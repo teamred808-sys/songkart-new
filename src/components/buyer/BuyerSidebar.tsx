@@ -13,7 +13,8 @@ import {
   ArrowLeftRight,
   LogOut,
   Home,
-  ScrollText
+  ScrollText,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,24 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useCartCount } from '@/hooks/useCartCount';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 // Navigation sections for better organization
 const navSections = [
@@ -57,9 +70,11 @@ const navSections = [
 
 export function BuyerSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [isBecomingSellerOpen, setIsBecomingSellerOpen] = useState(false);
+  const [isBecomingSellerLoading, setIsBecomingSellerLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, role, signOut } = useAuth();
+  const { profile, isSeller, signOut, becomeSeller } = useAuth();
   const { data: cartCount } = useCartCount();
 
   const isActive = (path: string) => {
@@ -74,7 +89,23 @@ export function BuyerSidebar() {
     navigate('/');
   };
 
-  const canSwitchToSeller = role === 'seller';
+  const handleBecomeSeller = async () => {
+    setIsBecomingSellerLoading(true);
+    const { error } = await becomeSeller();
+    setIsBecomingSellerLoading(false);
+    setIsBecomingSellerOpen(false);
+
+    if (error) {
+      toast.error('Failed to become a seller', {
+        description: error.message || 'Please try again later.',
+      });
+    } else {
+      toast.success('Welcome to the Seller community!', {
+        description: 'You can now upload and sell your songs.',
+      });
+      navigate('/seller');
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -194,8 +225,8 @@ export function BuyerSidebar() {
 
         {/* Footer */}
         <div className="p-2 border-t border-border space-y-2">
-          {/* Switch to Seller Mode */}
-          {canSwitchToSeller && (
+          {/* Switch to Seller Mode (for users who already have seller role) */}
+          {isSeller ? (
             collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -220,6 +251,62 @@ export function BuyerSidebar() {
                 <span>Switch to Seller</span>
               </Button>
             )
+          ) : (
+            /* Become a Seller (for buyers who don't have seller role yet) */
+            <AlertDialog open={isBecomingSellerOpen} onOpenChange={setIsBecomingSellerOpen}>
+              <AlertDialogTrigger asChild>
+                {collapsed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                        size="icon"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Become a Seller</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    className="w-full justify-start gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span>Become a Seller</span>
+                  </Button>
+                )}
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Become a Seller
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>Start selling your songs on SongKart! As a seller, you can:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Upload and sell your original songs</li>
+                      <li>Set your own prices for different license types</li>
+                      <li>Earn money from every sale</li>
+                      <li>Track your earnings and analytics</li>
+                    </ul>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You'll keep your buyer account and can still purchase songs from other sellers.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isBecomingSellerLoading}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleBecomeSeller}
+                    disabled={isBecomingSellerLoading}
+                    className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                  >
+                    {isBecomingSellerLoading ? 'Setting up...' : 'Yes, Make Me a Seller'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
 
           {/* User Info */}

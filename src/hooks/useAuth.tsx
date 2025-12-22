@@ -22,10 +22,12 @@ interface AuthContextType {
   roles: AppRole[];
   isLoading: boolean;
   isAdmin: boolean;
+  isSeller: boolean;
   signUp: (email: string, password: string, role: AppRole, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  becomeSeller: () => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -154,7 +156,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const becomeSeller = async () => {
+    if (!user) {
+      return { error: new Error('User not authenticated') };
+    }
+
+    // Check if user already has seller role
+    if (roles.includes('seller')) {
+      return { error: new Error('User is already a seller') };
+    }
+
+    try {
+      // Insert seller role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: user.id, role: 'seller' });
+
+      if (roleError) {
+        return { error: roleError };
+      }
+
+      // Create seller wallet
+      const { error: walletError } = await supabase
+        .from('seller_wallets')
+        .insert({ user_id: user.id });
+
+      if (walletError) {
+        console.error('Error creating seller wallet:', walletError);
+        // Don't fail the whole operation if wallet creation fails
+      }
+
+      // Refresh user data to update roles
+      await fetchUserData(user.id);
+
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const isAdmin = roles.includes('admin');
+  const isSeller = roles.includes('seller');
 
   return (
     <AuthContext.Provider
@@ -166,10 +208,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         roles,
         isLoading,
         isAdmin,
+        isSeller,
         signUp,
         signIn,
         signOut,
         refreshProfile,
+        becomeSeller,
       }}
     >
       {children}
