@@ -15,7 +15,9 @@ import {
   ChevronRight,
   LogOut,
   Shield,
-  Package
+  Package,
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,12 +30,13 @@ const navItems = [
   { icon: Users, label: 'User Management', path: '/admin/users' },
   { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },
+  { icon: FileText, label: 'Licenses', path: '/admin/licenses' },
   { icon: Wallet, label: 'Withdrawals', path: '/admin/withdrawals' },
   { icon: AlertTriangle, label: 'Disputes', path: '/admin/disputes' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Star, label: 'Featured Content', path: '/admin/featured' },
   { icon: Settings, label: 'Platform Settings', path: '/admin/settings' },
-  { icon: ScrollText, label: 'Activity Logs', path: '/admin/logs' },
+  { icon: ClipboardList, label: 'Activity Logs', path: '/admin/logs' },
 ];
 
 export function AdminSidebar() {
