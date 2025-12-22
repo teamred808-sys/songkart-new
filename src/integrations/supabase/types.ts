@@ -303,7 +303,7 @@ export type Database = {
           preview_audio_url: string | null
           preview_lyrics: string | null
           rejection_reason: string | null
-          seller_id: string
+          seller_id: string | null
           status: Database["public"]["Enums"]["song_status"]
           title: string
           updated_at: string
@@ -329,7 +329,7 @@ export type Database = {
           preview_audio_url?: string | null
           preview_lyrics?: string | null
           rejection_reason?: string | null
-          seller_id: string
+          seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title: string
           updated_at?: string
@@ -355,7 +355,7 @@ export type Database = {
           preview_audio_url?: string | null
           preview_lyrics?: string | null
           rejection_reason?: string | null
-          seller_id?: string
+          seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title?: string
           updated_at?: string
