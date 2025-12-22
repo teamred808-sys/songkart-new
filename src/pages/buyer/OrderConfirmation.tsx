@@ -1,16 +1,41 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle2, XCircle, Download, Music, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Download, Music, Loader2, FileText, Sparkles, ArrowRight } from 'lucide-react';
 import { useVerifyPayment } from '@/hooks/useCheckout';
+
+const confettiColors = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6'];
+
+function ConfettiPiece({ delay, left }: { delay: number; left: number }) {
+  const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+  return (
+    <div
+      className="absolute w-2 h-2 rounded-full animate-confetti"
+      style={{
+        backgroundColor: color,
+        left: `${left}%`,
+        animationDelay: `${delay}s`,
+        top: '-10px',
+      }}
+    />
+  );
+}
 
 export default function OrderConfirmation() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order_id');
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const { data: paymentData, isLoading, error } = useVerifyPayment(orderId);
+
+  useEffect(() => {
+    if (paymentData?.is_paid) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentData?.is_paid]);
 
   if (isLoading) {
     return (
@@ -46,35 +71,64 @@ export default function OrderConfirmation() {
   const order = paymentData.order;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 relative overflow-hidden">
+      {/* Confetti */}
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <ConfettiPiece key={i} delay={Math.random() * 2} left={Math.random() * 100} />
+          ))}
+        </div>
+      )}
+
       <div className="text-center space-y-4">
-        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+        <div className="relative inline-block">
+          <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto animate-scale-in" />
+          <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-amber-400 animate-pulse" />
+        </div>
         <h1 className="text-3xl font-bold">Payment Successful!</h1>
         <p className="text-muted-foreground">
-          Thank you for your purchase. Your order has been confirmed.
+          Thank you for your purchase. Your licenses are ready.
         </p>
       </div>
+
+      {/* What happens next */}
+      <Card className="bg-primary/5 border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">What happens next?</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">✓</div>
+            <span className="text-sm">License generated and stored in your vault</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">✓</div>
+            <span className="text-sm">Audio files ready for download</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">✓</div>
+            <span className="text-sm">Seller notified of your purchase</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {order && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Order #{order.order_number}</span>
-              <span className="text-lg font-normal text-muted-foreground">
+              <span className="text-lg font-normal text-primary">
                 ₹{Number(order.total_amount).toFixed(2)}
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Your purchased songs are now available in your library.
-            </p>
-
             <div className="flex gap-4">
               <Button asChild className="flex-1">
-                <Link to="/buyer/purchases">
-                  <Download className="mr-2 h-4 w-4" />
-                  View Purchases
+                <Link to="/buyer/downloads">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Go to License Vault
                 </Link>
               </Button>
               <Button asChild variant="outline" className="flex-1">

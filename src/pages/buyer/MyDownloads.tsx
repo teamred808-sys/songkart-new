@@ -84,8 +84,13 @@ export default function MyDownloads() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">My Downloads</h1>
-        <p className="text-muted-foreground">Access and download your purchased content.</p>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <ScrollText className="h-6 w-6 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold">License Vault</h1>
+        </div>
+        <p className="text-muted-foreground">Access and download your purchased content securely.</p>
       </div>
 
       {isLoading ? (
