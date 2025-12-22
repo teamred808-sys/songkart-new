@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Music, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,22 +15,30 @@ import { useCartCount } from '@/hooks/useCartCount';
 export function MiniCartDropdown() {
   const { data: cartCount = 0 } = useCartCount();
   const { data: cart, isLoading } = useCartWithTotals();
+  const navigate = useNavigate();
+
+  const handleCartClick = () => {
+    navigate('/buyer/cart');
+  };
 
   return (
     <HoverCard openDelay={100} closeDelay={200}>
       <HoverCardTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" asChild>
-          <Link to="/buyer/cart">
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <Badge 
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                variant="destructive"
-              >
-                {cartCount > 99 ? '99+' : cartCount}
-              </Badge>
-            )}
-          </Link>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative"
+          onClick={handleCartClick}
+        >
+          <ShoppingCart className="h-5 w-5" />
+          {cartCount > 0 && (
+            <Badge 
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              variant="destructive"
+            >
+              {cartCount > 99 ? '99+' : cartCount}
+            </Badge>
+          )}
         </Button>
       </HoverCardTrigger>
       <HoverCardContent 
