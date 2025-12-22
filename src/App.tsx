@@ -30,6 +30,7 @@ import Favorites from "./pages/buyer/Favorites";
 import BuyerSettings from "./pages/buyer/BuyerSettings";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SongModeration from "./pages/admin/SongModeration";
+import SongReview from "./pages/admin/SongReview";
 import UserManagement from "./pages/admin/UserManagement";
 import TransactionManagement from "./pages/admin/TransactionManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
@@ -95,6 +96,7 @@ const App = () => (
             }>
               <Route index element={<AdminDashboard />} />
               <Route path="songs" element={<SongModeration />} />
+              <Route path="songs/:id/review" element={<SongReview />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="transactions" element={<TransactionManagement />} />
               <Route path="orders" element={<OrderManagement />} />

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -129,9 +130,44 @@ export default function MySongs() {
   const approvedCount = songs?.filter(s => s.status === 'approved').length || 0;
   const rejectedCount = songs?.filter(s => s.status === 'rejected').length || 0;
 
+  // Check for rejected songs that need attention
+  const rejectedSongs = songs?.filter(s => s.status === 'rejected') || [];
+
+  // Helper to parse rejection reason
+  const parseRejectionReason = (reason: string) => {
+    const match = reason.match(/^\[([^\]]+)\]:\s*(.*)$/s);
+    if (match) {
+      return { category: match[1], details: match[2] };
+    }
+    return { category: null, details: reason };
+  };
+
   return (
     <TooltipProvider>
       <div className="p-6 lg:p-8 space-y-6">
+        {/* Rejection Alert Banner */}
+        {rejectedSongs.length > 0 && filter !== 'rejected' && (
+          <Alert className="border-destructive/50 bg-destructive/5">
+            <AlertCircle className="h-4 w-4 text-destructive" />
+            <div className="flex-1">
+              <p className="font-medium text-destructive">
+                {rejectedSongs.length} song{rejectedSongs.length > 1 ? 's' : ''} rejected
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Review the rejection reasons and make necessary corrections before resubmitting.
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              onClick={() => setFilter('rejected')}
+            >
+              View Rejected Songs
+            </Button>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -336,9 +372,30 @@ export default function MySongs() {
                                 </Button>
                               </CollapsibleTrigger>
                               <CollapsibleContent>
-                                <div className="mt-2 p-2 rounded-md bg-destructive/5 border border-destructive/20 text-xs text-destructive max-w-[200px]">
-                                  <p className="font-medium mb-1">Rejection Reason:</p>
-                                  <p>{song.rejection_reason}</p>
+                                <div className="mt-2 p-3 rounded-md bg-destructive/5 border border-destructive/20 text-xs max-w-[250px]">
+                                  {(() => {
+                                    const { category, details } = parseRejectionReason(song.rejection_reason);
+                                    return (
+                                      <>
+                                        {category && (
+                                          <Badge variant="outline" className="mb-2 bg-destructive/10 text-destructive border-destructive/30 text-[10px]">
+                                            {category}
+                                          </Badge>
+                                        )}
+                                        <p className="text-destructive leading-relaxed">{details}</p>
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="mt-2 h-7 text-xs w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                                          asChild
+                                        >
+                                          <Link to={`/seller/songs/${song.id}/edit`}>
+                                            <Edit className="mr-1 h-3 w-3" /> Edit & Resubmit
+                                          </Link>
+                                        </Button>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </CollapsibleContent>
                             </Collapsible>
