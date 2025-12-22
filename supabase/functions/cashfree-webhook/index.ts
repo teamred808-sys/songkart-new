@@ -131,6 +131,27 @@ serve(async (req) => {
           continue;
         }
 
+        // Trigger license PDF generation in background
+        try {
+          const pdfResponse = await fetch(`${supabaseUrl}/functions/v1/generate-license-pdf`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ order_item_id: orderItem.id }),
+          });
+          
+          if (!pdfResponse.ok) {
+            console.error("License PDF generation failed:", await pdfResponse.text());
+          } else {
+            console.log("License PDF generation triggered for order item:", orderItem.id);
+          }
+        } catch (pdfError) {
+          console.error("License PDF generation error:", pdfError);
+          // Don't fail the webhook if PDF generation fails - it can be regenerated later
+        }
+
         // Create download access
         await supabase
           .from("download_access")
