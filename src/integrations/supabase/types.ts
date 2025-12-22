@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           created_at: string
@@ -132,6 +165,57 @@ export type Database = {
           },
         ]
       }
+      featured_content: {
+        Row: {
+          content_id: string | null
+          content_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          link_url: string | null
+          starts_at: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_id?: string | null
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          link_url?: string | null
+          starts_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          link_url?: string | null
+          starts_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       genres: {
         Row: {
           created_at: string
@@ -241,39 +325,60 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
+          fraud_flags: Json | null
           full_name: string | null
           id: string
           is_verified: boolean | null
+          kyc_documents: Json | null
+          kyc_status: string | null
           social_links: Json | null
+          suspended_at: string | null
+          suspension_reason: string | null
           updated_at: string
+          upload_limit: number | null
           website: string | null
         }
         Insert: {
+          account_status?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email: string
+          fraud_flags?: Json | null
           full_name?: string | null
           id: string
           is_verified?: boolean | null
+          kyc_documents?: Json | null
+          kyc_status?: string | null
           social_links?: Json | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
+          upload_limit?: number | null
           website?: string | null
         }
         Update: {
+          account_status?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string
+          fraud_flags?: Json | null
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
+          kyc_documents?: Json | null
+          kyc_status?: string | null
           social_links?: Json | null
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
+          upload_limit?: number | null
           website?: string | null
         }
         Relationships: []
