@@ -19,12 +19,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: ShoppingBag, label: 'My Purchases', path: '/dashboard/purchases' },
-  { icon: Download, label: 'My Downloads', path: '/dashboard/downloads' },
-  { icon: ShoppingCart, label: 'Cart', path: '/dashboard/cart' },
-  { icon: Heart, label: 'Favorites', path: '/dashboard/favorites' },
-  { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/buyer' },
+  { icon: ShoppingBag, label: 'My Purchases', path: '/buyer/purchases' },
+  { icon: Download, label: 'My Downloads', path: '/buyer/downloads' },
+  { icon: ShoppingCart, label: 'Cart', path: '/buyer/cart' },
+  { icon: Heart, label: 'Favorites', path: '/buyer/favorites' },
+  { icon: Settings, label: 'Settings', path: '/buyer/settings' },
 ];
 
 export function BuyerSidebar() {
@@ -34,8 +34,8 @@ export function BuyerSidebar() {
   const { profile, role, signOut } = useAuth();
 
   const isActive = (path: string) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard';
+    if (path === '/buyer') {
+      return location.pathname === '/buyer';
     }
     return location.pathname.startsWith(path);
   };

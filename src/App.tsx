@@ -25,12 +25,14 @@ import BuyerDashboard from "./pages/buyer/BuyerDashboard";
 import MyPurchases from "./pages/buyer/MyPurchases";
 import MyDownloads from "./pages/buyer/MyDownloads";
 import Cart from "./pages/buyer/Cart";
+import OrderConfirmation from "./pages/buyer/OrderConfirmation";
 import Favorites from "./pages/buyer/Favorites";
 import BuyerSettings from "./pages/buyer/BuyerSettings";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SongModeration from "./pages/admin/SongModeration";
 import UserManagement from "./pages/admin/UserManagement";
 import TransactionManagement from "./pages/admin/TransactionManagement";
+import OrderManagement from "./pages/admin/OrderManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import DisputeManagement from "./pages/admin/DisputeManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -54,7 +56,7 @@ const App = () => (
             <Route path="/song/:id" element={<SongDetail />} />
             
             {/* Buyer Dashboard Routes */}
-            <Route path="/dashboard" element={
+            <Route path="/buyer" element={
               <ProtectedRoute allowedRoles={['buyer', 'seller']}>
                 <BuyerLayout />
               </ProtectedRoute>
@@ -63,6 +65,7 @@ const App = () => (
               <Route path="purchases" element={<MyPurchases />} />
               <Route path="downloads" element={<MyDownloads />} />
               <Route path="cart" element={<Cart />} />
+              <Route path="order-confirmation" element={<OrderConfirmation />} />
               <Route path="favorites" element={<Favorites />} />
               <Route path="settings" element={<BuyerSettings />} />
             </Route>
@@ -93,6 +96,7 @@ const App = () => (
               <Route path="songs" element={<SongModeration />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="transactions" element={<TransactionManagement />} />
+              <Route path="orders" element={<OrderManagement />} />
               <Route path="withdrawals" element={<WithdrawalManagement />} />
               <Route path="disputes" element={<DisputeManagement />} />
               <Route path="analytics" element={<AdminAnalytics />} />

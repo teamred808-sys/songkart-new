@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Shield
+  Shield,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
   { icon: Music, label: 'Song Moderation', path: '/admin/songs' },
   { icon: Users, label: 'User Management', path: '/admin/users' },
+  { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },
   { icon: Wallet, label: 'Withdrawals', path: '/admin/withdrawals' },
   { icon: AlertTriangle, label: 'Disputes', path: '/admin/disputes' },
