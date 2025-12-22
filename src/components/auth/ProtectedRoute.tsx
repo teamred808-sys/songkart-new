@@ -17,10 +17,9 @@ export function ProtectedRoute({
   allowedRoles,
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  const { user, role: userRole, isLoading, isRoleLoading } = useAuth();
+  const { user, role: userRole, isLoading } = useAuth();
 
-  // Show loading while auth or role is being determined
-  if (isLoading || isRoleLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -35,22 +34,9 @@ export function ProtectedRoute({
     return <Navigate to={redirectTo} replace />;
   }
 
-  // If user exists but role is still null (edge case), show loading
-  // This prevents redirect flash when role is being fetched
-  if (userRole === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Verifying access...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Check for multiple allowed roles
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(userRole)) {
+    if (!userRole || !allowedRoles.includes(userRole)) {
       return <Navigate to="/" replace />;
     }
     return <>{children}</>;

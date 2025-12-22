@@ -86,7 +86,7 @@ export function Navbar() {
               </Link>
             </Button>
 
-            {user && role !== 'admin' && <MiniCartDropdown />}
+            {user && <MiniCartDropdown />}
 
             {user ? (
               <DropdownMenu>
@@ -218,20 +218,18 @@ export function Navbar() {
                 >
                   Dashboard
                 </Link>
-                {role !== 'admin' && (
-                  <Link 
-                    to="/buyer/cart" 
-                    className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center justify-between"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <span>Cart</span>
-                    {cartCount > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {cartCount > 99 ? '99+' : cartCount}
-                      </Badge>
-                    )}
-                  </Link>
-                )}
+                <Link 
+                  to="/buyer/cart" 
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center justify-between"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span>Cart</span>
+                  {cartCount > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Badge>
+                  )}
+                </Link>
                 <button 
                   onClick={() => {
                     handleSignOut();

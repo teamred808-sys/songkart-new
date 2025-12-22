@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,7 +21,6 @@ interface AuthContextType {
   role: AppRole | null;
   roles: AppRole[];
   isLoading: boolean;
-  isRoleLoading: boolean;
   isAdmin: boolean;
   signUp: (email: string, password: string, role: AppRole, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -38,9 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRoleLoading, setIsRoleLoading] = useState(false);
 
-  const fetchUserData = useCallback(async (userId: string) => {
+  const fetchUserData = async (userId: string) => {
     try {
       // Fetch profile
       const { data: profileData } = await supabase
@@ -74,105 +72,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  }, []);
-
-  const bootstrapUser = useCallback(async () => {
-    try {
-      setIsRoleLoading(true);
-      console.log('Bootstrapping user...');
-      
-      const { data, error } = await supabase.functions.invoke('bootstrap-user');
-      
-      if (error) {
-        console.error('Bootstrap error:', error);
-        // Fallback to regular fetch if bootstrap fails
-        if (session?.user) {
-          await fetchUserData(session.user.id);
-        }
-        return;
-      }
-
-      console.log('Bootstrap response:', data);
-
-      if (data?.roles && data.roles.length > 0) {
-        setRoles(data.roles as AppRole[]);
-        setRole(data.primaryRole as AppRole);
-      }
-
-      // Still fetch full profile data
-      if (session?.user) {
-        await fetchUserData(session.user.id);
-      }
-    } catch (error) {
-      console.error('Bootstrap error:', error);
-      // Fallback to regular fetch
-      if (session?.user) {
-        await fetchUserData(session.user.id);
-      }
-    } finally {
-      setIsRoleLoading(false);
-    }
-  }, [session, fetchUserData]);
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log('Auth state change:', event);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          // Use setTimeout to prevent deadlock
+        // Defer Supabase calls with setTimeout to prevent deadlocks
+        if (session?.user) {
           setTimeout(() => {
-            setIsRoleLoading(true);
-            supabase.functions.invoke('bootstrap-user').then(({ data, error }) => {
-              if (error) {
-                console.error('Bootstrap on sign in error:', error);
-              } else {
-                console.log('Bootstrap on sign in:', data);
-                if (data?.roles && data.roles.length > 0) {
-                  setRoles(data.roles as AppRole[]);
-                  setRole(data.primaryRole as AppRole);
-                }
-              }
-              // Always fetch full data after bootstrap
-              fetchUserData(newSession.user.id).finally(() => {
-                setIsRoleLoading(false);
-              });
-            });
+            fetchUserData(session.user.id);
           }, 0);
-        } else if (event === 'SIGNED_OUT') {
+        } else {
           setProfile(null);
           setRole(null);
           setRoles([]);
-          setIsRoleLoading(false);
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setProfile(null);
+          setRole(null);
+          setRoles([]);
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       
-      if (existingSession?.user) {
-        setIsRoleLoading(true);
-        // Bootstrap then fetch data
-        supabase.functions.invoke('bootstrap-user').then(({ data, error }) => {
-          if (error) {
-            console.error('Bootstrap on init error:', error);
-          } else {
-            console.log('Bootstrap on init:', data);
-            if (data?.roles && data.roles.length > 0) {
-              setRoles(data.roles as AppRole[]);
-              setRole(data.primaryRole as AppRole);
-            }
-          }
-          fetchUserData(existingSession.user.id).finally(() => {
-            setIsLoading(false);
-            setIsRoleLoading(false);
-          });
+      if (session?.user) {
+        fetchUserData(session.user.id).finally(() => {
+          setIsLoading(false);
         });
       } else {
         setIsLoading(false);
@@ -180,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserData]);
+  }, []);
 
   const signUp = async (email: string, password: string, role: AppRole, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -230,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         roles,
         isLoading,
-        isRoleLoading,
         isAdmin,
         signUp,
         signIn,
