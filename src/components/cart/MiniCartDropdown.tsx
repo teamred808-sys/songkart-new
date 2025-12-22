@@ -77,7 +77,7 @@ export function MiniCartDropdown() {
                   <div key={item.id}>
                     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors group">
                       <Link 
-                        to={`/songs/${item.song_id}`}
+                        to={`/song/${item.song_id}`}
                         className="flex items-center gap-3 flex-1 min-w-0"
                       >
                         {item.songs?.cover_image_url ? (
