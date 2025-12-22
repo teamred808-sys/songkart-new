@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Music, Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Music, Search, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useCartCount } from '@/hooks/useCartCount';
+import { MiniCartDropdown } from '@/components/cart/MiniCartDropdown';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
@@ -85,21 +86,7 @@ export function Navbar() {
               </Link>
             </Button>
 
-            {user && (
-              <Button variant="ghost" size="icon" className="relative" asChild>
-                <Link to="/buyer/cart">
-                  <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
-                    <Badge 
-                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                      variant="destructive"
-                    >
-                      {cartCount > 99 ? '99+' : cartCount}
-                    </Badge>
-                  )}
-                </Link>
-              </Button>
-            )}
+            {user && <MiniCartDropdown />}
 
             {user ? (
               <DropdownMenu>
