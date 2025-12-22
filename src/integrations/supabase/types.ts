@@ -1228,6 +1228,13 @@ export type Database = {
             referencedRelation: "moods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "songs_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transactions: {
