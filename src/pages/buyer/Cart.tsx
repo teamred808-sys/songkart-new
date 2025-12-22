@@ -2,13 +2,20 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, CreditCard, AlertTriangle } from 'lucide-react';
+import { ShoppingBag, CreditCard, AlertTriangle, ShoppingCart, CheckCircle, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartWithTotals, useRemoveFromCartWithReservation, useCreateCheckoutSession } from '@/hooks/useCheckout';
 import { CartItemCard } from '@/components/cart/CartItemCard';
 import { AcknowledgmentCheckbox } from '@/components/cart/AcknowledgmentCheckbox';
 import { PriceBreakdown } from '@/components/cart/PriceBreakdown';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const steps = [
+  { id: 1, label: "Cart", icon: ShoppingCart },
+  { id: 2, label: "Review", icon: CheckCircle },
+  { id: 3, label: "Payment", icon: CreditCard },
+  { id: 4, label: "Done", icon: Lock },
+];
 
 export default function Cart() {
   const { data: cart, isLoading } = useCartWithTotals();
@@ -24,8 +31,33 @@ export default function Cart() {
     createCheckout.mutate({ acknowledgmentAccepted: acknowledged });
   };
 
+  const currentStep = 1;
+
   return (
     <div className="space-y-6">
+      {/* Step Indicator */}
+      <div className="flex items-center justify-center gap-2 py-4">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              step.id === currentStep
+                ? "bg-primary text-primary-foreground"
+                : step.id < currentStep
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+            }`}>
+              <step.icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{step.label}</span>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`w-8 h-0.5 mx-1 ${
+                step.id < currentStep ? "bg-primary" : "bg-border"
+              }`} />
+            )}
+          </div>
+        ))}
+      </div>
+
       <div>
         <h1 className="text-3xl font-bold">Shopping Cart</h1>
         <p className="text-muted-foreground">Review your items before checkout.</p>
@@ -75,7 +107,7 @@ export default function Cart() {
             <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               <AlertDescription>
-                Your cart contains exclusive licenses. These songs will be permanently locked after purchase and unavailable to other buyers.
+                <strong>Exclusive License Notice:</strong> Your cart contains exclusive licenses. These songs will be permanently locked after purchase and unavailable to other buyers.
               </AlertDescription>
             </Alert>
           )}
@@ -98,7 +130,7 @@ export default function Cart() {
                 itemCount={cart?.itemCount || 0}
               />
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex-col gap-3">
               <Button
                 className="w-full"
                 size="lg"
@@ -108,6 +140,9 @@ export default function Cart() {
                 <CreditCard className="mr-2 h-4 w-4" />
                 {createCheckout.isPending ? 'Processing...' : 'Proceed to Checkout'}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                🔒 Secure checkout powered by Cashfree
+              </p>
             </CardFooter>
           </Card>
         </div>
