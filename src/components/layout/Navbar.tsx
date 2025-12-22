@@ -10,12 +10,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useCartCount } from '@/hooks/useCartCount';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, role, isAdmin, signOut } = useAuth();
+  const { data: cartCount = 0 } = useCartCount();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -83,9 +86,17 @@ export function Navbar() {
             </Button>
 
             {user && (
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="ghost" size="icon" className="relative" asChild>
                 <Link to="/buyer/cart">
                   <ShoppingCart className="h-5 w-5" />
+                  {cartCount > 0 && (
+                    <Badge 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      variant="destructive"
+                    >
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
             )}
@@ -222,10 +233,15 @@ export function Navbar() {
                 </Link>
                 <Link 
                   to="/buyer/cart" 
-                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center justify-between"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Cart
+                  <span>Cart</span>
+                  {cartCount > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Badge>
+                  )}
                 </Link>
                 <button 
                   onClick={() => {
