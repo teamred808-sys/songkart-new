@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Use SANDBOX for testing, PRODUCTION for live payments
-const CASHFREE_API_URL = "https://sandbox.cashfree.com/pg/orders";
+// PRODUCTION mode for live payments
+const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
 const COMMISSION_RATE = 0.15;
 
 interface CheckoutRequest {
@@ -199,7 +199,7 @@ serve(async (req) => {
 
     // Log Cashfree response (frontend will use SDK with payment_session_id)
     console.log("=== Cashfree Order Created ===");
-    console.log("Environment: SANDBOX");
+    console.log("Environment: PRODUCTION");
     console.log("Order ID:", orderId);
     console.log("Payment Session ID:", cashfreeData.payment_session_id);
     console.log("Total Amount: INR", totalAmount);

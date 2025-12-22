@@ -161,9 +161,9 @@ export function useCreateCheckoutSession() {
       // Use Cashfree SDK to open checkout
       if (data.payment_session_id) {
         try {
-          // Initialize Cashfree SDK - use sandbox for testing, production for live
+          // Initialize Cashfree SDK - production mode for live payments
           const cashfree = window.Cashfree({
-            mode: "sandbox" // Change to "production" for live environment
+            mode: "production"
           });
           
           cashfree.checkout({
