@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Music, Twitter, Instagram, Youtube, Mail } from 'lucide-react';
+import { Twitter, Instagram, Youtube, Mail } from 'lucide-react';
+import songkartLogo from '@/assets/songkart-logo.png';
 
 export function Footer() {
   return (
@@ -9,9 +10,7 @@ export function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="bg-gradient-to-r from-primary to-accent p-2 rounded-lg">
-                <Music className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <img src={songkartLogo} alt="SongKart" className="h-10 w-10 object-contain" />
               <span className="font-display text-xl font-bold gradient-text">
                 SongKart
               </span>

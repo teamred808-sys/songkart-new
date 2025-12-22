@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Music, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import songkartLogo from '@/assets/songkart-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,9 +74,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="bg-gradient-to-r from-primary to-accent p-3 rounded-xl">
-            <Music className="h-6 w-6 text-primary-foreground" />
-          </div>
+          <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
           <span className="font-display text-2xl font-bold gradient-text">SongKart</span>
         </Link>
 
