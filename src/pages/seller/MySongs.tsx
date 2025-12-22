@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -29,17 +30,67 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye, AlertCircle } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  MoreHorizontal, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  Music,
+  FileAudio,
+  FileText
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-warning/20 text-warning border-warning/30',
-  approved: 'bg-success/20 text-success border-success/30',
-  rejected: 'bg-destructive/20 text-destructive border-destructive/30',
+const statusConfig: Record<string, { 
+  color: string; 
+  bgColor: string;
+  icon: typeof Clock;
+  label: string;
+  description: string;
+}> = {
+  pending: { 
+    color: 'text-amber-500', 
+    bgColor: 'bg-amber-500/10 border-amber-500/30',
+    icon: Clock,
+    label: 'Pending Review',
+    description: 'Your song is being reviewed by our team'
+  },
+  approved: { 
+    color: 'text-emerald-500', 
+    bgColor: 'bg-emerald-500/10 border-emerald-500/30',
+    icon: CheckCircle2,
+    label: 'Approved & Live',
+    description: 'Your song is live and available for purchase'
+  },
+  rejected: { 
+    color: 'text-destructive', 
+    bgColor: 'bg-destructive/10 border-destructive/30',
+    icon: XCircle,
+    label: 'Rejected',
+    description: 'Your song was not approved'
+  },
 };
 
 export default function MySongs() {
@@ -48,6 +99,7 @@ export default function MySongs() {
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedRejections, setExpandedRejections] = useState<Record<string, boolean>>({});
 
   const filteredSongs = songs?.filter((song) => {
     const matchesFilter = filter === 'all' || song.status === filter;
@@ -68,188 +120,304 @@ export default function MySongs() {
     );
   };
 
+  const toggleRejection = (id: string) => {
+    setExpandedRejections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Stats counts
+  const pendingCount = songs?.filter(s => s.status === 'pending').length || 0;
+  const approvedCount = songs?.filter(s => s.status === 'approved').length || 0;
+  const rejectedCount = songs?.filter(s => s.status === 'rejected').length || 0;
+
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold font-display">My Songs</h1>
-          <p className="text-muted-foreground">Manage your uploaded songs and licenses.</p>
+    <TooltipProvider>
+      <div className="p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold font-display">My Songs</h1>
+            <p className="text-muted-foreground">Manage your uploaded songs and licenses.</p>
+          </div>
+          <Button asChild className="btn-glow">
+            <Link to="/seller/songs/upload">
+              <Plus className="mr-2 h-4 w-4" />
+              Upload Song
+            </Link>
+          </Button>
         </div>
-        <Button asChild className="btn-glow">
-          <Link to="/seller/songs/upload">
-            <Plus className="mr-2 h-4 w-4" />
-            Upload Song
-          </Link>
-        </Button>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search songs..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className={cn(
+            "cursor-pointer transition-all",
+            filter === 'pending' ? 'border-amber-500 bg-amber-500/5' : 'hover:border-amber-500/50'
+          )} onClick={() => setFilter('pending')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Clock className="h-4 w-4 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingCount}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={cn(
+            "cursor-pointer transition-all",
+            filter === 'approved' ? 'border-emerald-500 bg-emerald-500/5' : 'hover:border-emerald-500/50'
+          )} onClick={() => setFilter('approved')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-500">{approvedCount}</p>
+                <p className="text-xs text-muted-foreground">Approved</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={cn(
+            "cursor-pointer transition-all",
+            filter === 'rejected' ? 'border-destructive bg-destructive/5' : 'hover:border-destructive/50'
+          )} onClick={() => setFilter('rejected')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <XCircle className="h-4 w-4 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-destructive">{rejectedCount}</p>
+                <p className="text-xs text-muted-foreground">Rejected</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as StatusFilter)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
 
-      {/* Songs Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[300px]">Song</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Genre</TableHead>
-              <TableHead className="text-right">Base Price</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              [...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-md" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  </TableCell>
-                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                </TableRow>
-              ))
-            ) : filteredSongs?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12">
-                  <div className="flex flex-col items-center gap-2">
-                    <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-muted-foreground">No songs found</p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/seller/songs/upload">Upload your first song</Link>
-                    </Button>
-                  </div>
-                </TableCell>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search songs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as StatusFilter)}>
+            <TabsList>
+              <TabsTrigger value="all">All ({songs?.length || 0})</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="approved">Approved</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Songs Table */}
+        <div className="rounded-xl border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-[300px]">Song</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Genre</TableHead>
+                <TableHead className="text-right">Base Price</TableHead>
+                <TableHead className="text-right">Sales</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
-            ) : (
-              filteredSongs?.map((song) => (
-                <TableRow key={song.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 rounded-md">
-                        <AvatarImage 
-                          src={song.cover_image_url || ''} 
-                          alt={song.title}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="rounded-md bg-muted">
-                          {song.title.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-12 w-12 rounded-lg" />
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-1" />
+                          <Skeleton className="h-3 w-20" />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-6 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredSongs?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 rounded-full bg-muted">
+                        <Music className="h-8 w-8 text-muted-foreground" />
+                      </div>
                       <div>
-                        <p className="font-medium">{song.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {song.has_lyrics && 'Lyrics'} {song.has_audio && '• Audio'}
+                        <p className="font-medium">No songs found</p>
+                        <p className="text-sm text-muted-foreground">
+                          {filter !== 'all' ? 'Try a different filter or ' : ''}Upload your first song to get started
                         </p>
                       </div>
+                      <Button asChild variant="outline" size="sm" className="mt-2">
+                        <Link to="/seller/songs/upload">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Upload Song
+                        </Link>
+                      </Button>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={cn("capitalize", statusColors[song.status])}
-                    >
-                      {song.status}
-                    </Badge>
-                    {song.status === 'rejected' && song.rejection_reason && (
-                      <p className="text-xs text-destructive mt-1 max-w-[150px] truncate">
-                        {song.rejection_reason}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {song.genre?.name || '-'}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    ${Number(song.base_price).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {song.license_tiers?.reduce((sum, t) => sum + (t.current_sales || 0), 0) || 0}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {song.status === 'approved' && (
-                          <DropdownMenuItem asChild>
-                            <Link to={`/song/${song.id}`}>
-                              <Eye className="mr-2 h-4 w-4" /> View on Store
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          asChild
-                          disabled={hasExclusiveSale(song)}
-                        >
-                          <Link to={`/seller/songs/${song.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        {song.status === 'pending' && (
-                          <DropdownMenuItem 
-                            onClick={() => setDeleteId(song.id)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredSongs?.map((song) => {
+                  const status = statusConfig[song.status];
+                  const StatusIcon = status.icon;
+                  const isRejectionExpanded = expandedRejections[song.id];
+                  
+                  return (
+                    <TableRow key={song.id} className="group">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-12 w-12 rounded-lg">
+                            <AvatarImage 
+                              src={song.cover_image_url || ''} 
+                              alt={song.title}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="rounded-lg bg-muted text-lg">
+                              {song.title.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{song.title}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {song.has_audio && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <FileAudio className="h-3.5 w-3.5 text-emerald-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Has audio file</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {song.has_lyrics && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <FileText className="h-3.5 w-3.5 text-blue-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>Has lyrics</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge 
+                                variant="outline" 
+                                className={cn("gap-1.5", status.bgColor, status.color)}
+                              >
+                                <StatusIcon className="h-3.5 w-3.5" />
+                                {status.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>{status.description}</TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Expandable Rejection Reason */}
+                          {song.status === 'rejected' && song.rejection_reason && (
+                            <Collapsible open={isRejectionExpanded} onOpenChange={() => toggleRejection(song.id)}>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-auto p-1 text-xs text-destructive hover:text-destructive">
+                                  <span>View reason</span>
+                                  <ChevronDown className={cn("h-3 w-3 ml-1 transition-transform", isRejectionExpanded && "rotate-180")} />
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="mt-2 p-2 rounded-md bg-destructive/5 border border-destructive/20 text-xs text-destructive max-w-[200px]">
+                                  <p className="font-medium mb-1">Rejection Reason:</p>
+                                  <p>{song.rejection_reason}</p>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-normal">
+                          {song.genre?.name || 'Uncategorized'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        ${Number(song.base_price).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-medium">
+                          {song.license_tiers?.reduce((sum, t) => sum + (t.current_sales || 0), 0) || 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            {song.status === 'approved' && (
+                              <DropdownMenuItem asChild>
+                                <Link to={`/song/${song.id}`} className="flex items-center">
+                                  <Eye className="mr-2 h-4 w-4" /> View on Store
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              asChild
+                              disabled={hasExclusiveSale(song)}
+                            >
+                              <Link to={`/seller/songs/${song.id}/edit`} className="flex items-center">
+                                <Edit className="mr-2 h-4 w-4" /> Edit Song
+                              </Link>
+                            </DropdownMenuItem>
+                            {song.status === 'pending' && (
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteId(song.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Song</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this song? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Song</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this song? This action cannot be undone and all associated data will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                Delete Song
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }
