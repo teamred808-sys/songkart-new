@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SellerLayout } from "@/components/seller/SellerLayout";
 import { BuyerLayout } from "@/components/buyer/BuyerLayout";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Browse from "./pages/Browse";
@@ -26,6 +27,16 @@ import MyDownloads from "./pages/buyer/MyDownloads";
 import Cart from "./pages/buyer/Cart";
 import Favorites from "./pages/buyer/Favorites";
 import BuyerSettings from "./pages/buyer/BuyerSettings";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import SongModeration from "./pages/admin/SongModeration";
+import UserManagement from "./pages/admin/UserManagement";
+import TransactionManagement from "./pages/admin/TransactionManagement";
+import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
+import DisputeManagement from "./pages/admin/DisputeManagement";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import FeaturedContent from "./pages/admin/FeaturedContent";
+import PlatformSettings from "./pages/admin/PlatformSettings";
+import ActivityLogs from "./pages/admin/ActivityLogs";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +81,24 @@ const App = () => (
               <Route path="wallet" element={<Wallet />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="settings" element={<SellerSettings />} />
+            </Route>
+            
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute role="admin">
+                <AdminLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<AdminDashboard />} />
+              <Route path="songs" element={<SongModeration />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="transactions" element={<TransactionManagement />} />
+              <Route path="withdrawals" element={<WithdrawalManagement />} />
+              <Route path="disputes" element={<DisputeManagement />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="featured" element={<FeaturedContent />} />
+              <Route path="settings" element={<PlatformSettings />} />
+              <Route path="logs" element={<ActivityLogs />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
