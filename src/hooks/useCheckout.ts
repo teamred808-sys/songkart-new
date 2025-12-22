@@ -24,6 +24,8 @@ export function useValidatedAddToCart() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['cart-count'] });
+      queryClient.invalidateQueries({ queryKey: ['cart-with-totals'] });
       queryClient.invalidateQueries({ queryKey: ['buyer-stats'] });
       toast.success(data.message || 'Added to cart');
       
@@ -214,6 +216,7 @@ export function useRemoveFromCartWithReservation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['cart-count'] });
       queryClient.invalidateQueries({ queryKey: ['cart-with-totals'] });
       queryClient.invalidateQueries({ queryKey: ['buyer-stats'] });
       toast.success('Removed from cart');
