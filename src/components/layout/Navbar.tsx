@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Music, Search, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import songkartLogo from '@/assets/songkart-logo.png';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,12 +40,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-lg blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-              <div className="relative bg-gradient-to-r from-primary to-accent p-2 rounded-lg">
-                <Music className="h-5 w-5 text-primary-foreground" />
-              </div>
-            </div>
+            <img src={songkartLogo} alt="SongKart" className="h-10 w-10 object-contain" />
             <span className="font-display text-xl font-bold gradient-text">
               SongKart
             </span>
