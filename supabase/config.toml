@@ -1,1 +1,13 @@
 project_id = "vxegvnndkeoubqnruiqj"
+
+[functions.audio-token]
+verify_jwt = false
+
+[functions.stream-preview]
+verify_jwt = false
+
+[functions.download-purchased]
+verify_jwt = true
+
+[functions.check-abuse]
+verify_jwt = false

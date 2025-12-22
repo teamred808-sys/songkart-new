@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      abuse_flags: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          details: Json | null
+          device_fingerprint: string | null
+          flag_type: string
+          id: string
+          ip_address: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          details?: Json | null
+          device_fingerprint?: string | null
+          flag_type: string
+          id?: string
+          ip_address?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          details?: Json | null
+          device_fingerprint?: string | null
+          flag_type?: string
+          id?: string
+          ip_address?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
@@ -46,6 +88,104 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      audio_sessions: {
+        Row: {
+          created_at: string | null
+          device_fingerprint: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          is_valid: boolean | null
+          last_access: string | null
+          play_count: number | null
+          session_token: string
+          song_id: string | null
+          started_at: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_fingerprint?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          is_valid?: boolean | null
+          last_access?: string | null
+          play_count?: number | null
+          session_token: string
+          song_id?: string | null
+          started_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_fingerprint?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_valid?: boolean | null
+          last_access?: string | null
+          play_count?: number | null
+          session_token?: string
+          song_id?: string | null
+          started_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_sessions_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audio_watermarks: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          id: string
+          song_id: string
+          transaction_id: string | null
+          watermark_code: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          id?: string
+          song_id: string
+          transaction_id?: string | null
+          watermark_code: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          id?: string
+          song_id?: string
+          transaction_id?: string | null
+          watermark_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_watermarks_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audio_watermarks_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cart_items: {
         Row: {
@@ -299,6 +439,59 @@ export type Database = {
         }
         Relationships: []
       }
+      piracy_reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          evidence: Json | null
+          id: string
+          notes: string | null
+          platform: string | null
+          reported_url: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          song_id: string
+          status: string | null
+          watermark_code: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          evidence?: Json | null
+          id?: string
+          notes?: string | null
+          platform?: string | null
+          reported_url?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id: string
+          status?: string | null
+          watermark_code?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          evidence?: Json | null
+          id?: string
+          notes?: string | null
+          platform?: string | null
+          reported_url?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id?: string
+          status?: string | null
+          watermark_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piracy_reports_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           id: string
@@ -425,6 +618,9 @@ export type Database = {
           created_at: string
           description: string | null
           duration: number | null
+          exclusive_buyer_id: string | null
+          exclusive_sold: boolean | null
+          exclusive_sold_at: string | null
           full_lyrics: string | null
           genre_id: string | null
           has_audio: boolean | null
@@ -451,6 +647,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration?: number | null
+          exclusive_buyer_id?: string | null
+          exclusive_sold?: boolean | null
+          exclusive_sold_at?: string | null
           full_lyrics?: string | null
           genre_id?: string | null
           has_audio?: boolean | null
@@ -477,6 +676,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration?: number | null
+          exclusive_buyer_id?: string | null
+          exclusive_sold?: boolean | null
+          exclusive_sold_at?: string | null
           full_lyrics?: string | null
           genre_id?: string | null
           has_audio?: boolean | null
