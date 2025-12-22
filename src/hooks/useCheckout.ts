@@ -5,6 +5,15 @@ import { toast } from 'sonner';
 
 const COMMISSION_RATE = 0.15;
 
+// Declare Cashfree global type
+declare global {
+  interface Window {
+    Cashfree: (config: { mode: string }) => {
+      checkout: (options: { paymentSessionId: string; redirectTarget: string }) => Promise<void>;
+    };
+  }
+}
+
 export function useValidatedAddToCart() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -149,11 +158,24 @@ export function useCreateCheckoutSession() {
       return data;
     },
     onSuccess: (data) => {
-      // Redirect to Cashfree payment page
-      if (data.payment_url) {
-        window.location.href = data.payment_url;
+      // Use Cashfree SDK to open checkout
+      if (data.payment_session_id) {
+        try {
+          // Initialize Cashfree SDK - use sandbox for testing, production for live
+          const cashfree = window.Cashfree({
+            mode: "sandbox" // Change to "production" for live environment
+          });
+          
+          cashfree.checkout({
+            paymentSessionId: data.payment_session_id,
+            redirectTarget: "_self", // Redirect in the same tab
+          });
+        } catch (sdkError) {
+          console.error('Cashfree SDK error:', sdkError);
+          toast.error('Failed to initialize payment. Please try again.');
+        }
       } else {
-        toast.error('Payment URL not received');
+        toast.error('Payment session not received');
       }
     },
     onError: (error: Error) => {
