@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Music, 
@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Home
+  Home,
+  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const navItems = [
 
 export function SellerSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut, profile } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -89,6 +91,19 @@ export function SellerSidebar() {
 
       {/* Footer */}
       <div className="p-2 border-t border-sidebar-border space-y-1">
+        {/* Switch to Buyer Mode */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className={cn(
+            "w-full justify-start gap-3 px-3 py-2.5 text-sidebar-foreground hover:bg-sidebar-accent",
+            collapsed && "justify-center"
+          )}
+        >
+          <ArrowLeftRight className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && <span className="font-medium">Switch to Buyer</span>}
+        </Button>
+
         <NavLink
           to="/"
           className={cn(

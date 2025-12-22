@@ -7,12 +7,14 @@ type AppRole = 'admin' | 'seller' | 'buyer';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   role?: AppRole;
+  allowedRoles?: AppRole[];
   redirectTo?: string;
 }
 
 export function ProtectedRoute({ 
   children, 
-  role, 
+  role,
+  allowedRoles,
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
   const { user, role: userRole, isLoading } = useAuth();
@@ -32,8 +34,16 @@ export function ProtectedRoute({
     return <Navigate to={redirectTo} replace />;
   }
 
+  // Check for multiple allowed roles
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
+  }
+
+  // Check for single role
   if (role && userRole !== role) {
-    // User is logged in but doesn't have the required role
     return <Navigate to="/" replace />;
   }
 

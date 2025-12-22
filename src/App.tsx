@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SellerLayout } from "@/components/seller/SellerLayout";
+import { BuyerLayout } from "@/components/buyer/BuyerLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Browse from "./pages/Browse";
@@ -19,6 +20,12 @@ import SalesOrders from "./pages/seller/SalesOrders";
 import Wallet from "./pages/seller/Wallet";
 import Analytics from "./pages/seller/Analytics";
 import SellerSettings from "./pages/seller/SellerSettings";
+import BuyerDashboard from "./pages/buyer/BuyerDashboard";
+import MyPurchases from "./pages/buyer/MyPurchases";
+import MyDownloads from "./pages/buyer/MyDownloads";
+import Cart from "./pages/buyer/Cart";
+import Favorites from "./pages/buyer/Favorites";
+import BuyerSettings from "./pages/buyer/BuyerSettings";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +41,20 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/browse" element={<Browse />} />
             <Route path="/song/:id" element={<SongDetail />} />
+            
+            {/* Buyer Dashboard Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['buyer', 'seller']}>
+                <BuyerLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<BuyerDashboard />} />
+              <Route path="purchases" element={<MyPurchases />} />
+              <Route path="downloads" element={<MyDownloads />} />
+              <Route path="cart" element={<Cart />} />
+              <Route path="favorites" element={<Favorites />} />
+              <Route path="settings" element={<BuyerSettings />} />
+            </Route>
             
             {/* Seller Dashboard Routes */}
             <Route path="/seller" element={
