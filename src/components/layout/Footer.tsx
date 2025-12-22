@@ -10,7 +10,7 @@ export function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src={songkartLogo} alt="SongKart" className="h-10 w-10 object-contain" />
+              <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
               <span className="font-display text-xl font-bold gradient-text">
                 SongKart
               </span>

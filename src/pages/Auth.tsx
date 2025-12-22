@@ -74,7 +74,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
+          <img src={songkartLogo} alt="SongKart" className="h-16 w-16 object-contain" />
           <span className="font-display text-2xl font-bold gradient-text">SongKart</span>
         </Link>
 
