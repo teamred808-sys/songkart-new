@@ -196,17 +196,10 @@ serve(async (req) => {
       });
     }
 
-    // Construct the correct Cashfree checkout URL
-    const isProduction = CASHFREE_API_URL.includes("api.cashfree.com") && !CASHFREE_API_URL.includes("sandbox");
-    const baseCheckoutUrl = isProduction 
-      ? "https://payments.cashfree.com/pgbillpay" 
-      : "https://sandbox.cashfree.com/pgbillpay";
-    
-    const paymentUrl = `${baseCheckoutUrl}?payment_session_id=${cashfreeData.payment_session_id}`;
-
-    console.log("Cashfree order created:", cashfreeData);
-    console.log("Generated payment URL:", paymentUrl);
-    console.log("Environment:", isProduction ? "PRODUCTION" : "SANDBOX");
+    // Log Cashfree response (frontend will use SDK with payment_session_id)
+    console.log("Cashfree order created successfully");
+    console.log("Order ID:", orderId);
+    console.log("Payment Session ID:", cashfreeData.payment_session_id);
 
     // Create checkout session
     const { data: checkoutSession, error: sessionError } = await supabase
@@ -240,7 +233,6 @@ serve(async (req) => {
       session_id: checkoutSession.id,
       cashfree_order_id: orderId,
       payment_session_id: cashfreeData.payment_session_id,
-      payment_url: paymentUrl,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
