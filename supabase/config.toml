@@ -11,3 +11,18 @@ verify_jwt = true
 
 [functions.check-abuse]
 verify_jwt = false
+
+[functions.validate-cart-item]
+verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.cashfree-webhook]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = true
+
+[functions.release-reservation]
+verify_jwt = true

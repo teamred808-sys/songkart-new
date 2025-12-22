@@ -1,24 +1,27 @@
-import { useCart, useRemoveFromCart } from '@/hooks/useBuyerData';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Music, Trash2, ShoppingBag, CreditCard } from 'lucide-react';
+import { ShoppingBag, CreditCard, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useCartWithTotals, useRemoveFromCartWithReservation, useCreateCheckoutSession } from '@/hooks/useCheckout';
+import { CartItemCard } from '@/components/cart/CartItemCard';
+import { AcknowledgmentCheckbox } from '@/components/cart/AcknowledgmentCheckbox';
+import { PriceBreakdown } from '@/components/cart/PriceBreakdown';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Cart() {
-  const { data: cartItems, isLoading } = useCart();
-  const removeFromCart = useRemoveFromCart();
+  const { data: cart, isLoading } = useCartWithTotals();
+  const removeFromCart = useRemoveFromCartWithReservation();
+  const createCheckout = useCreateCheckoutSession();
+  const [acknowledged, setAcknowledged] = useState(false);
 
-  const total = cartItems?.reduce((sum, item) => sum + Number(item.license_tiers?.price || 0), 0) || 0;
-
-  const handleRemove = (itemId: string) => {
-    removeFromCart.mutate(itemId);
+  const handleRemove = (cartItemId: string, songId: string, isExclusive: boolean) => {
+    removeFromCart.mutate({ cartItemId, songId, isExclusive });
   };
 
   const handleCheckout = () => {
-    toast.info('Checkout functionality coming soon!');
+    createCheckout.mutate({ acknowledgmentAccepted: acknowledged });
   };
 
   return (
@@ -29,13 +32,12 @@ export default function Cart() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Cart Items */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5" />
-                Cart Items ({cartItems?.length || 0})
+                Cart Items ({cart?.itemCount || 0})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -45,51 +47,15 @@ export default function Cart() {
                     <Skeleton key={i} className="h-24 w-full" />
                   ))}
                 </div>
-              ) : cartItems && cartItems.length > 0 ? (
+              ) : cart?.items && cart.items.length > 0 ? (
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div
+                  {cart.items.map((item) => (
+                    <CartItemCard
                       key={item.id}
-                      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {item.songs?.cover_image_url ? (
-                          <img
-                            src={item.songs.cover_image_url}
-                            alt={item.songs.title}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <Music className="h-8 w-8 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Link to={`/song/${item.song_id}`} className="hover:underline">
-                          <p className="font-medium truncate">{item.songs?.title}</p>
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          {(item.songs as any)?.profiles?.full_name || 'Unknown Artist'}
-                        </p>
-                        <Badge variant="outline" className="mt-1">
-                          {item.license_tiers?.license_type} License
-                        </Badge>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg">
-                          ${Number(item.license_tiers?.price || 0).toFixed(2)}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleRemove(item.id)}
-                          disabled={removeFromCart.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
+                      item={item}
+                      onRemove={handleRemove}
+                      isRemoving={removeFromCart.isPending}
+                    />
                   ))}
                 </div>
               ) : (
@@ -104,39 +70,43 @@ export default function Cart() {
               )}
             </CardContent>
           </Card>
+
+          {cart?.hasExclusiveItems && (
+            <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertDescription>
+                Your cart contains exclusive licenses. These songs will be permanently locked after purchase and unavailable to other buyers.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {cart?.items && cart.items.length > 0 && (
+            <AcknowledgmentCheckbox checked={acknowledged} onCheckedChange={setAcknowledged} />
+          )}
         </div>
 
-        {/* Order Summary */}
         <div>
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Platform Fee</span>
-                <span>$0.00</span>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
-              </div>
+            <CardContent>
+              <PriceBreakdown
+                subtotal={cart?.subtotal || 0}
+                platformFee={cart?.platformFee || 0}
+                total={cart?.total || 0}
+                itemCount={cart?.itemCount || 0}
+              />
             </CardContent>
             <CardFooter>
               <Button
                 className="w-full"
                 size="lg"
-                disabled={!cartItems?.length}
+                disabled={!cart?.itemCount || !acknowledged || createCheckout.isPending}
                 onClick={handleCheckout}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
-                Proceed to Checkout
+                {createCheckout.isPending ? 'Processing...' : 'Proceed to Checkout'}
               </Button>
             </CardFooter>
           </Card>
