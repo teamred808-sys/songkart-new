@@ -85,14 +85,14 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
+        {/* Search - Made larger and more prominent */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search songs, artists..."
+            placeholder="Search songs, artists, genres..."
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}
-            className="pl-10 bg-card/50 border-border/50"
+            className="pl-12 h-12 text-base bg-card/50 border-border/50 focus:border-primary/50"
           />
         </div>
 

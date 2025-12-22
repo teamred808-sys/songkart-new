@@ -1,29 +1,37 @@
-import { ShoppingBag, Upload, Shield, DollarSign, Music, FileText } from "lucide-react";
+import { ShoppingBag, Upload, Shield, Music, FileText, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const steps = [
   {
+    step: 1,
     icon: ShoppingBag,
     title: "For Buyers",
     description: "Browse our curated catalog, preview audio & lyrics, and purchase licenses instantly with secure checkout.",
     features: ["Preview before purchase", "Multiple license tiers", "Instant download"],
     gradient: "from-blue-500/20 to-cyan-500/20",
     iconColor: "text-blue-400",
+    borderColor: "border-blue-500/30",
   },
   {
+    step: 2,
     icon: Upload,
     title: "For Sellers",
     description: "Upload your original music and lyrics, set your prices, and earn money from every sale.",
     features: ["Easy upload process", "Set your own prices", "Track your earnings"],
     gradient: "from-purple-500/20 to-pink-500/20",
     iconColor: "text-purple-400",
+    borderColor: "border-purple-500/30",
   },
   {
+    step: 3,
     icon: Shield,
     title: "Safe & Secure",
     description: "All transactions are protected, content is verified, and licenses are legally binding.",
     features: ["Verified sellers", "Secure payments", "Legal protection"],
     gradient: "from-emerald-500/20 to-teal-500/20",
     iconColor: "text-emerald-400",
+    borderColor: "border-emerald-500/30",
   },
 ];
 
@@ -40,17 +48,25 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 relative">
+          {/* Connecting line for desktop */}
+          <div className="hidden md:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-emerald-500/30" />
+          
           {steps.map((step, index) => (
             <div
               key={index}
-              className={`relative group p-8 rounded-3xl bg-gradient-to-br ${step.gradient} border border-border/50 transition-all duration-300 hover:border-primary/50 hover:shadow-glow`}
+              className={`relative group p-8 rounded-3xl bg-gradient-to-br ${step.gradient} border ${step.borderColor} transition-all duration-300 hover:border-primary/50 hover:shadow-glow`}
             >
-              <div className="absolute top-4 right-4 text-6xl font-bold text-foreground/5">
-                {index + 1}
+              {/* Step number badge */}
+              <div className={`absolute -top-4 left-8 w-8 h-8 rounded-full bg-background border-2 ${step.borderColor} flex items-center justify-center`}>
+                <span className={`text-sm font-bold ${step.iconColor}`}>{step.step}</span>
               </div>
               
-              <div className={`inline-flex p-4 rounded-2xl bg-background/50 mb-6`}>
+              <div className="absolute top-4 right-4 text-6xl font-bold text-foreground/5">
+                {step.step}
+              </div>
+              
+              <div className={`inline-flex p-4 rounded-2xl bg-background/50 mb-6 mt-2`}>
                 <step.icon className={`w-8 h-8 ${step.iconColor}`} />
               </div>
 
@@ -98,6 +114,17 @@ const HowItWorks = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-12 text-center">
+          <p className="text-muted-foreground mb-4">Ready to explore? No login required to browse.</p>
+          <Button asChild size="lg">
+            <Link to="/browse">
+              Start Browsing
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>
