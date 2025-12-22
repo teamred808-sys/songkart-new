@@ -581,6 +581,168 @@ export type Database = {
         }
         Relationships: []
       }
+      license_documents: {
+        Row: {
+          buyer_id: string
+          buyer_name: string
+          created_at: string | null
+          document_hash: string
+          id: string
+          license_number: string
+          license_type: Database["public"]["Enums"]["license_type"]
+          metadata: Json | null
+          order_item_id: string | null
+          pdf_storage_path: string
+          price: number
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          seller_id: string
+          seller_name: string
+          song_id: string
+          song_title: string
+          status: string | null
+          template_id: string | null
+          template_version: number
+        }
+        Insert: {
+          buyer_id: string
+          buyer_name: string
+          created_at?: string | null
+          document_hash: string
+          id?: string
+          license_number: string
+          license_type: Database["public"]["Enums"]["license_type"]
+          metadata?: Json | null
+          order_item_id?: string | null
+          pdf_storage_path: string
+          price: number
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seller_id: string
+          seller_name: string
+          song_id: string
+          song_title: string
+          status?: string | null
+          template_id?: string | null
+          template_version: number
+        }
+        Update: {
+          buyer_id?: string
+          buyer_name?: string
+          created_at?: string | null
+          document_hash?: string
+          id?: string
+          license_number?: string
+          license_type?: Database["public"]["Enums"]["license_type"]
+          metadata?: Json | null
+          order_item_id?: string | null
+          pdf_storage_path?: string
+          price?: number
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seller_id?: string
+          seller_name?: string
+          song_id?: string
+          song_title?: string
+          status?: string | null
+          template_id?: string | null
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_documents_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_documents_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "license_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      license_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          governing_law: string | null
+          id: string
+          indemnification_clause: string
+          is_active: boolean | null
+          legal_clauses: Json
+          license_type: Database["public"]["Enums"]["license_type"]
+          ownership_clause: string
+          permitted_uses: string[]
+          platform_disclaimer: string
+          prohibited_uses: string[]
+          template_name: string
+          termination_conditions: string
+          updated_at: string | null
+          version: number
+          warranty_disclaimer: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          governing_law?: string | null
+          id?: string
+          indemnification_clause: string
+          is_active?: boolean | null
+          legal_clauses?: Json
+          license_type: Database["public"]["Enums"]["license_type"]
+          ownership_clause: string
+          permitted_uses?: string[]
+          platform_disclaimer: string
+          prohibited_uses?: string[]
+          template_name: string
+          termination_conditions: string
+          updated_at?: string | null
+          version?: number
+          warranty_disclaimer: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          governing_law?: string | null
+          id?: string
+          indemnification_clause?: string
+          is_active?: boolean | null
+          legal_clauses?: Json
+          license_type?: Database["public"]["Enums"]["license_type"]
+          ownership_clause?: string
+          permitted_uses?: string[]
+          platform_disclaimer?: string
+          prohibited_uses?: string[]
+          template_name?: string
+          termination_conditions?: string
+          updated_at?: string | null
+          version?: number
+          warranty_disclaimer?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_tiers: {
         Row: {
           created_at: string

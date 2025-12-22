@@ -1,10 +1,11 @@
 import { useOrders } from '@/hooks/useCheckout';
 import { useBuyerPurchases } from '@/hooks/useBuyerData';
+import { useDownloadLicense } from '@/hooks/useLicenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Music, Download, FileText, FileAudio, Lock } from 'lucide-react';
+import { Music, Download, FileText, FileAudio, Lock, ScrollText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 export default function MyDownloads() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   const { data: purchases, isLoading: purchasesLoading } = useBuyerPurchases();
+  const downloadLicense = useDownloadLicense();
 
   const isLoading = ordersLoading || purchasesLoading;
 
@@ -157,17 +159,16 @@ export default function MyDownloads() {
                   </Button>
                 )}
 
-                {/* License PDF */}
-                {item.license_pdf_url && (
+                {/* License PDF - Secure Download */}
+                {item.source === 'order' && (
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-2"
-                    asChild
+                    onClick={() => downloadLicense.mutate({ orderItemId: item.id })}
+                    disabled={downloadLicense.isPending}
                   >
-                    <a href={item.license_pdf_url} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4" />
-                      License Agreement
-                    </a>
+                    <ScrollText className="h-4 w-4" />
+                    {downloadLicense.isPending ? 'Loading...' : 'License Agreement'}
                   </Button>
                 )}
               </CardContent>
