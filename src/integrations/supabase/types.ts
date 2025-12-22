@@ -187,26 +187,71 @@ export type Database = {
           },
         ]
       }
+      buyer_carts: {
+        Row: {
+          buyer_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
+          base_price: number
           created_at: string
+          final_price: number
           id: string
+          is_exclusive: boolean | null
           license_tier_id: string
+          platform_commission: number
+          seller_id: string | null
           song_id: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          base_price?: number
           created_at?: string
+          final_price?: number
           id?: string
+          is_exclusive?: boolean | null
           license_tier_id: string
+          platform_commission?: number
+          seller_id?: string | null
           song_id: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          base_price?: number
           created_at?: string
+          final_price?: number
           id?: string
+          is_exclusive?: boolean | null
           license_tier_id?: string
+          platform_commission?: number
+          seller_id?: string | null
           song_id?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -225,6 +270,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      checkout_sessions: {
+        Row: {
+          acknowledgment_accepted: boolean | null
+          acknowledgment_timestamp: string | null
+          buyer_id: string
+          cart_snapshot: Json
+          cashfree_order_id: string | null
+          cashfree_payment_session_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          currency: string | null
+          expires_at: string | null
+          id: string
+          ip_address: string | null
+          platform_fee: number
+          status: string | null
+          subtotal: number
+          tax_amount: number | null
+          total_amount: number
+          user_agent: string | null
+        }
+        Insert: {
+          acknowledgment_accepted?: boolean | null
+          acknowledgment_timestamp?: string | null
+          buyer_id: string
+          cart_snapshot: Json
+          cashfree_order_id?: string | null
+          cashfree_payment_session_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          platform_fee: number
+          status?: string | null
+          subtotal: number
+          tax_amount?: number | null
+          total_amount: number
+          user_agent?: string | null
+        }
+        Update: {
+          acknowledgment_accepted?: boolean | null
+          acknowledgment_timestamp?: string | null
+          buyer_id?: string
+          cart_snapshot?: Json
+          cashfree_order_id?: string | null
+          cashfree_payment_session_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string | null
+          platform_fee?: number
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number | null
+          total_amount?: number
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       disputes: {
         Row: {
@@ -272,6 +380,105 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      download_access: {
+        Row: {
+          access_type: string | null
+          buyer_id: string
+          expires_at: string | null
+          granted_at: string | null
+          id: string
+          is_active: boolean | null
+          order_item_id: string
+          song_id: string
+        }
+        Insert: {
+          access_type?: string | null
+          buyer_id: string
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_item_id: string
+          song_id: string
+        }
+        Update: {
+          access_type?: string | null
+          buyer_id?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_item_id?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "download_access_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "download_access_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exclusive_reservations: {
+        Row: {
+          buyer_id: string
+          expires_at: string
+          id: string
+          license_tier_id: string | null
+          released_at: string | null
+          released_reason: string | null
+          reserved_at: string | null
+          song_id: string
+          status: string | null
+        }
+        Insert: {
+          buyer_id: string
+          expires_at: string
+          id?: string
+          license_tier_id?: string | null
+          released_at?: string | null
+          released_reason?: string | null
+          reserved_at?: string | null
+          song_id: string
+          status?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          expires_at?: string
+          id?: string
+          license_tier_id?: string | null
+          released_at?: string | null
+          released_reason?: string | null
+          reserved_at?: string | null
+          song_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exclusive_reservations_license_tier_id_fkey"
+            columns: ["license_tier_id"]
+            isOneToOne: false
+            referencedRelation: "license_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exclusive_reservations_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
         ]
@@ -438,6 +645,153 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      order_items: {
+        Row: {
+          commission_amount: number
+          commission_rate: number
+          created_at: string | null
+          download_count: number | null
+          id: string
+          is_exclusive: boolean | null
+          license_pdf_url: string | null
+          license_tier_id: string
+          license_type: string
+          max_downloads: number | null
+          order_id: string
+          price: number
+          seller_amount: number
+          seller_id: string
+          song_id: string
+          watermark_code: string | null
+        }
+        Insert: {
+          commission_amount: number
+          commission_rate: number
+          created_at?: string | null
+          download_count?: number | null
+          id?: string
+          is_exclusive?: boolean | null
+          license_pdf_url?: string | null
+          license_tier_id: string
+          license_type: string
+          max_downloads?: number | null
+          order_id: string
+          price: number
+          seller_amount: number
+          seller_id: string
+          song_id: string
+          watermark_code?: string | null
+        }
+        Update: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string | null
+          download_count?: number | null
+          id?: string
+          is_exclusive?: boolean | null
+          license_pdf_url?: string | null
+          license_tier_id?: string
+          license_type?: string
+          max_downloads?: number | null
+          order_id?: string
+          price?: number
+          seller_amount?: number
+          seller_id?: string
+          song_id?: string
+          watermark_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_license_tier_id_fkey"
+            columns: ["license_tier_id"]
+            isOneToOne: false
+            referencedRelation: "license_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          buyer_id: string
+          cashfree_order_id: string | null
+          cashfree_payment_id: string | null
+          checkout_session_id: string | null
+          created_at: string | null
+          currency: string | null
+          fulfilled_at: string | null
+          fulfillment_status: string | null
+          id: string
+          order_number: string
+          paid_at: string | null
+          payment_method: string | null
+          payment_status: string | null
+          platform_fee: number
+          subtotal: number
+          tax_amount: number | null
+          total_amount: number
+        }
+        Insert: {
+          buyer_id: string
+          cashfree_order_id?: string | null
+          cashfree_payment_id?: string | null
+          checkout_session_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          fulfilled_at?: string | null
+          fulfillment_status?: string | null
+          id?: string
+          order_number: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          platform_fee: number
+          subtotal: number
+          tax_amount?: number | null
+          total_amount: number
+        }
+        Update: {
+          buyer_id?: string
+          cashfree_order_id?: string | null
+          cashfree_payment_id?: string | null
+          checkout_session_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          fulfilled_at?: string | null
+          fulfillment_status?: string | null
+          id?: string
+          order_number?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          platform_fee?: number
+          subtotal?: number
+          tax_amount?: number | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_checkout_session_id_fkey"
+            columns: ["checkout_session_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       piracy_reports: {
         Row: {
@@ -845,6 +1199,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
