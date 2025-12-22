@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   Music, FileText, Play, Heart, Share2, ShoppingCart, 
-  Clock, Gauge, Globe, User, BadgeCheck, ChevronRight 
+  Clock, Gauge, Globe, User, BadgeCheck, ChevronRight, AlertTriangle, Loader2
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
@@ -13,17 +13,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSong, useLicenseTiers } from "@/hooks/useSongs";
+import { useValidatedAddToCart } from "@/hooks/useCheckout";
+import { useAuth } from "@/hooks/useAuth";
 import { LICENSE_TYPES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function SongDetail() {
   const { id } = useParams<{ id: string }>();
-  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
 
   const { data: song, isLoading: songLoading } = useSong(id!);
   const { data: licenseTiers, isLoading: tiersLoading } = useLicenseTiers(id!);
+  const addToCart = useValidatedAddToCart();
 
   const handlePlay = async () => {
     if (id) {
@@ -32,18 +36,18 @@ export default function SongDetail() {
   };
 
   const handleAddToCart = () => {
-    if (!selectedLicense) {
-      toast({
-        title: "Select a license",
-        description: "Please select a license tier before adding to cart.",
-        variant: "destructive",
-      });
+    if (!user) {
+      toast.error("Please sign in to add items to cart");
+      navigate("/auth");
       return;
     }
-    toast({
-      title: "Added to cart",
-      description: "Song has been added to your cart.",
-    });
+
+    if (!selectedLicense) {
+      toast.error("Please select a license tier before adding to cart");
+      return;
+    }
+
+    addToCart.mutate({ songId: id!, licenseTierId: selectedLicense });
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -269,19 +273,31 @@ export default function SongDetail() {
                   licenseTiers.map((tier) => {
                     const licenseInfo = LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES];
                     const isSelected = selectedLicense === tier.id;
+                    const isExclusive = tier.license_type === 'exclusive';
+                    const isSoldOut = tier.max_sales && tier.current_sales >= tier.max_sales;
                     
                     return (
                       <button
                         key={tier.id}
-                        onClick={() => setSelectedLicense(tier.id)}
+                        onClick={() => !isSoldOut && setSelectedLicense(tier.id)}
+                        disabled={isSoldOut}
                         className={`w-full p-4 rounded-lg border text-left transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border/50 bg-background/50 hover:border-primary/50"
+                          isSoldOut
+                            ? "opacity-50 cursor-not-allowed bg-muted"
+                            : isSelected
+                              ? "border-primary bg-primary/10"
+                              : "border-border/50 bg-background/50 hover:border-primary/50"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold">{licenseInfo?.label || tier.license_type}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{licenseInfo?.label || tier.license_type}</span>
+                            {isExclusive && (
+                              <Badge variant="default" className="bg-amber-500 text-xs">
+                                Exclusive
+                              </Badge>
+                            )}
+                          </div>
                           <span className="text-lg font-bold text-primary">
                             ₹{tier.price.toLocaleString()}
                           </span>
@@ -289,9 +305,18 @@ export default function SongDetail() {
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {tier.description || licenseInfo?.description}
                         </p>
+                        {isExclusive && !isSoldOut && (
+                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Full ownership - song removed from marketplace
+                          </p>
+                        )}
                         {tier.max_sales && (
-                          <p className="text-xs text-accent mt-1">
-                            {tier.max_sales - (tier.current_sales || 0)} of {tier.max_sales} remaining
+                          <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive' : 'text-accent'}`}>
+                            {isSoldOut 
+                              ? 'Sold out' 
+                              : `${tier.max_sales - (tier.current_sales || 0)} of ${tier.max_sales} remaining`
+                            }
                           </p>
                         )}
                       </button>
@@ -307,10 +332,14 @@ export default function SongDetail() {
                   className="w-full mt-4" 
                   size="lg"
                   onClick={handleAddToCart}
-                  disabled={!selectedLicense}
+                  disabled={!selectedLicense || addToCart.isPending}
                 >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
+                  {addToCart.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                  )}
+                  {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
                 </Button>
               </CardContent>
             </Card>
