@@ -187,7 +187,26 @@ serve(async (req) => {
       });
     }
 
+    // Validate payment_session_id exists
+    if (!cashfreeData.payment_session_id) {
+      console.error("Missing payment_session_id in Cashfree response:", cashfreeData);
+      return new Response(JSON.stringify({ error: "Payment session ID not received from gateway" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Construct the correct Cashfree checkout URL
+    const isProduction = CASHFREE_API_URL.includes("api.cashfree.com") && !CASHFREE_API_URL.includes("sandbox");
+    const baseCheckoutUrl = isProduction 
+      ? "https://payments.cashfree.com/pgbillpay" 
+      : "https://sandbox.cashfree.com/pgbillpay";
+    
+    const paymentUrl = `${baseCheckoutUrl}?payment_session_id=${cashfreeData.payment_session_id}`;
+
     console.log("Cashfree order created:", cashfreeData);
+    console.log("Generated payment URL:", paymentUrl);
+    console.log("Environment:", isProduction ? "PRODUCTION" : "SANDBOX");
 
     // Create checkout session
     const { data: checkoutSession, error: sessionError } = await supabase
@@ -221,7 +240,7 @@ serve(async (req) => {
       session_id: checkoutSession.id,
       cashfree_order_id: orderId,
       payment_session_id: cashfreeData.payment_session_id,
-      payment_url: cashfreeData.payment_link,
+      payment_url: paymentUrl,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
