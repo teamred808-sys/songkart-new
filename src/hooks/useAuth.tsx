@@ -19,7 +19,9 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  roles: AppRole[];
   isLoading: boolean;
+  isAdmin: boolean;
   signUp: (email: string, password: string, role: AppRole, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
@@ -48,15 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(profileData as Profile);
       }
 
-      // Fetch role
-      const { data: roleData } = await supabase
+      // Fetch all roles
+      const { data: rolesData } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
-      if (roleData) {
-        setRole(roleData.role as AppRole);
+      if (rolesData && rolesData.length > 0) {
+        const userRoles = rolesData.map(r => r.role as AppRole);
+        setRoles(userRoles);
+        // Set primary role (admin > seller > buyer)
+        if (userRoles.includes('admin')) {
+          setRole('admin');
+        } else if (userRoles.includes('seller')) {
+          setRole('seller');
+        } else {
+          setRole('buyer');
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -78,11 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setRoles([]);
         }
 
         if (event === 'SIGNED_OUT') {
           setProfile(null);
           setRole(null);
+          setRoles([]);
         }
       }
     );
@@ -141,6 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isAdmin = roles.includes('admin');
+
   return (
     <AuthContext.Provider
       value={{
@@ -148,7 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         role,
+        roles,
         isLoading,
+        isAdmin,
         signUp,
         signIn,
         signOut,

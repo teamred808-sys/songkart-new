@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Music, Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { Music, Search, ShoppingCart, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, profile, role, signOut } = useAuth();
+  const { user, profile, role, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -113,6 +113,14 @@ export function Navbar() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer text-destructive">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link to={getDashboardLink()} className="cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
@@ -196,6 +204,15 @@ export function Navbar() {
 
             {user ? (
               <>
+                {isAdmin && (
+                  <Link 
+                    to="/admin" 
+                    className="px-4 py-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Admin Panel
+                  </Link>
+                )}
                 <Link 
                   to={getDashboardLink()} 
                   className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
