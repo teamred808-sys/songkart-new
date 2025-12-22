@@ -138,11 +138,15 @@ export function MiniCartDropdown() {
                 <span className="text-sm text-muted-foreground">Subtotal</span>
                 <span className="font-semibold text-foreground">₹{cart.subtotal?.toLocaleString()}</span>
               </div>
-              <Button asChild className="w-full" size="sm">
-                <Link to="/buyer/cart" className="flex items-center justify-center gap-2">
+              <Button 
+                className="w-full" 
+                size="sm"
+                onClick={handleCartClick}
+              >
+                <span className="flex items-center justify-center gap-2">
                   View Cart
                   <ArrowRight className="h-4 w-4" />
-                </Link>
+                </span>
               </Button>
             </div>
           </>
