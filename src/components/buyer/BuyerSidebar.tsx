@@ -88,13 +88,13 @@ export function BuyerSidebar() {
           </NavLink>
         ))}
 
-        {/* Explore Homepage Link */}
+        {/* Visit Homepage Link */}
         <NavLink
           to="/"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300 group"
         >
-          <Home className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span>Explore Homepage</span>}
+          <Home className="h-5 w-5 flex-shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
+          {!collapsed && <span className="font-medium">Visit Homepage</span>}
         </NavLink>
 
         {/* Browse Store Link */}
