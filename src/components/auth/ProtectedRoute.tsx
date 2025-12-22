@@ -17,7 +17,7 @@ export function ProtectedRoute({
   allowedRoles,
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  const { user, role: userRole, isLoading } = useAuth();
+  const { user, roles, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -34,16 +34,17 @@ export function ProtectedRoute({
     return <Navigate to={redirectTo} replace />;
   }
 
-  // Check for multiple allowed roles
+  // Check for multiple allowed roles - user must have at least one matching role
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    const hasMatchingRole = roles.some(r => allowedRoles.includes(r));
+    if (!hasMatchingRole) {
       return <Navigate to="/" replace />;
     }
     return <>{children}</>;
   }
 
-  // Check for single role
-  if (role && userRole !== role) {
+  // Check for single role - user must have this role in their roles array
+  if (role && !roles.includes(role)) {
     return <Navigate to="/" replace />;
   }
 
