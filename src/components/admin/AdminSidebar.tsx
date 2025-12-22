@@ -106,16 +106,16 @@ export function AdminSidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-border space-y-2">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           className={cn(
-            "w-full justify-start text-muted-foreground hover:text-foreground",
+            "w-full justify-start gap-2 border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all duration-300 group",
             isCollapsed && "justify-center px-0"
           )}
           onClick={() => navigate('/')}
         >
-          <Home className="h-4 w-4" />
-          {!isCollapsed && <span className="ml-2">Explore Homepage</span>}
+          <Home className="h-4 w-4 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
+          {!isCollapsed && <span className="font-medium">Visit Homepage</span>}
         </Button>
         
         <Button
