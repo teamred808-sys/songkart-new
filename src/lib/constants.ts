@@ -27,6 +27,15 @@ export const LICENSE_INFO = {
   },
 } as const;
 
+// License types for components
+export const LICENSE_TYPES = {
+  personal: { label: 'Personal Use', description: 'For personal projects, demos, and non-commercial use' },
+  youtube: { label: 'YouTube/Streaming', description: 'For YouTube, Twitch, podcasts, and online content' },
+  commercial: { label: 'Commercial', description: 'For advertising, marketing, and commercial projects' },
+  film: { label: 'Film/TV', description: 'For films, TV shows, documentaries, and broadcasts' },
+  exclusive: { label: 'Exclusive Rights', description: 'Full ownership - song removed from marketplace after purchase' },
+} as const;
+
 // Song status display
 export const SONG_STATUS = {
   pending: { label: 'Pending Review', color: 'warning' },
