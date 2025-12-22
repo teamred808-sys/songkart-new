@@ -33,6 +33,7 @@ import SongModeration from "./pages/admin/SongModeration";
 import UserManagement from "./pages/admin/UserManagement";
 import TransactionManagement from "./pages/admin/TransactionManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
+import LicenseManagement from "./pages/admin/LicenseManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import DisputeManagement from "./pages/admin/DisputeManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="users" element={<UserManagement />} />
               <Route path="transactions" element={<TransactionManagement />} />
               <Route path="orders" element={<OrderManagement />} />
+              <Route path="licenses" element={<LicenseManagement />} />
               <Route path="withdrawals" element={<WithdrawalManagement />} />
               <Route path="disputes" element={<DisputeManagement />} />
               <Route path="analytics" element={<AdminAnalytics />} />
