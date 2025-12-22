@@ -57,7 +57,7 @@ const App = () => (
             
             {/* Buyer Dashboard Routes */}
             <Route path="/buyer" element={
-              <ProtectedRoute allowedRoles={['buyer', 'seller']}>
+              <ProtectedRoute allowedRoles={['buyer', 'seller', 'admin']}>
                 <BuyerLayout />
               </ProtectedRoute>
             }>
