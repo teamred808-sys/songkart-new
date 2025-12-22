@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Music } from "lucide-react";
+import { Music, Shield, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SongCard } from "@/components/songs/SongCard";
 import { SongFilters, type SongFiltersState } from "@/components/songs/SongFilters";
 import { useSongs, useGenres, useMoods } from "@/hooks/useSongs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 const initialFilters: SongFiltersState = {
   search: "",
@@ -18,6 +19,11 @@ const initialFilters: SongFiltersState = {
   sortBy: "newest",
 };
 
+const quickFilters = [
+  { label: "Audio Only", key: "hasAudio" },
+  { label: "Lyrics Only", key: "hasLyrics" },
+];
+
 export default function Browse() {
   const [filters, setFilters] = useState<SongFiltersState>(initialFilters);
   
@@ -25,17 +31,48 @@ export default function Browse() {
   const { data: genres = [] } = useGenres();
   const { data: moods = [] } = useMoods();
 
+  const toggleQuickFilter = (key: string) => {
+    setFilters(prev => ({ ...prev, [key]: !prev[key as keyof SongFiltersState] }));
+  };
+
   return (
     <MainLayout>
       <div className="container py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Browse <span className="text-gradient">Music</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Discover unique songs and lyrics from talented creators
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold">
+              Browse <span className="text-gradient">Music</span>
+            </h1>
+            <Badge variant="outline" className="gap-1 bg-primary/5">
+              <Shield className="h-3 w-3" />
+              Licensed Content
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mb-4">
+            Find legally licensed songs for your projects — preview free, buy instantly
           </p>
+          
+          {/* Quick filter chips */}
+          <div className="flex flex-wrap gap-2">
+            {quickFilters.map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => toggleQuickFilter(filter.key)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  filters[filter.key as keyof SongFiltersState]
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/30 text-sm text-muted-foreground">
+              <Sparkles className="h-3 w-3" />
+              Prices from ₹29
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -60,9 +97,11 @@ export default function Browse() {
             </div>
           ) : songs && songs.length > 0 ? (
             <>
-              <p className="text-sm text-muted-foreground mb-4">
-                {songs.length} song{songs.length !== 1 ? "s" : ""} found
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">
+                  {songs.length} song{songs.length !== 1 ? "s" : ""} found
+                </p>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                 {songs.map((song) => (
                   <SongCard

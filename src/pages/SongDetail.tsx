@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   Music, FileText, Play, Heart, Share2, ShoppingCart, 
-  Clock, Gauge, Globe, User, BadgeCheck, ChevronRight, AlertTriangle, Loader2
+  Clock, Gauge, Globe, User, BadgeCheck, ChevronRight, AlertTriangle, Loader2, Shield
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LicenseComparisonTable } from "@/components/songs/LicenseComparisonTable";
 import { useSong, useLicenseTiers } from "@/hooks/useSongs";
 import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
@@ -231,7 +232,15 @@ export default function SongDetail() {
             {/* Seller Card */}
             <Card className="bg-card/50 backdrop-blur border-border/50">
               <CardHeader>
-                <CardTitle className="text-lg">Seller</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Seller
+                  {song.seller?.is_verified && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      <Shield className="h-3 w-3" />
+                      Verified
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Link to={`/seller/${song.seller?.id}`} className="flex items-center gap-3 group">
@@ -255,8 +264,14 @@ export default function SongDetail() {
                     </p>
                   </div>
                 </Link>
+                <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
+                  This seller is verified by LyricLounge
+                </p>
               </CardContent>
             </Card>
+
+            {/* License Comparison */}
+            <LicenseComparisonTable />
 
             {/* License Tiers */}
             <Card className="bg-card/50 backdrop-blur border-border/50">

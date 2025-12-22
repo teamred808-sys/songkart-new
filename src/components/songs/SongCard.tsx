@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Music, FileText, Play, Heart } from "lucide-react";
+import { Music, FileText, Play, Heart, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ interface SongCardProps {
   hasLyrics?: boolean;
   playCount?: number;
   className?: string;
+  hasExclusive?: boolean;
 }
 
 export function SongCard({
@@ -31,6 +32,7 @@ export function SongCard({
   hasLyrics,
   playCount = 0,
   className,
+  hasExclusive,
 }: SongCardProps) {
   return (
     <Link to={`/song/${id}`}>
@@ -59,17 +61,25 @@ export function SongCard({
           </div>
 
           {/* Content type badges */}
-          <div className="absolute top-2 right-2 flex gap-1">
-            {hasAudio && (
-              <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
-                <Music className="h-3 w-3 mr-1" />
-                Audio
-              </Badge>
-            )}
-            {hasLyrics && (
-              <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
-                <FileText className="h-3 w-3 mr-1" />
-                Lyrics
+          <div className="absolute top-2 left-2 right-2 flex justify-between">
+            <div className="flex gap-1">
+              {hasAudio && (
+                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
+                  <Music className="h-3 w-3 mr-1" />
+                  Audio
+                </Badge>
+              )}
+              {hasLyrics && (
+                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Lyrics
+                </Badge>
+              )}
+            </div>
+            {hasExclusive && (
+              <Badge className="bg-amber-500/90 backdrop-blur text-xs">
+                <Star className="h-3 w-3 mr-1" />
+                Exclusive
               </Badge>
             )}
           </div>
@@ -83,7 +93,7 @@ export function SongCard({
               </h3>
               <p className="text-sm text-muted-foreground truncate">{sellerName}</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.preventDefault()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
               <Heart className="h-4 w-4" />
             </Button>
           </div>
@@ -102,9 +112,12 @@ export function SongCard({
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
-            <span className="text-lg font-bold text-primary">
-              ₹{basePrice.toLocaleString()}
-            </span>
+            <div>
+              <span className="text-xs text-muted-foreground">Starting from</span>
+              <p className="text-lg font-bold text-primary">
+                ₹{basePrice.toLocaleString()}
+              </p>
+            </div>
             {playCount > 0 && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Play className="h-3 w-3" />

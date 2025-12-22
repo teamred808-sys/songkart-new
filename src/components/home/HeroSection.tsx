@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Music, Mic2, Sparkles } from "lucide-react";
+import { Music, Mic2, Sparkles, Shield, CheckCircle, TrendingUp } from "lucide-react";
+
+const stats = [
+  { label: "Songs", value: "10K+", icon: Music },
+  { label: "Artists", value: "5K+", icon: Mic2 },
+  { label: "Downloads", value: "50K+", icon: TrendingUp },
+];
 
 const HeroSection = () => {
   return (
@@ -49,12 +55,28 @@ const HeroSection = () => {
             </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8">
             The premier marketplace for buying and selling original songs, lyrics, and compositions. 
             Find the perfect sound for your next project.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {/* Trust badges row */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/50 border border-border/50 backdrop-blur">
+              <Shield className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Secure Payments</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/50 border border-border/50 backdrop-blur">
+              <CheckCircle className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Licensed Content</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/50 border border-border/50 backdrop-blur">
+              <Mic2 className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Verified Artists</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Button asChild size="lg" className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-glow">
               <Link to="/browse">
                 <Music className="mr-2 h-5 w-5" />
@@ -69,19 +91,21 @@ const HeroSection = () => {
             </Button>
           </div>
 
-          <div className="mt-16 flex items-center justify-center gap-8 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-sm">Secure Transactions</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-sm">Licensed Content</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-sm">Verified Sellers</span>
-            </div>
+          {/* Animated stats */}
+          <div className="flex items-center justify-center gap-8 md:gap-12">
+            {stats.map((stat, index) => (
+              <div 
+                key={index}
+                className="flex flex-col items-center gap-1 animate-fade-in"
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+              >
+                <div className="flex items-center gap-2">
+                  <stat.icon className="w-5 h-5 text-primary" />
+                  <span className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
