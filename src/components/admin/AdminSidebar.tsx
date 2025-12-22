@@ -10,14 +10,14 @@ import {
   BarChart3,
   Star,
   Settings,
-  ScrollText,
   ChevronLeft,
   ChevronRight,
   LogOut,
   Shield,
   Package,
   FileText,
-  ClipboardList
+  ClipboardList,
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -114,8 +114,8 @@ export function AdminSidebar() {
           )}
           onClick={() => navigate('/')}
         >
-          <LayoutDashboard className="h-4 w-4" />
-          {!isCollapsed && <span className="ml-2">Back to Site</span>}
+          <Home className="h-4 w-4" />
+          {!isCollapsed && <span className="ml-2">Explore Homepage</span>}
         </Button>
         
         <Button

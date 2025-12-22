@@ -112,7 +112,7 @@ export function SellerSidebar() {
           )}
         >
           <Home className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span className="font-medium">Back to Store</span>}
+          {!collapsed && <span className="font-medium">Explore Homepage</span>}
         </NavLink>
         
         {!collapsed && profile && (

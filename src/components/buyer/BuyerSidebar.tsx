@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Store,
   ArrowLeftRight,
-  LogOut
+  LogOut,
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,15 @@ export function BuyerSidebar() {
             {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
+
+        {/* Explore Homepage Link */}
+        <NavLink
+          to="/"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Home className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && <span>Explore Homepage</span>}
+        </NavLink>
 
         {/* Browse Store Link */}
         <NavLink
