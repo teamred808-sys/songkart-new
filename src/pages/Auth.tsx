@@ -76,7 +76,7 @@ export default function Auth() {
           <div className="bg-gradient-to-r from-primary to-accent p-3 rounded-xl">
             <Music className="h-6 w-6 text-primary-foreground" />
           </div>
-          <span className="font-display text-2xl font-bold gradient-text">LyricLounge</span>
+          <span className="font-display text-2xl font-bold gradient-text">SongKart</span>
         </Link>
 
         {/* Auth Card */}

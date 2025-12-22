@@ -43,7 +43,7 @@ export default function SellerDashboard() {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold mb-1">🎉 Welcome to LyricLounge!</h3>
+                <h3 className="text-lg font-semibold mb-1">🎉 Welcome to SongKart!</h3>
                 <p className="text-muted-foreground text-sm">
                   Start by uploading your first song. Complete your profile to build trust with buyers.
                 </p>

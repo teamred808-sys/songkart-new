@@ -46,7 +46,7 @@ export function Navbar() {
               </div>
             </div>
             <span className="font-display text-xl font-bold gradient-text">
-              LyricLounge
+              SongKart
             </span>
           </Link>
 
