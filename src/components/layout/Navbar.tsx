@@ -26,7 +26,7 @@ export function Navbar() {
   const getDashboardLink = () => {
     if (role === 'admin') return '/admin';
     if (role === 'seller') return '/seller';
-    return '/dashboard';
+    return '/buyer';
   };
 
   return (
@@ -84,7 +84,7 @@ export function Navbar() {
 
             {user && (
               <Button variant="ghost" size="icon" asChild>
-                <Link to="/cart">
+                <Link to="/buyer/cart">
                   <ShoppingCart className="h-5 w-5" />
                 </Link>
               </Button>
@@ -221,7 +221,7 @@ export function Navbar() {
                   Dashboard
                 </Link>
                 <Link 
-                  to="/cart" 
+                  to="/buyer/cart" 
                   className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
