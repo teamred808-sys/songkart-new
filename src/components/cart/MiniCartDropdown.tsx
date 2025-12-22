@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Music, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Music, ArrowRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,16 +9,23 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import { useCartWithTotals } from '@/hooks/useCheckout';
+import { useCartWithTotals, useRemoveFromCartWithReservation } from '@/hooks/useCheckout';
 import { useCartCount } from '@/hooks/useCartCount';
 
 export function MiniCartDropdown() {
   const { data: cartCount = 0 } = useCartCount();
   const { data: cart, isLoading } = useCartWithTotals();
+  const removeFromCart = useRemoveFromCartWithReservation();
   const navigate = useNavigate();
 
   const handleCartClick = () => {
     navigate('/buyer/cart');
+  };
+
+  const handleRemoveItem = (e: React.MouseEvent, itemId: string, songId: string, isExclusive: boolean) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeFromCart.mutate({ cartItemId: itemId, songId, isExclusive });
   };
 
   return (
@@ -68,40 +75,51 @@ export function MiniCartDropdown() {
               <div className="p-2">
                 {cart.items.slice(0, 4).map((item, index) => (
                   <div key={item.id}>
-                    <Link 
-                      to={`/songs/${item.song_id}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      {item.songs?.cover_image_url ? (
-                        <img 
-                          src={item.songs.cover_image_url} 
-                          alt={item.songs?.title || 'Song'}
-                          className="h-12 w-12 rounded-md object-cover"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                          <Music className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {item.songs?.title || 'Unknown Song'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {item.license_tiers?.license_type}
-                          </Badge>
-                          {item.is_exclusive && (
-                            <Badge variant="destructive" className="text-xs">
-                              Exclusive
+                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors group">
+                      <Link 
+                        to={`/songs/${item.song_id}`}
+                        className="flex items-center gap-3 flex-1 min-w-0"
+                      >
+                        {item.songs?.cover_image_url ? (
+                          <img 
+                            src={item.songs.cover_image_url} 
+                            alt={item.songs?.title || 'Song'}
+                            className="h-12 w-12 rounded-md object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <Music className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {item.songs?.title || 'Unknown Song'}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {item.license_tiers?.license_type}
                             </Badge>
-                          )}
+                            {item.is_exclusive && (
+                              <Badge variant="destructive" className="text-xs">
+                                Exclusive
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <span className="text-sm font-semibold text-foreground">
+                      </Link>
+                      <span className="text-sm font-semibold text-foreground flex-shrink-0">
                         ₹{item.price?.toLocaleString()}
                       </span>
-                    </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={(e) => handleRemoveItem(e, item.id, item.song_id, item.is_exclusive || false)}
+                        disabled={removeFromCart.isPending}
+                      >
+                        <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      </Button>
+                    </div>
                     {index < Math.min(cart.items.length, 4) - 1 && (
                       <Separator className="my-1" />
                     )}
