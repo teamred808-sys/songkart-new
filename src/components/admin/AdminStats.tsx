@@ -6,6 +6,12 @@ import { Users, Music, Clock, DollarSign, Wallet, AlertTriangle, TrendingUp, Per
 export function AdminStats() {
   const { data: stats, isLoading } = useAdminStats();
 
+  // Calculate conversion rate based on total revenue vs total views
+  // For simplicity, using total songs vs completed transactions ratio
+  const conversionRate = stats?.totalSongs && stats.totalSongs > 0
+    ? ((stats.completedTransactions || 0) / stats.totalSongs * 100).toFixed(1)
+    : '0.0';
+
   const statCards = [
     {
       title: 'Total Users',
@@ -59,7 +65,8 @@ export function AdminStats() {
     },
     {
       title: 'Conversion Rate',
-      value: '12.5%',
+      value: `${conversionRate}%`,
+      subValue: `${stats?.completedTransactions || 0} sales`,
       icon: TrendingUp,
       color: 'text-cyan-500',
       bgColor: 'bg-cyan-500/10'

@@ -18,7 +18,7 @@ export function useAdminStats() {
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('songs').select('id', { count: 'exact', head: true }),
         supabase.from('songs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('transactions').select('amount, commission_amount').eq('payment_status', 'completed'),
+        supabase.from('transactions').select('amount, commission_amount', { count: 'exact' }).eq('payment_status', 'completed'),
         supabase.from('withdrawal_requests').select('id, amount', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('disputes').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_review'])
       ]);
@@ -35,7 +35,8 @@ export function useAdminStats() {
         commissionEarnings,
         pendingWithdrawals: withdrawalsResult.count || 0,
         pendingWithdrawalAmount,
-        activeDisputes: disputesResult.count || 0
+        activeDisputes: disputesResult.count || 0,
+        completedTransactions: transactionsResult.count || 0
       };
     }
   });
@@ -46,29 +47,48 @@ export function useAllUsers(filters?: { role?: 'admin' | 'seller' | 'buyer'; sta
   return useQuery({
     queryKey: ['admin-users', filters],
     queryFn: async () => {
-      let query = supabase
+      // First get all profiles
+      let profileQuery = supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles!inner(role)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (filters?.role) {
-        query = query.eq('user_roles.role', filters.role);
-      }
-
       if (filters?.status) {
-        query = query.eq('account_status', filters.status);
+        profileQuery = profileQuery.eq('account_status', filters.status);
       }
 
       if (filters?.search) {
-        query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+        profileQuery = profileQuery.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      const { data: profiles, error: profilesError } = await profileQuery;
+      if (profilesError) throw profilesError;
+      
+      if (!profiles || profiles.length === 0) return [];
+
+      // Fetch user roles separately
+      const userIds = profiles.map(p => p.id);
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
+
+      if (rolesError) throw rolesError;
+
+      // Combine profiles with roles
+      const usersWithRoles = profiles.map(profile => ({
+        ...profile,
+        user_roles: roles?.filter(r => r.user_id === profile.id) || []
+      }));
+
+      // Filter by role if specified
+      if (filters?.role) {
+        return usersWithRoles.filter(user => 
+          user.user_roles.some(r => r.role === filters.role)
+        );
+      }
+
+      return usersWithRoles;
     }
   });
 }
@@ -174,8 +194,8 @@ export function useAllTransactions(filters?: { status?: string; dateFrom?: strin
         .from('transactions')
         .select(`
           *,
-          buyer:buyer_id(full_name, email),
-          seller:seller_id(full_name, email),
+          buyer:profiles!transactions_buyer_id_profiles_fkey(full_name, email),
+          seller:profiles!transactions_seller_id_profiles_fkey(full_name, email),
           songs:song_id(title, cover_image_url),
           license_tiers:license_tier_id(license_type, price)
         `)
@@ -209,7 +229,7 @@ export function useAllWithdrawals(filters?: { status?: 'pending' | 'approved' | 
         .from('withdrawal_requests')
         .select(`
           *,
-          profiles:user_id(full_name, email, kyc_status, is_verified)
+          profiles:profiles!withdrawal_requests_user_id_profiles_fkey(full_name, email, kyc_status, is_verified)
         `)
         .order('created_at', { ascending: false });
 
@@ -233,8 +253,8 @@ export function useAllDisputes(filters?: { status?: 'open' | 'in_review' | 'reso
         .from('disputes')
         .select(`
           *,
-          raised_by_profile:raised_by(full_name, email),
-          against_profile:against(full_name, email),
+          raised_by_profile:profiles!disputes_raised_by_profiles_fkey(full_name, email),
+          against_profile:profiles!disputes_against_profiles_fkey(full_name, email),
           transactions:transaction_id(amount, song_id)
         `)
         .order('created_at', { ascending: false });
@@ -259,7 +279,7 @@ export function useActivityLogs(filters?: { action?: string; entityType?: string
         .from('activity_logs')
         .select(`
           *,
-          profiles:user_id(full_name, email, avatar_url)
+          profiles:profiles!activity_logs_user_id_profiles_fkey(full_name, email, avatar_url)
         `)
         .order('created_at', { ascending: false })
         .limit(filters?.limit || 100);

@@ -87,7 +87,15 @@ export type Database = {
           metadata?: Json | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audio_sessions: {
         Row: {
@@ -375,6 +383,20 @@ export type Database = {
           transaction_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "disputes_against_profiles_fkey"
+            columns: ["against"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_raised_by_profiles_fkey"
+            columns: ["raised_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "disputes_transaction_id_fkey"
             columns: ["transaction_id"]
@@ -1288,10 +1310,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "transactions_buyer_id_profiles_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_license_tier_id_fkey"
             columns: ["license_tier_id"]
             isOneToOne: false
             referencedRelation: "license_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_seller_id_profiles_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1361,7 +1397,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
