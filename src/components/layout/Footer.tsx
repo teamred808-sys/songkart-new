@@ -13,7 +13,7 @@ export function Footer() {
                 <Music className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-bold gradient-text">
-                LyricLounge
+                SongKart
               </span>
             </Link>
             <p className="text-muted-foreground text-sm">
@@ -119,7 +119,7 @@ export function Footer() {
 
         <div className="border-t border-border mt-8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} LyricLounge. All rights reserved.
+            © {new Date().getFullYear()} SongKart. All rights reserved.
           </p>
           <p className="text-muted-foreground text-sm">
             Made with ♪ for musicians and creators worldwide

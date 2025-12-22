@@ -265,7 +265,7 @@ export default function SongDetail() {
                   </div>
                 </Link>
                 <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
-                  This seller is verified by LyricLounge
+                  This seller is verified by SongKart
                 </p>
               </CardContent>
             </Card>
