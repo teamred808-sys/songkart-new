@@ -41,8 +41,9 @@ export function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
-            <span className="font-display text-xl font-bold gradient-text">
-              SongKart
+            <span className="font-display text-xl text-white tracking-tight">
+              <span className="font-extrabold">SONG</span>
+              <span className="font-normal">KART</span>
             </span>
           </Link>
 
