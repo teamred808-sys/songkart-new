@@ -75,7 +75,10 @@ export default function Auth() {
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
           <img src={songkartLogo} alt="SongKart" className="h-16 w-16 object-contain" />
-          <span className="font-display text-2xl font-bold gradient-text">SongKart</span>
+          <span className="font-display text-2xl text-white tracking-tight">
+            <span className="font-extrabold">SONG</span>
+            <span className="font-normal">KART</span>
+          </span>
         </Link>
 
         {/* Auth Card */}
