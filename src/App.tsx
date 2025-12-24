@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Browse from "./pages/Browse";
 import SongDetail from "./pages/SongDetail";
+import Sellers from "./pages/Sellers";
 import NotFound from "./pages/NotFound";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 import MySongs from "./pages/seller/MySongs";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/browse" element={<Browse />} />
+            <Route path="/sellers" element={<Sellers />} />
             <Route path="/song/:id" element={<SongDetail />} />
             
             {/* Buyer Dashboard Routes */}
