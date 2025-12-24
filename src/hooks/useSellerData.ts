@@ -346,3 +346,24 @@ export function useMoods() {
     },
   });
 }
+
+export function useUpdateSellerDynamicPricing() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ dynamic_pricing_enabled: enabled })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seller-stats'] });
+    },
+  });
+}

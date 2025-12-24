@@ -1452,6 +1452,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          dynamic_pricing_enabled: boolean
           email: string
           fraud_flags: Json | null
           full_name: string | null
@@ -1471,6 +1472,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          dynamic_pricing_enabled?: boolean
           email: string
           fraud_flags?: Json | null
           full_name?: string | null
@@ -1490,6 +1492,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          dynamic_pricing_enabled?: boolean
           email?: string
           fraud_flags?: Json | null
           full_name?: string | null
