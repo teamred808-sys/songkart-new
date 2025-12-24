@@ -124,6 +124,9 @@ const App = () => (
               <Route path="content/:id/edit" element={<ContentEditor />} />
             </Route>
             
+            {/* Public CMS Pages */}
+            <Route path="/:slug" element={<ContentPage />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
