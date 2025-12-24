@@ -3,8 +3,9 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SellerTierBadge } from './SellerTierBadge';
 import { useSellerTier } from '@/hooks/useSellerTier';
-import { TrendingUp, Lock, IndianRupee } from 'lucide-react';
+import { TrendingUp, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface SellerTierCardProps {
   className?: string;
@@ -12,6 +13,7 @@ interface SellerTierCardProps {
 
 export function SellerTierCard({ className }: SellerTierCardProps) {
   const { data: tierInfo, isLoading } = useSellerTier();
+  const { formatPrice, currencySymbol } = useCurrency();
 
   if (isLoading) {
     return (
@@ -36,9 +38,9 @@ export function SellerTierCard({ className }: SellerTierCardProps) {
     ? Math.min(100, (tierInfo.lifetime_sales / tierInfo.next_tier_threshold) * 100)
     : 100;
 
-  const formatCurrency = (amount: number | null) => {
+  const formatCurrencyLimit = (amount: number | null) => {
     if (amount === null) return 'No limit';
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return formatPrice(amount);
   };
 
   return (
@@ -73,11 +75,11 @@ export function SellerTierCard({ className }: SellerTierCardProps) {
         {/* Lifetime Sales */}
         <div className="bg-muted/50 rounded-lg p-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <IndianRupee className="h-4 w-4" />
+            <span className="text-sm font-medium">{currencySymbol}</span>
             <span>Lifetime Sales</span>
           </div>
           <p className="text-2xl font-bold">
-            ₹{tierInfo.lifetime_sales.toLocaleString('en-IN')}
+            {formatPrice(tierInfo.lifetime_sales)}
           </p>
         </div>
 
@@ -90,7 +92,7 @@ export function SellerTierCard({ className }: SellerTierCardProps) {
             </div>
             <Progress value={progressPercentage} className="h-2" />
             <p className="text-xs text-muted-foreground">
-              ₹{tierInfo.amount_to_next_tier.toLocaleString('en-IN')} more to unlock{' '}
+              {formatPrice(tierInfo.amount_to_next_tier)} more to unlock{' '}
               <span className="text-primary font-medium">
                 {tierInfo.tier_level === 1 && 'Rising Artist'}
                 {tierInfo.tier_level === 2 && 'Pro Artist'}
@@ -114,13 +116,13 @@ export function SellerTierCard({ className }: SellerTierCardProps) {
             <div className="bg-muted/30 rounded-lg p-3">
               <p className="text-xs text-muted-foreground mb-1">Lyrics Only</p>
               <p className="font-semibold text-sm">
-                {formatCurrency(tierInfo.max_price_lyrics_only)}
+                {formatCurrencyLimit(tierInfo.max_price_lyrics_only)}
               </p>
             </div>
             <div className="bg-muted/30 rounded-lg p-3">
               <p className="text-xs text-muted-foreground mb-1">With Audio</p>
               <p className="font-semibold text-sm">
-                {formatCurrency(tierInfo.max_price_with_audio)}
+                {formatCurrencyLimit(tierInfo.max_price_with_audio)}
               </p>
             </div>
           </div>

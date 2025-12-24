@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface EarningsChartProps {
   data: { month: string; amount: number }[] | undefined;
@@ -8,6 +9,8 @@ interface EarningsChartProps {
 }
 
 export function EarningsChart({ data, isLoading }: EarningsChartProps) {
+  const { currencySymbol, formatPrice } = useCurrency();
+
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
@@ -20,6 +23,7 @@ export function EarningsChart({ data, isLoading }: EarningsChartProps) {
       </Card>
     );
   }
+
 
   return (
     <Card className="bg-card border-border">
@@ -45,7 +49,7 @@ export function EarningsChart({ data, isLoading }: EarningsChartProps) {
               <YAxis 
                 stroke="hsl(240, 5%, 55%)"
                 fontSize={12}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `${currencySymbol}${value}`}
               />
               <Tooltip 
                 contentStyle={{
@@ -54,7 +58,7 @@ export function EarningsChart({ data, isLoading }: EarningsChartProps) {
                   borderRadius: '8px',
                 }}
                 labelStyle={{ color: 'hsl(0, 0%, 98%)' }}
-                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Earnings']}
+                formatter={(value: number) => [formatPrice(value), 'Earnings']}
               />
               <Area
                 type="monotone"
