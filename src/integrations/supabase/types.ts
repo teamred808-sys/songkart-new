@@ -352,6 +352,8 @@ export type Database = {
         Row: {
           acknowledgment_accepted: boolean | null
           acknowledgment_timestamp: string | null
+          buyer_country_code: string | null
+          buyer_currency_code: string | null
           buyer_id: string
           cart_snapshot: Json
           cashfree_order_id: string | null
@@ -359,10 +361,12 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           currency: string | null
+          exchange_rate_used: number | null
           expires_at: string | null
           id: string
           ip_address: string | null
           platform_fee: number
+          pricing_zone_id: string | null
           status: string | null
           subtotal: number
           tax_amount: number | null
@@ -372,6 +376,8 @@ export type Database = {
         Insert: {
           acknowledgment_accepted?: boolean | null
           acknowledgment_timestamp?: string | null
+          buyer_country_code?: string | null
+          buyer_currency_code?: string | null
           buyer_id: string
           cart_snapshot: Json
           cashfree_order_id?: string | null
@@ -379,10 +385,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           currency?: string | null
+          exchange_rate_used?: number | null
           expires_at?: string | null
           id?: string
           ip_address?: string | null
           platform_fee: number
+          pricing_zone_id?: string | null
           status?: string | null
           subtotal: number
           tax_amount?: number | null
@@ -392,6 +400,8 @@ export type Database = {
         Update: {
           acknowledgment_accepted?: boolean | null
           acknowledgment_timestamp?: string | null
+          buyer_country_code?: string | null
+          buyer_currency_code?: string | null
           buyer_id?: string
           cart_snapshot?: Json
           cashfree_order_id?: string | null
@@ -399,17 +409,27 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           currency?: string | null
+          exchange_rate_used?: number | null
           expires_at?: string | null
           id?: string
           ip_address?: string | null
           platform_fee?: number
+          pricing_zone_id?: string | null
           status?: string | null
           subtotal?: number
           tax_amount?: number | null
           total_amount?: number
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "checkout_sessions_pricing_zone_id_fkey"
+            columns: ["pricing_zone_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_zones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cms_content: {
         Row: {
@@ -543,6 +563,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      currency_exchange_rates: {
+        Row: {
+          currency_code: string
+          currency_name: string
+          currency_symbol: string
+          id: string
+          is_active: boolean | null
+          last_updated: string | null
+          rate_from_inr: number
+        }
+        Insert: {
+          currency_code: string
+          currency_name: string
+          currency_symbol: string
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string | null
+          rate_from_inr: number
+        }
+        Update: {
+          currency_code?: string
+          currency_name?: string
+          currency_symbol?: string
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string | null
+          rate_from_inr?: number
+        }
+        Relationships: []
       }
       disputes: {
         Row: {
@@ -1111,6 +1161,75 @@ export type Database = {
           },
         ]
       }
+      order_pricing_snapshots: {
+        Row: {
+          base_price_inr: number
+          buyer_country_code: string
+          buyer_currency_code: string
+          calculated_price_inr: number
+          created_at: string | null
+          detection_method: string
+          exchange_rate_used: number
+          final_price_buyer_currency: number
+          final_price_inr: number
+          id: string
+          order_id: string
+          order_item_id: string
+          tier_max_price: number | null
+          zone_code: string
+          zone_multiplier: number
+        }
+        Insert: {
+          base_price_inr: number
+          buyer_country_code: string
+          buyer_currency_code: string
+          calculated_price_inr: number
+          created_at?: string | null
+          detection_method: string
+          exchange_rate_used: number
+          final_price_buyer_currency: number
+          final_price_inr: number
+          id?: string
+          order_id: string
+          order_item_id: string
+          tier_max_price?: number | null
+          zone_code: string
+          zone_multiplier: number
+        }
+        Update: {
+          base_price_inr?: number
+          buyer_country_code?: string
+          buyer_currency_code?: string
+          calculated_price_inr?: number
+          created_at?: string | null
+          detection_method?: string
+          exchange_rate_used?: number
+          final_price_buyer_currency?: number
+          final_price_inr?: number
+          id?: string
+          order_id?: string
+          order_item_id?: string
+          tier_max_price?: number | null
+          zone_code?: string
+          zone_multiplier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_pricing_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_pricing_snapshots_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           buyer_id: string
@@ -1253,6 +1372,77 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      pricing_zone_countries: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string | null
+          currency_code: string
+          id: string
+          is_active: boolean | null
+          zone_id: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string | null
+          currency_code: string
+          id?: string
+          is_active?: boolean | null
+          zone_id: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string | null
+          currency_code?: string
+          id?: string
+          is_active?: boolean | null
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_zone_countries_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_zones: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          multiplier: number
+          updated_at: string | null
+          zone_code: string
+          zone_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          multiplier?: number
+          updated_at?: string | null
+          zone_code: string
+          zone_name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          multiplier?: number
+          updated_at?: string | null
+          zone_code?: string
+          zone_name?: string
         }
         Relationships: []
       }
@@ -1918,11 +2108,44 @@ export type Database = {
         Args: { p_seller_id: string }
         Returns: undefined
       }
+      calculate_dynamic_price: {
+        Args: {
+          p_base_price_inr: number
+          p_country_code: string
+          p_has_audio: boolean
+          p_seller_id: string
+        }
+        Returns: {
+          base_price_inr: number
+          buyer_currency_code: string
+          calculated_price_inr: number
+          exchange_rate: number
+          final_price_buyer_currency: number
+          final_price_inr: number
+          is_capped_by_tier: boolean
+          is_dynamic_pricing_enabled: boolean
+          tier_max_price: number
+          zone_code: string
+          zone_multiplier: number
+        }[]
+      }
       check_self_purchase: {
         Args: { p_buyer_id: string; p_song_id: string }
         Returns: Json
       }
       generate_order_number: { Args: never; Returns: string }
+      get_country_pricing: {
+        Args: { p_country_code: string }
+        Returns: {
+          currency_code: string
+          currency_symbol: string
+          exchange_rate: number
+          is_dynamic_pricing_enabled: boolean
+          multiplier: number
+          zone_code: string
+          zone_name: string
+        }[]
+      }
       get_seller_tier: {
         Args: { p_seller_id: string }
         Returns: {

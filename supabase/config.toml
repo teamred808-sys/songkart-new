@@ -29,3 +29,15 @@ verify_jwt = true
 
 [functions.admin-review-content]
 verify_jwt = true
+
+[functions.detect-buyer-country]
+verify_jwt = false
+
+[functions.download-license]
+verify_jwt = true
+
+[functions.generate-license-pdf]
+verify_jwt = true
+
+[functions.revoke-license]
+verify_jwt = true
