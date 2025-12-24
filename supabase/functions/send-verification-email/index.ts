@@ -135,7 +135,7 @@ serve(async (req: Request) => {
 
     // Send the email
     const emailResponse = await resend.emails.send({
-      from: "SongKart <onboarding@resend.dev>",
+      from: "SongKart <noreply@songkart.com>",
       to: [profile.email],
       subject: "Verify your SongKart seller account",
       html: `
