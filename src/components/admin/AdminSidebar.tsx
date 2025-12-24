@@ -28,11 +28,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
+  { icon: FileText, label: 'Content', path: '/admin/content' },
   { icon: Music, label: 'Song Moderation', path: '/admin/songs' },
   { icon: Users, label: 'User Management', path: '/admin/users' },
   { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },
-  { icon: FileText, label: 'Licenses', path: '/admin/licenses' },
   { icon: Wallet, label: 'Withdrawals', path: '/admin/withdrawals' },
   { icon: AlertTriangle, label: 'Disputes', path: '/admin/disputes' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },

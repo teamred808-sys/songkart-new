@@ -45,6 +45,9 @@ import PlatformSettings from "./pages/admin/PlatformSettings";
 import ActivityLogs from "./pages/admin/ActivityLogs";
 import BugReports from "./pages/admin/BugReports";
 import SystemMonitoring from "./pages/admin/SystemMonitoring";
+import ContentManagement from "./pages/admin/ContentManagement";
+import ContentEditor from "./pages/admin/ContentEditor";
+import ContentPage from "./pages/ContentPage";
 
 const queryClient = new QueryClient();
 
