@@ -119,7 +119,7 @@ export default function Sellers() {
               {filteredSellers.map((seller) => (
                 <Link
                   key={seller.id}
-                  to={`/browse?seller=${seller.id}`}
+                  to={`/seller/${seller.id}`}
                   className="bg-card hover:bg-card/80 rounded-xl p-6 border border-border transition-all hover:border-primary/50 hover:shadow-lg group"
                 >
                   <div className="flex flex-col items-center text-center">
