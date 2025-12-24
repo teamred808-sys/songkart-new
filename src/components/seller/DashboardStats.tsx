@@ -2,7 +2,6 @@ import {
   Upload, 
   CheckCircle, 
   ShoppingCart, 
-  DollarSign, 
   Wallet, 
   Clock,
   TrendingUp,
@@ -78,8 +77,8 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
                   <span>Lifetime earnings</span>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-emerald-500/20">
-                <DollarSign className="h-6 w-6 text-emerald-500" />
+              <div className="p-3 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                <span className="text-xl font-bold text-emerald-500">{currencySymbol}</span>
               </div>
             </div>
           </CardContent>

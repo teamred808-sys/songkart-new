@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SellerTransaction } from '@/hooks/useSellerData';
 import { formatDistanceToNow } from 'date-fns';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface RecentSalesProps {
   transactions: SellerTransaction[] | undefined;
@@ -12,6 +13,7 @@ interface RecentSalesProps {
 
 export function RecentSales({ transactions, isLoading }: RecentSalesProps) {
   const recentTx = transactions?.slice(0, 5) || [];
+  const { formatPrice } = useCurrency();
 
   if (isLoading) {
     return (
@@ -69,7 +71,7 @@ export function RecentSales({ transactions, isLoading }: RecentSalesProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-success">
-                    +${Number(tx.seller_amount).toFixed(2)}
+                    +{formatPrice(Number(tx.seller_amount))}
                   </p>
                   <Badge variant="outline" className="text-xs">
                     {tx.license_tier?.license_type || 'License'}
