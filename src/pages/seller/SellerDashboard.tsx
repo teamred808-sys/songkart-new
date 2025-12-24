@@ -24,30 +24,40 @@ export default function SellerDashboard() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleVerifyClick = async () => {
-    if (!user?.email) {
-      toast({
-        title: "Error",
-        description: "No email address found for your account.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsVerifying(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email,
-      });
+      const { data, error } = await supabase.functions.invoke('send-verification-email');
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Failed to send verification email');
+      }
+
+      if (data?.error) {
+        if (data.already_verified) {
+          toast({
+            title: "Already verified",
+            description: "Your account is already verified. Please refresh the page.",
+          });
+          return;
+        }
+        if (data.rate_limited) {
+          toast({
+            title: "Please wait",
+            description: data.error,
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(data.error);
+      }
 
       setVerificationPending(true);
       toast({
-        title: "Verification email sent",
+        title: "Verification email sent!",
         description: "Please check your inbox and click the verification link.",
       });
     } catch (error: any) {
+      console.error('Verification error:', error);
       toast({
         title: "Failed to send verification email",
         description: error.message || "Please try again later.",

@@ -51,6 +51,7 @@ import ContentEditor from "./pages/admin/ContentEditor";
 import ContentPage from "./pages/ContentPage";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import VerifyEmail from "./pages/VerifyEmail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,6 +139,9 @@ const App = () => (
             {/* Blog Routes - must be before /:slug */}
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            
+            {/* Email Verification */}
+            <Route path="/verify-email" element={<VerifyEmail />} />
             
             {/* Public CMS Pages */}
             <Route path="/:slug" element={<ContentPage />} />
