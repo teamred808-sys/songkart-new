@@ -118,6 +118,10 @@ const App = () => (
               <Route path="logs" element={<ActivityLogs />} />
               <Route path="bugs" element={<BugReports />} />
               <Route path="monitoring" element={<SystemMonitoring />} />
+              {/* CMS Content Management */}
+              <Route path="content" element={<ContentManagement />} />
+              <Route path="content/new" element={<ContentEditor />} />
+              <Route path="content/:id/edit" element={<ContentEditor />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
