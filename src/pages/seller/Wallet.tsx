@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal } from '@/hooks/useSellerData';
+import { usePlatformSettings } from '@/hooks/useAdminData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,7 @@ const statusDescriptions: Record<string, string> = {
 export default function Wallet() {
   const { data: wallet, isLoading: walletLoading } = useSellerWallet();
   const { data: withdrawals, isLoading: withdrawalsLoading } = useWithdrawalRequests();
+  const { data: platformSettings } = usePlatformSettings();
   const requestWithdrawal = useRequestWithdrawal();
   const { formatPrice, currencySymbol } = useCurrency();
 
@@ -100,7 +102,10 @@ export default function Wallet() {
   const availableBalance = Number(wallet?.available_balance || 0);
   const pendingBalance = Number(wallet?.pending_balance || 0);
   const totalEarnings = Number(wallet?.total_earnings || 0);
-  const threshold = Number(wallet?.withdrawal_threshold || 50);
+  
+  // Use wallet threshold if set, otherwise fall back to global platform setting
+  const globalThreshold = platformSettings?.min_withdrawal?.amount || 500;
+  const threshold = Number(wallet?.withdrawal_threshold) || globalThreshold;
   const progressToWithdrawal = Math.min((availableBalance / threshold) * 100, 100);
 
   const canWithdraw = availableBalance >= threshold;
