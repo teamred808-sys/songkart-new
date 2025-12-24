@@ -1,8 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Twitter, Instagram, Youtube, Mail } from 'lucide-react';
 import songkartLogo from '@/assets/songkart-logo.png';
+import { usePublishedPages } from '@/hooks/useCmsContent';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function Footer() {
+  const { data: cmsPages, isLoading: isPagesLoading } = usePublishedPages();
+
   return (
     <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
@@ -11,7 +15,7 @@ export function Footer() {
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
-              <span className="font-display text-xl text-white tracking-tight">
+              <span className="font-display text-xl text-foreground tracking-tight">
                 <span className="font-extrabold">SONG</span>
                 <span className="font-normal">KART</span>
               </span>
@@ -89,30 +93,30 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Pages - Dynamic from CMS */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Support</h4>
+            <h4 className="font-display font-semibold mb-4">Pages</h4>
             <ul className="space-y-2">
-              <li>
-                <Link to="/help" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Privacy Policy
-                </Link>
-              </li>
+              {isPagesLoading ? (
+                <>
+                  <li><Skeleton className="h-4 w-24" /></li>
+                  <li><Skeleton className="h-4 w-20" /></li>
+                  <li><Skeleton className="h-4 w-28" /></li>
+                </>
+              ) : cmsPages && cmsPages.length > 0 ? (
+                cmsPages.map((page) => (
+                  <li key={page.id}>
+                    <Link 
+                      to={`/${page.slug}`} 
+                      className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+                    >
+                      {page.title}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-muted-foreground text-sm">No pages yet</li>
+              )}
             </ul>
           </div>
         </div>

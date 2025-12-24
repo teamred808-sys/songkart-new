@@ -167,6 +167,24 @@ export function useContentById(id: string | undefined) {
   });
 }
 
+// Hook to fetch published pages for footer/navigation
+export function usePublishedPages() {
+  return useQuery({
+    queryKey: ['cms-published-pages'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cms_content')
+        .select('id, title, slug')
+        .eq('type', 'page')
+        .eq('status', 'published')
+        .order('title', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 // Hook to fetch published blog posts
 export function usePublishedPosts() {
   return useQuery({
