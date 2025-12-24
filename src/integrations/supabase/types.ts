@@ -1316,6 +1316,163 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_tier_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          lifetime_sales_at_change: number | null
+          new_tier: number
+          notes: string | null
+          previous_tier: number | null
+          seller_id: string
+          trigger_type: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lifetime_sales_at_change?: number | null
+          new_tier: number
+          notes?: string | null
+          previous_tier?: number | null
+          seller_id: string
+          trigger_type: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lifetime_sales_at_change?: number | null
+          new_tier?: number
+          notes?: string | null
+          previous_tier?: number | null
+          seller_id?: string
+          trigger_type?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_tier_history_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_tier_history_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_tier_status: {
+        Row: {
+          created_at: string | null
+          current_tier_level: number
+          frozen_at: string | null
+          frozen_by: string | null
+          frozen_reason: string | null
+          id: string
+          last_tier_check: string | null
+          lifetime_sales_amount: number
+          seller_id: string
+          tier_frozen: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_tier_level?: number
+          frozen_at?: string | null
+          frozen_by?: string | null
+          frozen_reason?: string | null
+          id?: string
+          last_tier_check?: string | null
+          lifetime_sales_amount?: number
+          seller_id: string
+          tier_frozen?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_tier_level?: number
+          frozen_at?: string | null
+          frozen_by?: string | null
+          frozen_reason?: string | null
+          id?: string
+          last_tier_check?: string | null
+          lifetime_sales_amount?: number
+          seller_id?: string
+          tier_frozen?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_tier_status_current_tier_level_fkey"
+            columns: ["current_tier_level"]
+            isOneToOne: false
+            referencedRelation: "seller_tiers"
+            referencedColumns: ["tier_level"]
+          },
+          {
+            foreignKeyName: "seller_tier_status_frozen_by_fkey"
+            columns: ["frozen_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_tier_status_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_tiers: {
+        Row: {
+          badge_color: string | null
+          badge_label: string
+          created_at: string | null
+          description: string | null
+          id: string
+          max_price_lyrics_only: number | null
+          max_price_with_audio: number | null
+          min_lifetime_sales: number
+          name: string
+          tier_level: number
+          updated_at: string | null
+        }
+        Insert: {
+          badge_color?: string | null
+          badge_label: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_price_lyrics_only?: number | null
+          max_price_with_audio?: number | null
+          min_lifetime_sales?: number
+          name: string
+          tier_level: number
+          updated_at?: string | null
+        }
+        Update: {
+          badge_color?: string | null
+          badge_label?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_price_lyrics_only?: number | null
+          max_price_with_audio?: number | null
+          min_lifetime_sales?: number
+          name?: string
+          tier_level?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       seller_wallets: {
         Row: {
           available_balance: number | null
@@ -1524,6 +1681,77 @@ export type Database = {
           },
         ]
       }
+      tier_abuse_flags: {
+        Row: {
+          action_taken: string | null
+          buyer_id: string | null
+          created_at: string | null
+          details: Json | null
+          flag_type: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          seller_id: string
+          status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          flag_type: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seller_id: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          buyer_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          flag_type?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          seller_id?: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tier_abuse_flags_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tier_abuse_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tier_abuse_flags_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tier_abuse_flags_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -1677,7 +1905,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_freeze_seller_tier: {
+        Args: {
+          p_admin_id?: string
+          p_freeze: boolean
+          p_reason?: string
+          p_seller_id: string
+        }
+        Returns: undefined
+      }
+      calculate_and_update_tier: {
+        Args: { p_seller_id: string }
+        Returns: undefined
+      }
+      check_self_purchase: {
+        Args: { p_buyer_id: string; p_song_id: string }
+        Returns: Json
+      }
       generate_order_number: { Args: never; Returns: string }
+      get_seller_tier: {
+        Args: { p_seller_id: string }
+        Returns: {
+          amount_to_next_tier: number
+          badge_color: string
+          badge_label: string
+          frozen_reason: string
+          is_frozen: boolean
+          lifetime_sales: number
+          max_price_lyrics_only: number
+          max_price_with_audio: number
+          next_tier_threshold: number
+          tier_level: number
+          tier_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1687,6 +1948,10 @@ export type Database = {
       }
       increment_play_count: { Args: { song_uuid: string }; Returns: undefined }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      validate_song_price: {
+        Args: { p_has_audio: boolean; p_price: number; p_seller_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "seller" | "buyer"

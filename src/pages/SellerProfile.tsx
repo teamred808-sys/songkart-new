@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { SongCard } from "@/components/songs/SongCard";
+import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
+import { useSellerTier } from "@/hooks/useSellerTier";
 import { CheckCircle, Music, Play, Eye, Globe, ExternalLink } from "lucide-react";
 
 interface SellerProfile {
@@ -37,6 +39,7 @@ interface Song {
 
 const SellerProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const { data: sellerTier } = useSellerTier(id);
 
   const { data: seller, isLoading: isLoadingSeller } = useQuery({
     queryKey: ["seller-profile", id],
@@ -150,13 +153,21 @@ const SellerProfile = () => {
           </Avatar>
 
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-3xl font-bold">{seller.full_name || "Anonymous Seller"}</h1>
               {seller.is_verified && (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Verified
                 </Badge>
+              )}
+              {sellerTier && (
+                <SellerTierBadge
+                  tierLevel={sellerTier.tier_level}
+                  tierName={sellerTier.tier_name}
+                  badgeColor={sellerTier.badge_color}
+                  size="md"
+                />
               )}
             </div>
 

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 
 interface SongCardProps {
   id: string;
@@ -18,6 +19,11 @@ interface SongCardProps {
   playCount?: number;
   className?: string;
   hasExclusive?: boolean;
+  sellerTier?: {
+    level: number;
+    name: string;
+    color: string;
+  };
 }
 
 export function SongCard({
@@ -33,6 +39,7 @@ export function SongCard({
   playCount = 0,
   className,
   hasExclusive,
+  sellerTier,
 }: SongCardProps) {
   return (
     <Link to={`/song/${id}`}>
@@ -91,7 +98,17 @@ export function SongCard({
               <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                 {title}
               </h3>
-              <p className="text-sm text-muted-foreground truncate">{sellerName}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground truncate">{sellerName}</p>
+                {sellerTier && (
+                  <SellerTierBadge
+                    tierLevel={sellerTier.level}
+                    tierName={sellerTier.name}
+                    badgeColor={sellerTier.color}
+                    size="sm"
+                  />
+                )}
+              </div>
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
               <Heart className="h-4 w-4" />
