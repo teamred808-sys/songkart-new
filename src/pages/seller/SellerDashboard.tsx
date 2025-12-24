@@ -2,6 +2,7 @@ import { DashboardStats } from '@/components/seller/DashboardStats';
 import { EarningsChart } from '@/components/seller/EarningsChart';
 import { RecentSales } from '@/components/seller/RecentSales';
 import { TopSongs } from '@/components/seller/TopSongs';
+import { SellerTierCard } from '@/components/seller/SellerTierCard';
 import { useSellerStats, useSellerTransactions, useSellerSongs } from '@/hooks/useSellerData';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -82,7 +83,12 @@ export default function SellerDashboard() {
       )}
 
       {/* Stats Grid */}
-      <DashboardStats stats={stats} isLoading={statsLoading} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <DashboardStats stats={stats} isLoading={statsLoading} />
+        </div>
+        <SellerTierCard />
+      </div>
 
       {/* Charts and Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

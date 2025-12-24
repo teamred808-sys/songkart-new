@@ -13,9 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LicenseComparisonTable } from "@/components/songs/LicenseComparisonTable";
+import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { useSong, useLicenseTiers } from "@/hooks/useSongs";
 import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
+import { useSellerTier } from "@/hooks/useSellerTier";
 import { LICENSE_TYPES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ export default function SongDetail() {
 
   const { data: song, isLoading: songLoading } = useSong(id!);
   const { data: licenseTiers, isLoading: tiersLoading } = useLicenseTiers(id!);
+  const { data: sellerTier } = useSellerTier(song?.seller?.id);
   const addToCart = useValidatedAddToCart();
 
   const handlePlay = async () => {
@@ -264,6 +267,16 @@ export default function SongDetail() {
                     </p>
                   </div>
                 </Link>
+                {sellerTier && (
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <SellerTierBadge
+                      tierLevel={sellerTier.tier_level}
+                      tierName={sellerTier.tier_name}
+                      badgeColor={sellerTier.badge_color}
+                      size="md"
+                    />
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
                   This seller is verified by SongKart
                 </p>
