@@ -1,10 +1,10 @@
 import { AdminStats } from '@/components/admin/AdminStats';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { RevenueChart } from '@/components/admin/RevenueChart';
+import { MonitoringWidget } from '@/components/admin/MonitoringWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Clock, FileCheck, DollarSign, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Clock, FileCheck, DollarSign } from 'lucide-react';
 
 const quickActions = [
   { 
@@ -72,10 +72,14 @@ export default function AdminDashboard() {
 
       <AdminStats />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RevenueChart />
-        <ActivityFeed />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RevenueChart />
+        </div>
+        <MonitoringWidget />
       </div>
+
+      <ActivityFeed />
     </div>
   );
 }

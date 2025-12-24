@@ -43,6 +43,8 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import FeaturedContent from "./pages/admin/FeaturedContent";
 import PlatformSettings from "./pages/admin/PlatformSettings";
 import ActivityLogs from "./pages/admin/ActivityLogs";
+import BugReports from "./pages/admin/BugReports";
+import SystemMonitoring from "./pages/admin/SystemMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -111,6 +113,8 @@ const App = () => (
               <Route path="featured" element={<FeaturedContent />} />
               <Route path="settings" element={<PlatformSettings />} />
               <Route path="logs" element={<ActivityLogs />} />
+              <Route path="bugs" element={<BugReports />} />
+              <Route path="monitoring" element={<SystemMonitoring />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />
