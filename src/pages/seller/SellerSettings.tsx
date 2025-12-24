@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useUpdateSellerDynamicPricing } from '@/hooks/useSellerData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,11 +12,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Upload, CheckCircle, Shield, Bell } from 'lucide-react';
+import { Loader2, Upload, CheckCircle, Shield, Bell, Globe } from 'lucide-react';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 export default function SellerSettings() {
   const { profile, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const updateDynamicPricing = useUpdateSellerDynamicPricing();
 
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
@@ -23,11 +26,41 @@ export default function SellerSettings() {
     website: profile?.website || '',
   });
 
+  const [dynamicPricingEnabled, setDynamicPricingEnabled] = useState(true);
+
   const [notifications, setNotifications] = useState({
     email_sales: true,
     email_approvals: true,
     email_withdrawals: true,
   });
+
+  // Initialize dynamic pricing state from profile
+  useEffect(() => {
+    if (profile?.dynamic_pricing_enabled !== undefined) {
+      setDynamicPricingEnabled(profile.dynamic_pricing_enabled);
+    }
+  }, [profile?.dynamic_pricing_enabled]);
+
+  const handleDynamicPricingToggle = async (checked: boolean) => {
+    setDynamicPricingEnabled(checked);
+    try {
+      await updateDynamicPricing.mutateAsync(checked);
+      await refreshProfile();
+      toast({ 
+        title: checked ? 'Dynamic pricing enabled' : 'Dynamic pricing disabled',
+        description: checked 
+          ? 'Your songs may be priced higher for buyers in premium markets.' 
+          : 'All buyers will see your base price converted to their local currency.'
+      });
+    } catch (error: any) {
+      setDynamicPricingEnabled(!checked); // Revert on error
+      toast({ 
+        title: 'Error updating pricing preference', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
+  };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,6 +244,42 @@ export default function SellerSettings() {
             <Button variant="outline" className="mt-4" disabled>
               Request Verification (Coming Soon)
             </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pricing Preferences */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Pricing Preferences
+          </CardTitle>
+          <CardDescription>Control how your songs are priced for international buyers.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 pr-4">
+              <div className="flex items-center gap-2">
+                <p className="font-medium">Country-wise Dynamic Pricing</p>
+                <HelpTooltip content="When enabled, your song prices may be adjusted based on the buyer's country (e.g., higher in premium markets like US/EU). Your earnings are calculated from your base INR price, so this can only increase what buyers pay, never decrease it." />
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {dynamicPricingEnabled 
+                  ? 'Prices may be adjusted higher for buyers in premium markets. Your base earnings are unaffected.'
+                  : 'All buyers see your base price converted to their local currency at current exchange rates.'}
+              </p>
+            </div>
+            <Switch
+              checked={dynamicPricingEnabled}
+              onCheckedChange={handleDynamicPricingToggle}
+              disabled={updateDynamicPricing.isPending}
+            />
+          </div>
+          {dynamicPricingEnabled && (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              <p><strong>How it works:</strong> Buyers in markets like the US, UK, or EU may see slightly higher prices based on regional pricing zones. Your base price in INR remains the same, and your earnings are calculated from that base price.</p>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -12,6 +12,7 @@ interface Profile {
   bio: string | null;
   website: string | null;
   is_verified: boolean;
+  dynamic_pricing_enabled: boolean;
 }
 
 interface AuthContextType {
