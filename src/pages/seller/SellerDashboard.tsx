@@ -1,20 +1,62 @@
+import { useState } from 'react';
 import { DashboardStats } from '@/components/seller/DashboardStats';
 import { EarningsChart } from '@/components/seller/EarningsChart';
 import { RecentSales } from '@/components/seller/RecentSales';
 import { TopSongs } from '@/components/seller/TopSongs';
 import { SellerTierCard } from '@/components/seller/SellerTierCard';
+import { VerificationWarningBanner } from '@/components/seller/VerificationWarningBanner';
 import { useSellerStats, useSellerTransactions, useSellerSongs } from '@/hooks/useSellerData';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Clock, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Plus, Clock, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export default function SellerDashboard() {
   const { data: stats, isLoading: statsLoading } = useSellerStats();
   const { data: transactions, isLoading: txLoading } = useSellerTransactions();
   const { data: songs, isLoading: songsLoading } = useSellerSongs();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  
+  const [verificationPending, setVerificationPending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleVerifyClick = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "No email address found for your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+      });
+
+      if (error) throw error;
+
+      setVerificationPending(true);
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox and click the verification link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to send verification email",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Calculate pending songs
   const pendingSongs = songs?.filter(s => s.status === 'pending').length || 0;
@@ -37,6 +79,17 @@ export default function SellerDashboard() {
           </Link>
         </Button>
       </div>
+
+      {/* Verification Warning Banner - Only for unverified sellers */}
+      {profile && !profile.is_verified && (
+        <VerificationWarningBanner
+          isVerified={profile.is_verified ?? false}
+          uploadCount={songs?.length || 0}
+          onVerifyClick={handleVerifyClick}
+          verificationPending={verificationPending}
+          isLoading={isVerifying}
+        />
+      )}
 
       {/* First-time seller onboarding banner */}
       {songs && songs.length === 0 && (
