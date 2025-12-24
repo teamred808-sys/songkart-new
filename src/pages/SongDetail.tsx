@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LicenseComparisonTable } from "@/components/songs/LicenseComparisonTable";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
+import { Price } from "@/components/ui/Price";
 import { useSong, useLicenseTiers } from "@/hooks/useSongs";
 import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
@@ -327,7 +328,7 @@ export default function SongDetail() {
                             )}
                           </div>
                           <span className="text-lg font-bold text-primary">
-                            ₹{tier.price.toLocaleString()}
+                            <Price amount={tier.price} />
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">

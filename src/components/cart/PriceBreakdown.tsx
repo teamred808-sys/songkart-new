@@ -6,6 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Price } from '@/components/ui/Price';
 
 interface PriceBreakdownProps {
   subtotal: number;
@@ -23,7 +24,7 @@ export function PriceBreakdown({ subtotal, platformFee, total, itemCount }: Pric
         <span className="text-muted-foreground">
           License Fees ({itemCount} {itemCount === 1 ? 'item' : 'items'})
         </span>
-        <span>₹{subtotal.toFixed(2)}</span>
+        <span><Price amount={subtotal} /></span>
       </div>
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground flex items-center gap-1">
@@ -39,12 +40,12 @@ export function PriceBreakdown({ subtotal, platformFee, total, itemCount }: Pric
             </Tooltip>
           </TooltipProvider>
         </span>
-        <span className="text-muted-foreground">₹{platformFee.toFixed(2)}</span>
+        <span className="text-muted-foreground"><Price amount={platformFee} /></span>
       </div>
       <Separator />
       <div className="flex justify-between font-bold text-lg">
         <span>Total</span>
-        <span className="text-primary">₹{total.toFixed(2)}</span>
+        <span className="text-primary"><Price amount={total} /></span>
       </div>
       
       {/* Trust message */}

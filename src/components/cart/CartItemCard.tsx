@@ -2,6 +2,7 @@ import { Music, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Price } from '@/components/ui/Price';
 import { useEffect, useState } from 'react';
 
 interface CartItemCardProps {
@@ -106,7 +107,7 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
       </div>
 
       <div className="text-right">
-        <p className="font-bold text-lg">₹{item.price.toFixed(2)}</p>
+        <p className="font-bold text-lg"><Price amount={item.price} /></p>
         <Button
           variant="ghost"
           size="sm"

@@ -7,6 +7,7 @@ import { SongFilters, type SongFiltersState } from "@/components/songs/SongFilte
 import { useSongs, useGenres, useMoods } from "@/hooks/useSongs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Price } from "@/components/ui/Price";
 
 const quickFilters = [
   { label: "Audio Only", key: "hasAudio" },
@@ -93,7 +94,7 @@ export default function Browse() {
             ))}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/30 text-sm text-muted-foreground">
               <Sparkles className="h-3 w-3" />
-              Prices from ₹29
+              Prices from <Price amount={29} />
             </div>
           </div>
         </div>

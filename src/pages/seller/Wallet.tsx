@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import {
   Dialog,
   DialogContent,
@@ -71,6 +72,7 @@ export default function Wallet() {
   const { data: wallet, isLoading: walletLoading } = useSellerWallet();
   const { data: withdrawals, isLoading: withdrawalsLoading } = useWithdrawalRequests();
   const requestWithdrawal = useRequestWithdrawal();
+  const { formatPrice, currencySymbol } = useCurrency();
 
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -144,7 +146,7 @@ export default function Wallet() {
                       <Banknote className="h-6 w-6 text-primary" />
                     </div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Sales</p>
-                    <p className="text-xl font-bold">${totalEarnings.toFixed(2)}</p>
+                    <p className="text-xl font-bold">{formatPrice(totalEarnings)}</p>
                     <p className="text-xs text-muted-foreground">Lifetime</p>
                   </div>
 
@@ -159,7 +161,7 @@ export default function Wallet() {
                       <Clock className="h-6 w-6 text-amber-500" />
                     </div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">On Hold</p>
-                    <p className="text-xl font-bold text-amber-500">${pendingBalance.toFixed(2)}</p>
+                    <p className="text-xl font-bold text-amber-500">{formatPrice(pendingBalance)}</p>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <p className="text-xs text-muted-foreground cursor-help flex items-center justify-center gap-1">
@@ -183,7 +185,7 @@ export default function Wallet() {
                       <WalletIcon className="h-6 w-6 text-emerald-500" />
                     </div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Available</p>
-                    <p className="text-2xl font-bold text-emerald-500">${availableBalance.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-emerald-500">{formatPrice(availableBalance)}</p>
                     <p className="text-xs text-muted-foreground">Ready to withdraw</p>
                   </div>
                 </div>
@@ -217,14 +219,14 @@ export default function Wallet() {
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">
                   {canWithdraw 
-                    ? `You have $${availableBalance.toFixed(2)} available for withdrawal.`
-                    : `You need at least $${threshold} to request a withdrawal. Currently $${availableBalance.toFixed(2)} available.`
+                    ? `You have ${formatPrice(availableBalance)} available for withdrawal.`
+                    : `You need at least ${currencySymbol}${threshold} to request a withdrawal. Currently ${formatPrice(availableBalance)} available.`
                   }
                 </p>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Progress to threshold</span>
-                    <span className="font-medium">${availableBalance.toFixed(2)} / ${threshold}</span>
+                    <span className="font-medium">{formatPrice(availableBalance)} / {currencySymbol}{threshold}</span>
                   </div>
                   <Progress value={progressToWithdrawal} className="h-2" />
                 </div>
@@ -292,7 +294,7 @@ export default function Wallet() {
                           {format(new Date(wd.created_at), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell className="font-semibold">
-                          ${Number(wd.amount).toFixed(2)}
+                          {formatPrice(Number(wd.amount))}
                         </TableCell>
                         <TableCell className="capitalize">
                           <Badge variant="secondary">{wd.payout_method || '-'}</Badge>
@@ -333,13 +335,13 @@ export default function Wallet() {
                 Request Withdrawal
               </DialogTitle>
               <DialogDescription>
-                Available balance: <span className="font-semibold text-emerald-500">${availableBalance.toFixed(2)}</span>
+                Available balance: <span className="font-semibold text-emerald-500">{formatPrice(availableBalance)}</span>
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">Amount ({currencySymbol})</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -350,7 +352,7 @@ export default function Wallet() {
                   placeholder="Enter amount"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Minimum: ${threshold} • Maximum: ${availableBalance.toFixed(2)}
+                  Minimum: {currencySymbol}{threshold} • Maximum: {formatPrice(availableBalance)}
                 </p>
               </div>
 

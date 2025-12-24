@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface StatsData {
   totalUploads: number;
@@ -28,12 +29,7 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+  const { formatPrice, currencySymbol } = useCurrency();
 
   const availableBalance = stats?.availableBalance || 0;
   const withdrawalThreshold = 50; // Default threshold
@@ -75,7 +71,7 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
               <div>
                 <p className="text-sm text-muted-foreground font-medium">Total Earnings</p>
                 <p className="text-3xl lg:text-4xl font-bold font-display text-emerald-500 mt-2">
-                  {formatCurrency(stats?.totalEarnings || 0)}
+                  {formatPrice(stats?.totalEarnings || 0)}
                 </p>
                 <div className="flex items-center gap-1 mt-2 text-xs text-emerald-600">
                   <TrendingUp className="h-3 w-3" />
@@ -96,12 +92,12 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground font-medium">Available Balance</p>
                 <p className="text-3xl lg:text-4xl font-bold font-display text-primary mt-2">
-                  {formatCurrency(availableBalance)}
+                  {formatPrice(availableBalance)}
                 </p>
                 <div className="mt-3 space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Withdrawal threshold</span>
-                    <span className="font-medium">${withdrawalThreshold}</span>
+                    <span className="font-medium">{currencySymbol}{withdrawalThreshold}</span>
                   </div>
                   <Progress value={progressToWithdrawal} className="h-2" />
                 </div>
@@ -159,7 +155,7 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
               <Clock className="h-4 w-4 text-amber-500 group-hover:scale-110 transition-transform" />
             </div>
             <p className="text-2xl font-bold font-display text-amber-500">
-              {formatCurrency(stats?.pendingWithdrawals || 0)}
+              {formatPrice(stats?.pendingWithdrawals || 0)}
             </p>
           </CardContent>
         </Card>

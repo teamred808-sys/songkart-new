@@ -3,9 +3,11 @@ import { ShoppingBag, DollarSign, ShoppingCart, Heart, TrendingUp } from 'lucide
 import { useBuyerStats } from '@/hooks/useBuyerData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 export function BuyerStats() {
   const { data: stats, isLoading } = useBuyerStats();
+  const { formatPrice } = useCurrency();
 
   const statCards = [
     {
@@ -19,7 +21,7 @@ export function BuyerStats() {
     },
     {
       title: 'Total Spent',
-      value: `₹${(stats?.totalSpent || 0).toFixed(2)}`,
+      value: formatPrice(stats?.totalSpent || 0),
       icon: DollarSign,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-500/10',
