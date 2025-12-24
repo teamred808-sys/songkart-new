@@ -1,43 +1,36 @@
 import { ShoppingBag, Upload, Shield, Music, FileText, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
-const steps = [
-  {
-    step: 1,
-    icon: ShoppingBag,
-    title: "For Buyers",
-    description: "Browse our curated catalog, preview audio & lyrics, and purchase licenses instantly with secure checkout.",
-    features: ["Preview before purchase", "Multiple license tiers", "Instant download"],
-    gradient: "from-blue-500/20 to-cyan-500/20",
-    iconColor: "text-blue-400",
-    borderColor: "border-blue-500/30",
-  },
-  {
-    step: 2,
-    icon: Upload,
-    title: "For Sellers",
-    description: "Upload your original music and lyrics, set your prices, and earn money from every sale.",
-    features: ["Easy upload process", "Set your own prices", "Track your earnings"],
-    gradient: "from-purple-500/20 to-pink-500/20",
-    iconColor: "text-purple-400",
-    borderColor: "border-purple-500/30",
-  },
-  {
-    step: 3,
-    icon: Shield,
-    title: "Safe & Secure",
-    description: "All transactions are protected, content is verified, and licenses are legally binding.",
-    features: ["Verified sellers", "Secure payments", "Legal protection"],
-    gradient: "from-emerald-500/20 to-teal-500/20",
-    iconColor: "text-emerald-400",
-    borderColor: "border-emerald-500/30",
-  },
-];
-
+const steps = [{
+  step: 1,
+  icon: ShoppingBag,
+  title: "For Buyers",
+  description: "Browse our curated catalog, preview audio & lyrics, and purchase licenses instantly with secure checkout.",
+  features: ["Preview before purchase", "Multiple license tiers", "Instant download"],
+  gradient: "from-blue-500/20 to-cyan-500/20",
+  iconColor: "text-blue-400",
+  borderColor: "border-blue-500/30"
+}, {
+  step: 2,
+  icon: Upload,
+  title: "For Sellers",
+  description: "Upload your original music and lyrics, set your prices, and earn money from every sale.",
+  features: ["Easy upload process", "Set your own prices", "Track your earnings"],
+  gradient: "from-purple-500/20 to-pink-500/20",
+  iconColor: "text-purple-400",
+  borderColor: "border-purple-500/30"
+}, {
+  step: 3,
+  icon: Shield,
+  title: "Safe & Secure",
+  description: "All transactions are protected, content is verified, and licenses are legally binding.",
+  features: ["Verified sellers", "Secure payments", "Legal protection"],
+  gradient: "from-emerald-500/20 to-teal-500/20",
+  iconColor: "text-emerald-400",
+  borderColor: "border-emerald-500/30"
+}];
 const HowItWorks = () => {
-  return (
-    <section className="py-24 bg-background">
+  return <section className="py-24 bg-background">
       <div className="container px-4">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -50,13 +43,9 @@ const HowItWorks = () => {
 
         <div className="grid md:grid-cols-3 gap-8 relative">
           {/* Connecting line for desktop */}
-          <div className="hidden md:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-emerald-500/30" />
           
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className={`relative group p-8 rounded-3xl bg-gradient-to-br ${step.gradient} border ${step.borderColor} transition-all duration-300 hover:border-primary/50 hover:shadow-glow`}
-            >
+          
+          {steps.map((step, index) => <div key={index} className={`relative group p-8 rounded-3xl bg-gradient-to-br ${step.gradient} border ${step.borderColor} transition-all duration-300 hover:border-primary/50 hover:shadow-glow`}>
               {/* Step number badge */}
               <div className={`absolute -top-4 left-8 w-8 h-8 rounded-full bg-background border-2 ${step.borderColor} flex items-center justify-center`}>
                 <span className={`text-sm font-bold ${step.iconColor}`}>{step.step}</span>
@@ -79,15 +68,12 @@ const HowItWorks = () => {
               </p>
 
               <ul className="space-y-3">
-                {step.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-sm text-foreground">
+                {step.features.map((feature, i) => <li key={i} className="flex items-center gap-3 text-sm text-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                     {feature}
-                  </li>
-                ))}
+                  </li>)}
               </ul>
-            </div>
-          ))}
+            </div>)}
         </div>
 
         {/* Additional info cards */}
@@ -127,8 +113,6 @@ const HowItWorks = () => {
           </Button>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HowItWorks;
