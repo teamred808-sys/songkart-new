@@ -97,6 +97,75 @@ export type Database = {
           },
         ]
       }
+      admin_bug_reports: {
+        Row: {
+          affected_section: string
+          assignee_id: string | null
+          created_at: string | null
+          description: string
+          id: string
+          internal_notes: Json | null
+          logs: Json | null
+          reporter_id: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          screenshots: Json | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          affected_section: string
+          assignee_id?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          internal_notes?: Json | null
+          logs?: Json | null
+          reporter_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          screenshots?: Json | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          affected_section?: string
+          assignee_id?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          internal_notes?: Json | null
+          logs?: Json | null
+          reporter_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          screenshots?: Json | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_bug_reports_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_bug_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audio_sessions: {
         Row: {
           created_at: string | null
@@ -1253,6 +1322,69 @@ export type Database = {
           {
             foreignKeyName: "songs_seller_id_fkey"
             columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_error_logs: {
+        Row: {
+          action_performed: string | null
+          browser_info: Json | null
+          context: Json | null
+          created_at: string | null
+          error_message: string
+          error_stack: string | null
+          error_type: string
+          id: string
+          linked_bug_report_id: string | null
+          module: string
+          resolved: boolean | null
+          severity: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_performed?: string | null
+          browser_info?: Json | null
+          context?: Json | null
+          created_at?: string | null
+          error_message: string
+          error_stack?: string | null
+          error_type: string
+          id?: string
+          linked_bug_report_id?: string | null
+          module: string
+          resolved?: boolean | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_performed?: string | null
+          browser_info?: Json | null
+          context?: Json | null
+          created_at?: string | null
+          error_message?: string
+          error_stack?: string | null
+          error_type?: string
+          id?: string
+          linked_bug_report_id?: string | null
+          module?: string
+          resolved?: boolean | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_error_logs_linked_bug_report_id_fkey"
+            columns: ["linked_bug_report_id"]
+            isOneToOne: false
+            referencedRelation: "admin_bug_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_error_logs_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

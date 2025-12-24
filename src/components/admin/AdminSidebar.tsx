@@ -17,7 +17,9 @@ import {
   Package,
   FileText,
   ClipboardList,
-  Home
+  Home,
+  Bug,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +39,8 @@ const navItems = [
   { icon: Star, label: 'Featured Content', path: '/admin/featured' },
   { icon: Settings, label: 'Platform Settings', path: '/admin/settings' },
   { icon: ClipboardList, label: 'Activity Logs', path: '/admin/logs' },
+  { icon: Bug, label: 'Bug Reports', path: '/admin/bugs' },
+  { icon: Activity, label: 'Monitoring', path: '/admin/monitoring' },
 ];
 
 export function AdminSidebar() {
