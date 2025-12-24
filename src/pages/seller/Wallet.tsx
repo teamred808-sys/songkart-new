@@ -103,9 +103,8 @@ export default function Wallet() {
   const pendingBalance = Number(wallet?.pending_balance || 0);
   const totalEarnings = Number(wallet?.total_earnings || 0);
   
-  // Use wallet threshold if set, otherwise fall back to global platform setting
-  const globalThreshold = platformSettings?.min_withdrawal?.amount || 500;
-  const threshold = Number(wallet?.withdrawal_threshold) || globalThreshold;
+  // Always use global platform setting as the threshold
+  const threshold = platformSettings?.min_withdrawal?.amount || 500;
   const progressToWithdrawal = Math.min((availableBalance / threshold) * 100, 100);
 
   const canWithdraw = availableBalance >= threshold;
