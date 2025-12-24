@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { usePlatformSettings } from '@/hooks/useAdminData';
 
 interface StatsData {
   totalUploads: number;
@@ -29,9 +30,10 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
   const { formatPrice, currencySymbol } = useCurrency();
+  const { data: platformSettings } = usePlatformSettings();
 
   const availableBalance = stats?.availableBalance || 0;
-  const withdrawalThreshold = 50; // Default threshold
+  const withdrawalThreshold = platformSettings?.min_withdrawal?.amount || 500;
   const progressToWithdrawal = Math.min((availableBalance / withdrawalThreshold) * 100, 100);
 
   if (isLoading) {
