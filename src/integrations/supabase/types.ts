@@ -411,6 +411,139 @@ export type Database = {
         }
         Relationships: []
       }
+      cms_content: {
+        Row: {
+          author_id: string | null
+          canonical_url: string | null
+          content_html: string | null
+          content_json: Json
+          created_at: string | null
+          excerpt: string | null
+          featured_image: string | null
+          id: string
+          no_index: boolean | null
+          og_description: string | null
+          og_image: string | null
+          og_title: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          seo_description: string | null
+          seo_keywords: string[] | null
+          seo_title: string | null
+          slug: string
+          status: Database["public"]["Enums"]["content_status"]
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+          updated_at: string | null
+          view_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          canonical_url?: string | null
+          content_html?: string | null
+          content_json?: Json
+          created_at?: string | null
+          excerpt?: string | null
+          featured_image?: string | null
+          id?: string
+          no_index?: boolean | null
+          og_description?: string | null
+          og_image?: string | null
+          og_title?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["content_status"]
+          title: string
+          type?: Database["public"]["Enums"]["content_type"]
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          canonical_url?: string | null
+          content_html?: string | null
+          content_json?: Json
+          created_at?: string | null
+          excerpt?: string | null
+          featured_image?: string | null
+          id?: string
+          no_index?: boolean | null
+          og_description?: string | null
+          og_image?: string | null
+          og_title?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          seo_description?: string | null
+          seo_keywords?: string[] | null
+          seo_title?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["content_type"]
+          updated_at?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_media: {
+        Row: {
+          alt_text: string | null
+          caption: string | null
+          created_at: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          public_url: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id?: string
+          public_url: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          alt_text?: string | null
+          caption?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          public_url?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_media_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disputes: {
         Row: {
           against: string
@@ -1557,6 +1690,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "seller" | "buyer"
+      content_status: "draft" | "published" | "scheduled" | "archived"
+      content_type: "page" | "post"
       dispute_status: "open" | "in_review" | "resolved" | "closed"
       license_type: "personal" | "youtube" | "commercial" | "film" | "exclusive"
       song_status: "pending" | "approved" | "rejected"
@@ -1689,6 +1824,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "seller", "buyer"],
+      content_status: ["draft", "published", "scheduled", "archived"],
+      content_type: ["page", "post"],
       dispute_status: ["open", "in_review", "resolved", "closed"],
       license_type: ["personal", "youtube", "commercial", "film", "exclusive"],
       song_status: ["pending", "approved", "rejected"],
