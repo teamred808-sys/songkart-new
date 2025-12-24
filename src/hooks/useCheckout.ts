@@ -22,14 +22,67 @@ export function useValidatedAddToCart() {
     mutationFn: async ({ songId, licenseTierId }: { songId: string; licenseTierId: string }) => {
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke('validate-cart-item', {
-        body: { song_id: songId, license_tier_id: licenseTierId },
-      });
+      // Fast path: First check the license tier type client-side
+      const { data: licenseTier, error: tierError } = await supabase
+        .from('license_tiers')
+        .select('license_type, price, is_available, max_sales, current_sales, song_id')
+        .eq('id', licenseTierId)
+        .single();
 
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      if (tierError || !licenseTier) throw new Error('License tier not found');
+      if (!licenseTier.is_available) throw new Error('This license is no longer available');
 
-      return data;
+      const isExclusive = licenseTier.license_type === 'exclusive';
+
+      // For EXCLUSIVE licenses, use the edge function (handles reservations)
+      if (isExclusive) {
+        const { data, error } = await supabase.functions.invoke('validate-cart-item', {
+          body: { song_id: songId, license_tier_id: licenseTierId },
+        });
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+        return data;
+      }
+
+      // For NON-EXCLUSIVE licenses, use fast direct database operations
+      // Check max sales limit if applicable
+      if (licenseTier.max_sales && licenseTier.current_sales >= licenseTier.max_sales) {
+        throw new Error('Maximum sales limit reached for this license');
+      }
+
+      // Get seller_id from the song
+      const { data: song, error: songError } = await supabase
+        .from('songs')
+        .select('seller_id')
+        .eq('id', songId)
+        .single();
+
+      if (songError || !song) throw new Error('Song not found');
+
+      // Calculate prices
+      const basePrice = Number(licenseTier.price);
+      const platformCommission = basePrice * COMMISSION_RATE;
+
+      // Upsert cart item (insert or update if exists)
+      const { error: upsertError } = await supabase
+        .from('cart_items')
+        .upsert({
+          user_id: user.id,
+          song_id: songId,
+          license_tier_id: licenseTierId,
+          seller_id: song.seller_id,
+          base_price: basePrice,
+          platform_commission: platformCommission,
+          final_price: basePrice,
+          is_exclusive: false,
+        }, {
+          onConflict: 'user_id,song_id',
+          ignoreDuplicates: false
+        });
+
+      if (upsertError) throw new Error('Failed to add to cart');
+
+      return { success: true, message: 'Added to cart', is_exclusive: false };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
