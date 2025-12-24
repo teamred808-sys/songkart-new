@@ -179,6 +179,18 @@ serve(async (req: Request) => {
         .delete()
         .eq("token", token);
 
+      // Check if it's a domain verification issue
+      const errorMessage = emailResponse.error.message || "";
+      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Email service requires domain verification. Please contact support or try again later.",
+            needs_domain_verification: true
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: "Failed to send verification email. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
