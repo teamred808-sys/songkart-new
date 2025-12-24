@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Price } from '@/components/ui/Price';
 import {
   Table,
   TableBody,
@@ -90,7 +91,7 @@ export default function MyPurchases() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold">₹{Number(order.total_amount).toFixed(2)}</p>
+                          <p className="font-bold"><Price amount={Number(order.total_amount)} /></p>
                           <Badge 
                             variant={order.payment_status === 'paid' ? 'default' : 'secondary'}
                             className={order.payment_status === 'paid' ? 'bg-green-500' : ''}
@@ -125,7 +126,7 @@ export default function MyPurchases() {
                                 )}
                               </div>
                             </div>
-                            <p className="font-medium">₹{Number(item.price).toFixed(2)}</p>
+                            <p className="font-medium"><Price amount={Number(item.price)} /></p>
                           </div>
                         ))}
                       </div>
@@ -203,7 +204,7 @@ export default function MyPurchases() {
                             {format(new Date(purchase.created_at), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell className="font-medium">
-                            ₹{Number(purchase.amount).toFixed(2)}
+                            <Price amount={Number(purchase.amount)} />
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">

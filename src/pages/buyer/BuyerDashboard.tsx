@@ -6,6 +6,7 @@ import { useRecentPurchases } from '@/hooks/useBuyerData';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/ui/Price';
 import { 
   Music, 
   ArrowRight, 
@@ -186,7 +187,7 @@ export default function BuyerDashboard() {
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="font-semibold">₹{Number(purchase.amount).toFixed(2)}</p>
+                      <p className="font-semibold"><Price amount={Number(purchase.amount)} /></p>
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(purchase.created_at), { addSuffix: true })}
                       </p>
