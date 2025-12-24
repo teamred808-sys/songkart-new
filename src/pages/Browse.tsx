@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Music, Shield, Sparkles } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Music, Shield, Sparkles, FileText, Headphones } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SongCard } from "@/components/songs/SongCard";
 import { SongFilters, type SongFiltersState } from "@/components/songs/SongFilters";
@@ -7,25 +8,47 @@ import { useSongs, useGenres, useMoods } from "@/hooks/useSongs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
-const initialFilters: SongFiltersState = {
-  search: "",
-  genre: "",
-  mood: "",
-  language: "",
-  priceRange: [0, 50000],
-  bpmRange: [60, 200],
-  hasAudio: false,
-  hasLyrics: false,
-  sortBy: "newest",
-};
-
 const quickFilters = [
   { label: "Audio Only", key: "hasAudio" },
   { label: "Lyrics Only", key: "hasLyrics" },
 ];
 
 export default function Browse() {
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get("type");
+
+  // Initialize filters based on URL params
+  const initialFilters: SongFiltersState = useMemo(() => ({
+    search: "",
+    genre: "",
+    mood: "",
+    language: "",
+    priceRange: [0, 50000],
+    bpmRange: [60, 200],
+    hasAudio: typeParam === "audio",
+    hasLyrics: typeParam === "lyrics",
+    sortBy: "newest",
+  }), [typeParam]);
+
   const [filters, setFilters] = useState<SongFiltersState>(initialFilters);
+
+  // Update filters when URL params change
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      hasAudio: typeParam === "audio",
+      hasLyrics: typeParam === "lyrics",
+    }));
+  }, [typeParam]);
+
+  // Determine page title based on type
+  const pageTitle = useMemo(() => {
+    if (typeParam === "audio") return { main: "Audio", sub: "Songs" };
+    if (typeParam === "lyrics") return { main: "Lyrics", sub: "Only" };
+    return { main: "Browse", sub: "Music" };
+  }, [typeParam]);
+
+  const PageIcon = typeParam === "audio" ? Headphones : typeParam === "lyrics" ? FileText : Music;
   
   const { data: songs, isLoading: songsLoading } = useSongs(filters);
   const { data: genres = [] } = useGenres();
@@ -42,11 +65,11 @@ export default function Browse() {
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <h1 className="text-3xl md:text-4xl font-bold">
-              Browse <span className="text-gradient">Music</span>
+              {pageTitle.main} <span className="text-gradient">{pageTitle.sub}</span>
             </h1>
             <Badge variant="outline" className="gap-1 bg-primary/5">
-              <Shield className="h-3 w-3" />
-              Licensed Content
+              <PageIcon className="h-3 w-3" />
+              {typeParam === "audio" ? "Audio Files" : typeParam === "lyrics" ? "Lyrics Available" : "Licensed Content"}
             </Badge>
           </div>
           <p className="text-muted-foreground mb-4">
