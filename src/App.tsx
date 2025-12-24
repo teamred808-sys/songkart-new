@@ -48,6 +48,8 @@ import SystemMonitoring from "./pages/admin/SystemMonitoring";
 import ContentManagement from "./pages/admin/ContentManagement";
 import ContentEditor from "./pages/admin/ContentEditor";
 import ContentPage from "./pages/ContentPage";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +125,10 @@ const App = () => (
               <Route path="content/new" element={<ContentEditor />} />
               <Route path="content/:id/edit" element={<ContentEditor />} />
             </Route>
+            
+            {/* Blog Routes - must be before /:slug */}
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             
             {/* Public CMS Pages */}
             <Route path="/:slug" element={<ContentPage />} />
