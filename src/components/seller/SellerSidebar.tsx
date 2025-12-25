@@ -59,10 +59,7 @@ export function SellerSidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path: string) => {
-    if (path === '/seller') {
-      return location.pathname === '/seller';
-    }
-    return location.pathname.startsWith(path);
+    return location.pathname === path;
   };
 
   return (
