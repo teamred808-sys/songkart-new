@@ -31,6 +31,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const statusColors: Record<string, string> = {
   completed: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
@@ -41,6 +42,7 @@ const statusColors: Record<string, string> = {
 export default function SalesOrders() {
   const { data: transactions, isLoading } = useSellerTransactions();
   const [search, setSearch] = useState('');
+  const { formatPrice } = useCurrency();
 
   const filteredTx = transactions?.filter(tx =>
     tx.song?.title?.toLowerCase().includes(search.toLowerCase())
@@ -80,7 +82,7 @@ export default function SalesOrders() {
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
               </div>
               <p className="text-2xl font-bold font-display text-emerald-500">
-                ${totalRevenue.toFixed(2)}
+                {formatPrice(totalRevenue)}
               </p>
               <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                 <ArrowUpRight className="h-3 w-3" />
@@ -96,7 +98,7 @@ export default function SalesOrders() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold font-display text-muted-foreground">
-                ${totalCommission.toFixed(2)}
+                {formatPrice(totalCommission)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">15% commission</p>
             </CardContent>
@@ -109,7 +111,7 @@ export default function SalesOrders() {
                 <DollarSign className="h-4 w-4 text-accent" />
               </div>
               <p className="text-2xl font-bold font-display">
-                ${avgOrderValue.toFixed(2)}
+                {formatPrice(avgOrderValue)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">Per transaction</p>
             </CardContent>
