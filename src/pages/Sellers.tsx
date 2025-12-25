@@ -135,7 +135,7 @@ export default function Sellers() {
                         {seller.full_name || "Anonymous Artist"}
                       </h3>
                       {seller.is_verified && (
-                        <CheckCircle className="h-4 w-4 text-primary fill-primary/20" />
+                        <CheckCircle className="h-4 w-4 text-blue-500 fill-blue-500/20" />
                       )}
                     </div>
                     
