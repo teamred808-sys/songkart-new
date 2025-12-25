@@ -82,7 +82,7 @@ export default function UserManagement() {
                   </TableCell>
                   <TableCell><Badge variant="outline">{user.user_roles?.[0]?.role || 'buyer'}</Badge></TableCell>
                   <TableCell>{statusBadge(user.account_status || 'active')}</TableCell>
-                  <TableCell>{user.is_verified ? <CheckCircle className="h-4 w-4 text-blue-500" /> : <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell>{user.is_verified ? <CheckCircle className="h-4 w-4 text-blue-500 animate-pulse" /> : <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{format(new Date(user.created_at), 'MMM dd, yyyy')}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

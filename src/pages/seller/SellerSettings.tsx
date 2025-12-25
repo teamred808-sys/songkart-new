@@ -233,8 +233,8 @@ export default function SellerSettings() {
               </p>
             </div>
             {profile?.is_verified ? (
-              <Badge className="bg-success/20 text-success border-success/30">
-                <CheckCircle className="mr-1 h-3 w-3" /> Verified
+              <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30">
+                <CheckCircle className="mr-1 h-3 w-3 animate-pulse" /> Verified
               </Badge>
             ) : (
               <Badge variant="outline">Not Verified</Badge>

@@ -164,8 +164,8 @@ const SellerProfile = () => {
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-3xl font-bold">{seller.full_name || "Anonymous Seller"}</h1>
               {seller.is_verified && (
-                <Badge variant="secondary" className="gap-1">
-                  <CheckCircle className="h-3 w-3 text-blue-500" />
+                <Badge variant="secondary" className="gap-1 bg-blue-500/10 border-blue-500/30 text-blue-500">
+                  <CheckCircle className="h-3 w-3 animate-pulse" />
                   Verified
                 </Badge>
               )}
