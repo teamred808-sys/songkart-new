@@ -16,6 +16,7 @@ import {
   Cell,
 } from 'recharts';
 import { Eye, Play, TrendingUp, DollarSign, Music } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const COLORS = ['hsl(270, 95%, 65%)', 'hsl(185, 95%, 55%)', 'hsl(150, 85%, 45%)', 'hsl(38, 95%, 55%)', 'hsl(0, 75%, 55%)'];
 
@@ -23,6 +24,7 @@ export default function Analytics() {
   const { data: stats, isLoading: statsLoading } = useSellerStats();
   const { data: songs, isLoading: songsLoading } = useSellerSongs();
   const { data: transactions, isLoading: txLoading } = useSellerTransactions();
+  const { formatPrice, currencySymbol } = useCurrency();
 
   const totalViews = songs?.reduce((sum, s) => sum + (s.view_count || 0), 0) || 0;
   const totalPlays = songs?.reduce((sum, s) => sum + (s.play_count || 0), 0) || 0;
@@ -106,7 +108,7 @@ export default function Analytics() {
                   <DollarSign className="h-4 w-4 text-success" />
                 </div>
                 <p className="text-2xl font-bold font-display">
-                  ${songs?.length ? ((stats?.totalEarnings || 0) / songs.length).toFixed(2) : '0.00'}
+                  {formatPrice(songs?.length ? (stats?.totalEarnings || 0) / songs.length : 0)}
                 </p>
               </>
             )}
@@ -130,14 +132,14 @@ export default function Analytics() {
                   <BarChart data={stats?.monthlyEarnings || []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(240, 10%, 15%)" />
                     <XAxis dataKey="month" stroke="hsl(240, 5%, 55%)" fontSize={12} />
-                    <YAxis stroke="hsl(240, 5%, 55%)" fontSize={12} tickFormatter={(v) => `$${v}`} />
+                    <YAxis stroke="hsl(240, 5%, 55%)" fontSize={12} tickFormatter={(v) => `${currencySymbol}${v}`} />
                     <Tooltip 
                       contentStyle={{
                         backgroundColor: 'hsl(240, 10%, 8%)',
                         border: '1px solid hsl(240, 10%, 15%)',
                         borderRadius: '8px',
                       }}
-                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                      formatter={(value: number) => [formatPrice(value), 'Revenue']}
                     />
                     <Bar dataKey="amount" fill="hsl(270, 95%, 65%)" radius={[4, 4, 0, 0]} />
                   </BarChart>

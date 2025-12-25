@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Download, Music, Loader2, FileText, Sparkles, ArrowRight } from 'lucide-react';
 import { useVerifyPayment } from '@/hooks/useCheckout';
+import { Price } from '@/components/ui/Price';
 
 const confettiColors = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6'];
 
@@ -119,7 +120,7 @@ export default function OrderConfirmation() {
             <CardTitle className="flex items-center justify-between">
               <span>Order #{order.order_number}</span>
               <span className="text-lg font-normal text-primary">
-                ₹{Number(order.total_amount).toFixed(2)}
+                <Price amount={Number(order.total_amount)} />
               </span>
             </CardTitle>
           </CardHeader>
