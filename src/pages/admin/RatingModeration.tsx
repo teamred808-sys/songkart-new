@@ -11,7 +11,6 @@ import {
   Eye,
   Loader2,
 } from "lucide-react";
-import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,8 +98,7 @@ export default function RatingModeration() {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -471,7 +469,6 @@ export default function RatingModeration() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </AdminLayout>
+    </div>
   );
 }
