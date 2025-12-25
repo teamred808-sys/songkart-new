@@ -22,23 +22,25 @@ const StartSellingButton = ({
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const uploadPagePath = '/seller/songs/upload';
+
   const handleClick = async () => {
     // If auth is still loading, wait
     if (authLoading) return;
 
-    // Not logged in → go to signup with seller role pre-selected
+    // Not logged in → go to signup with seller role pre-selected and redirect param
     if (!user) {
-      navigate('/auth?mode=signup&role=seller');
+      navigate(`/auth?mode=signup&role=seller&redirect=${encodeURIComponent(uploadPagePath)}`);
       return;
     }
 
-    // Already a seller → go to seller dashboard
+    // Already a seller → go directly to upload song page
     if (isSeller) {
-      navigate('/seller');
+      navigate(uploadPagePath);
       return;
     }
 
-    // Logged in as buyer only → become a seller
+    // Logged in as buyer only → become a seller, then go to upload page
     setIsProcessing(true);
     try {
       const { error } = await becomeSeller();
@@ -47,7 +49,7 @@ const StartSellingButton = ({
         console.error("Error becoming seller:", error);
       } else {
         toast.success("Welcome! You're now a seller.");
-        navigate('/seller');
+        navigate(uploadPagePath);
       }
     } catch (err) {
       toast.error("Something went wrong. Please try again.");
