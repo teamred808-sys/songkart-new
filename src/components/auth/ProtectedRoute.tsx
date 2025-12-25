@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
@@ -18,6 +18,7 @@ export function ProtectedRoute({
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
   const { user, roles, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -31,7 +32,10 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to={redirectTo} replace />;
+    // Preserve the intended destination for redirect after login
+    const currentPath = location.pathname + location.search;
+    const authUrl = `${redirectTo}?redirect=${encodeURIComponent(currentPath)}`;
+    return <Navigate to={authUrl} replace />;
   }
 
   // Check for multiple allowed roles - user must have at least one matching role

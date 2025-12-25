@@ -15,15 +15,24 @@ export default function Auth() {
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
 
-  // Read URL parameters for tab and role pre-selection
+  // Read URL parameters for tab, role pre-selection, and redirect
   const modeParam = searchParams.get('mode');
   const tabParam = searchParams.get('tab');
   const roleParam = searchParams.get('role');
+  const redirectParam = searchParams.get('redirect');
   
   // Support both 'mode=signup' and 'tab=signup' for backwards compatibility
   const defaultTab = (modeParam === 'signup' || tabParam === 'signup') ? 'signup' : 'signin';
   // Pre-select seller role if specified in URL
   const defaultRole = roleParam === 'seller' ? 'seller' : 'buyer';
+
+  // Helper to get safe redirect path (only allow internal paths)
+  const getRedirectPath = () => {
+    if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+      return redirectParam;
+    }
+    return '/';
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -52,7 +61,7 @@ export default function Auth() {
       });
     } else {
       toast({ title: 'Welcome back!' });
-      navigate('/');
+      navigate(getRedirectPath());
     }
 
     setIsLoading(false);
@@ -72,7 +81,7 @@ export default function Auth() {
       });
     } else {
       toast({ title: 'Account created!', description: 'You can now sign in.' });
-      navigate('/');
+      navigate(getRedirectPath());
     }
 
     setIsLoading(false);
