@@ -12,9 +12,18 @@ import { toast } from '@/hooks/use-toast';
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get('tab') === 'signup' ? 'signup' : 'signin';
   const navigate = useNavigate();
   const { signIn, signUp } = useAuth();
+
+  // Read URL parameters for tab and role pre-selection
+  const modeParam = searchParams.get('mode');
+  const tabParam = searchParams.get('tab');
+  const roleParam = searchParams.get('role');
+  
+  // Support both 'mode=signup' and 'tab=signup' for backwards compatibility
+  const defaultTab = (modeParam === 'signup' || tabParam === 'signup') ? 'signup' : 'signin';
+  // Pre-select seller role if specified in URL
+  const defaultRole = roleParam === 'seller' ? 'seller' : 'buyer';
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,7 +36,7 @@ export default function Auth() {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpName, setSignUpName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>('buyer');
+  const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>(defaultRole);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
