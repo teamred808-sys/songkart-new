@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Mic2, ArrowRight } from "lucide-react";
+import StartSellingButton from "./StartSellingButton";
 
 const CTABanner = () => {
   return (
@@ -29,12 +30,10 @@ const CTABanner = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button asChild size="lg" className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-glow">
-              <Link to="/auth?mode=signup&role=seller">
-                Become a Seller
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+            <StartSellingButton size="lg" className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-glow">
+              Become a Seller
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </StartSellingButton>
             <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-border hover:bg-muted">
               <Link to="/browse">
                 Explore Catalog

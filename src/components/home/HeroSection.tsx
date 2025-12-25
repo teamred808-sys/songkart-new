@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Music, Mic2, Sparkles, Shield, CheckCircle, TrendingUp } from "lucide-react";
-
+import StartSellingButton from "./StartSellingButton";
 const stats = [
   { label: "Songs", value: "10K+", icon: Music },
   { label: "Artists", value: "5K+", icon: Mic2 },
@@ -83,12 +83,10 @@ const HeroSection = () => {
                 Browse Catalog
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/50 hover:bg-primary/10">
-              <Link to="/auth?mode=signup&role=seller">
-                <Mic2 className="mr-2 h-5 w-5" />
-                Start Selling
-              </Link>
-            </Button>
+            <StartSellingButton variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/50 hover:bg-primary/10">
+              <Mic2 className="mr-2 h-5 w-5" />
+              Start Selling
+            </StartSellingButton>
           </div>
 
           {/* Animated stats */}
