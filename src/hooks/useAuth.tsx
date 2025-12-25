@@ -77,12 +77,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Migrate session to appropriate storage based on "Remember Me" preference
+  const migrateSessionStorage = () => {
+    const rememberMe = localStorage.getItem('remember_me') === 'true';
+    const sessionKey = 'sb-vxegvnndkeoubqnruiqj-auth-token';
+    
+    if (rememberMe) {
+      // Ensure session is in localStorage (persist across browser restart)
+      const sessionData = sessionStorage.getItem(sessionKey);
+      if (sessionData) {
+        localStorage.setItem(sessionKey, sessionData);
+        sessionStorage.removeItem(sessionKey);
+      }
+    } else {
+      // Move session to sessionStorage (expires on browser close)
+      const sessionData = localStorage.getItem(sessionKey);
+      if (sessionData) {
+        sessionStorage.setItem(sessionKey, sessionData);
+        localStorage.removeItem(sessionKey);
+      }
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Migrate session storage based on Remember Me preference after sign in
+        if (event === 'SIGNED_IN' && session) {
+          setTimeout(() => {
+            migrateSessionStorage();
+          }, 0);
+        }
 
         // Defer Supabase calls with setTimeout to prevent deadlocks
         if (session?.user) {
@@ -149,6 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    
+    // Clear remember me preference
+    localStorage.removeItem('remember_me');
+    
+    // Clear any lingering session data from both storages
+    const sessionKey = 'sb-vxegvnndkeoubqnruiqj-auth-token';
+    localStorage.removeItem(sessionKey);
+    sessionStorage.removeItem(sessionKey);
   };
 
   const refreshProfile = async () => {
