@@ -87,7 +87,7 @@ export function useAdminApproveSong() {
         .single();
 
       // Only set approved_at if it's the first approval
-      const updateData: { status: string; rejection_reason: null; approved_at?: string } = {
+      const updateData: { status: 'approved'; rejection_reason: null; approved_at?: string } = {
         status: 'approved',
         rejection_reason: null,
       };
