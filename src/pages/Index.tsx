@@ -7,8 +7,12 @@ import GenreSection from "@/components/home/GenreSection";
 import HowItWorks from "@/components/home/HowItWorks";
 import LatestReleases from "@/components/home/LatestReleases";
 import CTABanner from "@/components/home/CTABanner";
+import { useMarkHomepageSeen } from "@/hooks/useFirstVisit";
 
 const Index = () => {
+  // Mark homepage as seen when user visits
+  useMarkHomepageSeen();
+
   return (
     <MainLayout>
       <HeroSection />
