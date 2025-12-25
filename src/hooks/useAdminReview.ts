@@ -79,9 +79,26 @@ export function useAdminApproveSong() {
 
   return useMutation({
     mutationFn: async (songId: string) => {
+      // First check if song already has approved_at (resubmission case)
+      const { data: song } = await supabase
+        .from('songs')
+        .select('approved_at')
+        .eq('id', songId)
+        .single();
+
+      // Only set approved_at if it's the first approval
+      const updateData: { status: string; rejection_reason: null; approved_at?: string } = {
+        status: 'approved',
+        rejection_reason: null,
+      };
+
+      if (!song?.approved_at) {
+        updateData.approved_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('songs')
-        .update({ status: 'approved', rejection_reason: null })
+        .update(updateData)
         .eq('id', songId);
 
       if (error) throw error;
@@ -89,6 +106,7 @@ export function useAdminApproveSong() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-song-review'] });
       queryClient.invalidateQueries({ queryKey: ['admin-songs'] });
+      queryClient.invalidateQueries({ queryKey: ['new-uploads'] });
       toast({
         title: 'Song Approved',
         description: 'The song has been approved and is now live.',

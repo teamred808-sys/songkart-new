@@ -1666,6 +1666,41 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_upload_rates: {
+        Row: {
+          created_at: string | null
+          id: string
+          seller_id: string
+          updated_at: string | null
+          upload_count: number | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          seller_id: string
+          updated_at?: string | null
+          upload_count?: number | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          seller_id?: string
+          updated_at?: string | null
+          upload_count?: number | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_upload_rates_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_verification_tokens: {
         Row: {
           created_at: string | null
@@ -1736,6 +1771,7 @@ export type Database = {
       }
       songs: {
         Row: {
+          approved_at: string | null
           audio_url: string | null
           base_price: number
           bpm: number | null
@@ -1754,6 +1790,9 @@ export type Database = {
           is_featured: boolean | null
           language: string | null
           mood_id: string | null
+          new_uploads_excluded: boolean | null
+          new_uploads_pinned: boolean | null
+          new_uploads_pinned_until: string | null
           play_count: number | null
           preview_audio_url: string | null
           preview_lyrics: string | null
@@ -1765,6 +1804,7 @@ export type Database = {
           view_count: number | null
         }
         Insert: {
+          approved_at?: string | null
           audio_url?: string | null
           base_price?: number
           bpm?: number | null
@@ -1783,6 +1823,9 @@ export type Database = {
           is_featured?: boolean | null
           language?: string | null
           mood_id?: string | null
+          new_uploads_excluded?: boolean | null
+          new_uploads_pinned?: boolean | null
+          new_uploads_pinned_until?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_lyrics?: string | null
@@ -1794,6 +1837,7 @@ export type Database = {
           view_count?: number | null
         }
         Update: {
+          approved_at?: string | null
           audio_url?: string | null
           base_price?: number
           bpm?: number | null
@@ -1812,6 +1856,9 @@ export type Database = {
           is_featured?: boolean | null
           language?: string | null
           mood_id?: string | null
+          new_uploads_excluded?: boolean | null
+          new_uploads_pinned?: boolean | null
+          new_uploads_pinned_until?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_lyrics?: string | null
@@ -2142,6 +2189,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_manage_new_upload: {
+        Args: { p_action: string; p_pin_until?: string; p_song_id: string }
+        Returns: Json
+      }
       calculate_and_update_tier: {
         Args: { p_seller_id: string }
         Returns: undefined
@@ -2171,6 +2222,7 @@ export type Database = {
         Args: { p_buyer_id: string; p_song_id: string }
         Returns: Json
       }
+      check_upload_rate_limit: { Args: { p_seller_id: string }; Returns: Json }
       generate_order_number: { Args: never; Returns: string }
       get_country_pricing: {
         Args: { p_country_code: string }
@@ -2182,6 +2234,32 @@ export type Database = {
           multiplier: number
           zone_code: string
           zone_name: string
+        }[]
+      }
+      get_new_uploads: {
+        Args: { p_limit?: number }
+        Returns: {
+          approved_at: string
+          base_price: number
+          cover_image_url: string
+          description: string
+          genre_name: string
+          has_audio: boolean
+          has_lyrics: boolean
+          id: string
+          is_pinned: boolean
+          mood_name: string
+          play_count: number
+          preview_audio_url: string
+          ranking_score: number
+          seller_avatar: string
+          seller_id: string
+          seller_name: string
+          seller_tier_badge_color: string
+          seller_tier_level: number
+          seller_tier_name: string
+          seller_verified: boolean
+          title: string
         }[]
       }
       get_seller_tier: {
@@ -2208,6 +2286,10 @@ export type Database = {
         Returns: boolean
       }
       increment_play_count: { Args: { song_uuid: string }; Returns: undefined }
+      increment_upload_count: {
+        Args: { p_seller_id: string }
+        Returns: undefined
+      }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
       validate_song_price: {
         Args: { p_has_audio: boolean; p_price: number; p_seller_id: string }
