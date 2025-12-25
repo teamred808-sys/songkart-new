@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Music, FileText, Play, Heart, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,7 +31,7 @@ interface SongCardProps {
   };
 }
 
-export function SongCard({
+export const SongCard = memo(function SongCard({
   id,
   title,
   sellerName,
@@ -58,6 +59,8 @@ export function SongCard({
             <img
               src={coverUrl}
               alt={title}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
           ) : (
@@ -159,4 +162,4 @@ export function SongCard({
       </Card>
     </Link>
   );
-}
+});

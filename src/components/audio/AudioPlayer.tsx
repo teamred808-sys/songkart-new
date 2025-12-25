@@ -89,7 +89,7 @@ export function AudioPlayer({ src, duration, className, onPlay }: AudioPlayerPro
 
   return (
     <div className={cn("flex items-center gap-3 p-3 rounded-lg bg-card/50 backdrop-blur", className)}>
-      <audio ref={audioRef} src={src} preload="metadata" />
+      <audio ref={audioRef} src={src} preload="none" />
       
       <Button
         variant="ghost"

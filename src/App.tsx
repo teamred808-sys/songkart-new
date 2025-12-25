@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,9 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SellerLayout } from "@/components/seller/SellerLayout";
 import { BuyerLayout } from "@/components/buyer/BuyerLayout";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { PageLoader } from "@/components/ui/PageLoader";
+
+// Eagerly loaded public pages (critical path)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Browse from "./pages/Browse";
@@ -16,50 +20,58 @@ import SongDetail from "./pages/SongDetail";
 import Sellers from "./pages/Sellers";
 import SellerProfile from "./pages/SellerProfile";
 import NotFound from "./pages/NotFound";
-import SellerDashboard from "./pages/seller/SellerDashboard";
-import MySongs from "./pages/seller/MySongs";
-import UploadSong from "./pages/seller/UploadSong";
-import EditSong from "./pages/seller/EditSong";
-import SalesOrders from "./pages/seller/SalesOrders";
-import Wallet from "./pages/seller/Wallet";
-import Analytics from "./pages/seller/Analytics";
-import SellerSettings from "./pages/seller/SellerSettings";
-import BuyerDashboard from "./pages/buyer/BuyerDashboard";
-import MyPurchases from "./pages/buyer/MyPurchases";
-import MyDownloads from "./pages/buyer/MyDownloads";
-import Cart from "./pages/buyer/Cart";
-import OrderConfirmation from "./pages/buyer/OrderConfirmation";
-import Favorites from "./pages/buyer/Favorites";
-import BuyerSettings from "./pages/buyer/BuyerSettings";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import SongModeration from "./pages/admin/SongModeration";
-import SongReview from "./pages/admin/SongReview";
-import UserManagement from "./pages/admin/UserManagement";
-import TransactionManagement from "./pages/admin/TransactionManagement";
-import OrderManagement from "./pages/admin/OrderManagement";
-import LicenseManagement from "./pages/admin/LicenseManagement";
-import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
-import DisputeManagement from "./pages/admin/DisputeManagement";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import FeaturedContent from "./pages/admin/FeaturedContent";
-import PlatformSettings from "./pages/admin/PlatformSettings";
-import ActivityLogs from "./pages/admin/ActivityLogs";
-import BugReports from "./pages/admin/BugReports";
-import SystemMonitoring from "./pages/admin/SystemMonitoring";
-import ContentManagement from "./pages/admin/ContentManagement";
-import ContentEditor from "./pages/admin/ContentEditor";
-import NewUploadsManagement from "./pages/admin/NewUploadsManagement";
-import RatingModeration from "./pages/admin/RatingModeration";
 import ContentPage from "./pages/ContentPage";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import VerifyEmail from "./pages/VerifyEmail";
 
+// Lazy loaded seller pages
+const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
+const MySongs = lazy(() => import("./pages/seller/MySongs"));
+const UploadSong = lazy(() => import("./pages/seller/UploadSong"));
+const EditSong = lazy(() => import("./pages/seller/EditSong"));
+const SalesOrders = lazy(() => import("./pages/seller/SalesOrders"));
+const Wallet = lazy(() => import("./pages/seller/Wallet"));
+const Analytics = lazy(() => import("./pages/seller/Analytics"));
+const SellerSettings = lazy(() => import("./pages/seller/SellerSettings"));
+
+// Lazy loaded buyer pages
+const BuyerDashboard = lazy(() => import("./pages/buyer/BuyerDashboard"));
+const MyPurchases = lazy(() => import("./pages/buyer/MyPurchases"));
+const MyDownloads = lazy(() => import("./pages/buyer/MyDownloads"));
+const Cart = lazy(() => import("./pages/buyer/Cart"));
+const OrderConfirmation = lazy(() => import("./pages/buyer/OrderConfirmation"));
+const Favorites = lazy(() => import("./pages/buyer/Favorites"));
+const BuyerSettings = lazy(() => import("./pages/buyer/BuyerSettings"));
+
+// Lazy loaded admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const SongModeration = lazy(() => import("./pages/admin/SongModeration"));
+const SongReview = lazy(() => import("./pages/admin/SongReview"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const TransactionManagement = lazy(() => import("./pages/admin/TransactionManagement"));
+const OrderManagement = lazy(() => import("./pages/admin/OrderManagement"));
+const LicenseManagement = lazy(() => import("./pages/admin/LicenseManagement"));
+const WithdrawalManagement = lazy(() => import("./pages/admin/WithdrawalManagement"));
+const DisputeManagement = lazy(() => import("./pages/admin/DisputeManagement"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const FeaturedContent = lazy(() => import("./pages/admin/FeaturedContent"));
+const PlatformSettings = lazy(() => import("./pages/admin/PlatformSettings"));
+const ActivityLogs = lazy(() => import("./pages/admin/ActivityLogs"));
+const BugReports = lazy(() => import("./pages/admin/BugReports"));
+const SystemMonitoring = lazy(() => import("./pages/admin/SystemMonitoring"));
+const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
+const ContentEditor = lazy(() => import("./pages/admin/ContentEditor"));
+const NewUploadsManagement = lazy(() => import("./pages/admin/NewUploadsManagement"));
+const RatingModeration = lazy(() => import("./pages/admin/RatingModeration"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
       retry: 1,
+      refetchOnWindowFocus: false, // Reduce unnecessary refetches
     },
   },
 });
@@ -86,13 +98,13 @@ const App = () => (
                 <BuyerLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<BuyerDashboard />} />
-              <Route path="purchases" element={<MyPurchases />} />
-              <Route path="downloads" element={<MyDownloads />} />
-              <Route path="cart" element={<Cart />} />
-              <Route path="order-confirmation" element={<OrderConfirmation />} />
-              <Route path="favorites" element={<Favorites />} />
-              <Route path="settings" element={<BuyerSettings />} />
+              <Route index element={<Suspense fallback={<PageLoader />}><BuyerDashboard /></Suspense>} />
+              <Route path="purchases" element={<Suspense fallback={<PageLoader />}><MyPurchases /></Suspense>} />
+              <Route path="downloads" element={<Suspense fallback={<PageLoader />}><MyDownloads /></Suspense>} />
+              <Route path="cart" element={<Suspense fallback={<PageLoader />}><Cart /></Suspense>} />
+              <Route path="order-confirmation" element={<Suspense fallback={<PageLoader />}><OrderConfirmation /></Suspense>} />
+              <Route path="favorites" element={<Suspense fallback={<PageLoader />}><Favorites /></Suspense>} />
+              <Route path="settings" element={<Suspense fallback={<PageLoader />}><BuyerSettings /></Suspense>} />
             </Route>
             
             {/* Seller Dashboard Routes */}
@@ -101,14 +113,14 @@ const App = () => (
                 <SellerLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<SellerDashboard />} />
-              <Route path="songs" element={<MySongs />} />
-              <Route path="songs/upload" element={<UploadSong />} />
-              <Route path="songs/:id/edit" element={<EditSong />} />
-              <Route path="sales" element={<SalesOrders />} />
-              <Route path="wallet" element={<Wallet />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="settings" element={<SellerSettings />} />
+              <Route index element={<Suspense fallback={<PageLoader />}><SellerDashboard /></Suspense>} />
+              <Route path="songs" element={<Suspense fallback={<PageLoader />}><MySongs /></Suspense>} />
+              <Route path="songs/upload" element={<Suspense fallback={<PageLoader />}><UploadSong /></Suspense>} />
+              <Route path="songs/:id/edit" element={<Suspense fallback={<PageLoader />}><EditSong /></Suspense>} />
+              <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesOrders /></Suspense>} />
+              <Route path="wallet" element={<Suspense fallback={<PageLoader />}><Wallet /></Suspense>} />
+              <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
+              <Route path="settings" element={<Suspense fallback={<PageLoader />}><SellerSettings /></Suspense>} />
             </Route>
             
             {/* Admin Dashboard Routes */}
@@ -117,27 +129,27 @@ const App = () => (
                 <AdminLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="songs" element={<SongModeration />} />
-              <Route path="songs/:id/review" element={<SongReview />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="transactions" element={<TransactionManagement />} />
-              <Route path="orders" element={<OrderManagement />} />
-              <Route path="licenses" element={<LicenseManagement />} />
-              <Route path="withdrawals" element={<WithdrawalManagement />} />
-              <Route path="disputes" element={<DisputeManagement />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="featured" element={<FeaturedContent />} />
-              <Route path="new-uploads" element={<NewUploadsManagement />} />
-              <Route path="ratings" element={<RatingModeration />} />
-              <Route path="settings" element={<PlatformSettings />} />
-              <Route path="logs" element={<ActivityLogs />} />
-              <Route path="bugs" element={<BugReports />} />
-              <Route path="monitoring" element={<SystemMonitoring />} />
+              <Route index element={<Suspense fallback={<PageLoader />}><AdminDashboard /></Suspense>} />
+              <Route path="songs" element={<Suspense fallback={<PageLoader />}><SongModeration /></Suspense>} />
+              <Route path="songs/:id/review" element={<Suspense fallback={<PageLoader />}><SongReview /></Suspense>} />
+              <Route path="users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+              <Route path="transactions" element={<Suspense fallback={<PageLoader />}><TransactionManagement /></Suspense>} />
+              <Route path="orders" element={<Suspense fallback={<PageLoader />}><OrderManagement /></Suspense>} />
+              <Route path="licenses" element={<Suspense fallback={<PageLoader />}><LicenseManagement /></Suspense>} />
+              <Route path="withdrawals" element={<Suspense fallback={<PageLoader />}><WithdrawalManagement /></Suspense>} />
+              <Route path="disputes" element={<Suspense fallback={<PageLoader />}><DisputeManagement /></Suspense>} />
+              <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AdminAnalytics /></Suspense>} />
+              <Route path="featured" element={<Suspense fallback={<PageLoader />}><FeaturedContent /></Suspense>} />
+              <Route path="new-uploads" element={<Suspense fallback={<PageLoader />}><NewUploadsManagement /></Suspense>} />
+              <Route path="ratings" element={<Suspense fallback={<PageLoader />}><RatingModeration /></Suspense>} />
+              <Route path="settings" element={<Suspense fallback={<PageLoader />}><PlatformSettings /></Suspense>} />
+              <Route path="logs" element={<Suspense fallback={<PageLoader />}><ActivityLogs /></Suspense>} />
+              <Route path="bugs" element={<Suspense fallback={<PageLoader />}><BugReports /></Suspense>} />
+              <Route path="monitoring" element={<Suspense fallback={<PageLoader />}><SystemMonitoring /></Suspense>} />
               {/* CMS Content Management */}
-              <Route path="content" element={<ContentManagement />} />
-              <Route path="content/new" element={<ContentEditor />} />
-              <Route path="content/:id/edit" element={<ContentEditor />} />
+              <Route path="content" element={<Suspense fallback={<PageLoader />}><ContentManagement /></Suspense>} />
+              <Route path="content/new" element={<Suspense fallback={<PageLoader />}><ContentEditor /></Suspense>} />
+              <Route path="content/:id/edit" element={<Suspense fallback={<PageLoader />}><ContentEditor /></Suspense>} />
             </Route>
             
             {/* Blog Routes - must be before /:slug */}
