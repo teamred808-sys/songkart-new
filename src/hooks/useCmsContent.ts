@@ -167,6 +167,9 @@ export function useContentById(id: string | undefined) {
   });
 }
 
+// Reserved slugs that conflict with React routes
+const RESERVED_SLUGS = ['blog', 'auth', 'browse', 'sellers', 'seller', 'buyer', 'admin', 'cart', 'verify-email'];
+
 // Hook to fetch published pages for footer/navigation
 export function usePublishedPages() {
   return useQuery({
@@ -180,7 +183,9 @@ export function usePublishedPages() {
         .order('title', { ascending: true });
       
       if (error) throw error;
-      return data;
+      
+      // Filter out reserved slugs that conflict with React routes
+      return data?.filter(page => !RESERVED_SLUGS.includes(page.slug)) || [];
     },
   });
 }

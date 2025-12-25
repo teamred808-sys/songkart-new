@@ -80,16 +80,6 @@ export function Footer() {
                   Seller Dashboard
                 </Link>
               </li>
-              <li>
-                <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Pricing Guide
-                </Link>
-              </li>
-              <li>
-                <Link to="/licensing" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  License Types
-                </Link>
-              </li>
             </ul>
           </div>
 
