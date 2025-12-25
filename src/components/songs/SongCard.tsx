@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { Price } from "@/components/ui/Price";
+import { RatingBadge } from "@/components/songs/RatingDisplay";
 
 interface SongCardProps {
   id: string;
@@ -20,6 +21,8 @@ interface SongCardProps {
   playCount?: number;
   className?: string;
   hasExclusive?: boolean;
+  averageRating?: number | null;
+  totalRatings?: number | null;
   sellerTier?: {
     level: number;
     name: string;
@@ -40,6 +43,8 @@ export function SongCard({
   playCount = 0,
   className,
   hasExclusive,
+  averageRating,
+  totalRatings,
   sellerTier,
 }: SongCardProps) {
   return (
@@ -136,12 +141,19 @@ export function SongCard({
                 <Price amount={basePrice} />
               </p>
             </div>
-            {playCount > 0 && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Play className="h-3 w-3" />
-                {playCount.toLocaleString()}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Rating Badge */}
+              <RatingBadge 
+                averageRating={averageRating || 0} 
+                totalRatings={totalRatings || 0} 
+              />
+              {playCount > 0 && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Play className="h-3 w-3" />
+                  {playCount.toLocaleString()}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

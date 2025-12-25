@@ -49,6 +49,7 @@ import SystemMonitoring from "./pages/admin/SystemMonitoring";
 import ContentManagement from "./pages/admin/ContentManagement";
 import ContentEditor from "./pages/admin/ContentEditor";
 import NewUploadsManagement from "./pages/admin/NewUploadsManagement";
+import RatingModeration from "./pages/admin/RatingModeration";
 import ContentPage from "./pages/ContentPage";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
@@ -128,6 +129,7 @@ const App = () => (
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="featured" element={<FeaturedContent />} />
               <Route path="new-uploads" element={<NewUploadsManagement />} />
+              <Route path="ratings" element={<RatingModeration />} />
               <Route path="settings" element={<PlatformSettings />} />
               <Route path="logs" element={<ActivityLogs />} />
               <Route path="bugs" element={<BugReports />} />

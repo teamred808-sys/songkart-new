@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { isValidUUID, filterValidUUIDs } from '@/lib/validation';
 
 const COMMISSION_RATE = 0.15;
 
@@ -21,6 +22,8 @@ export function useValidatedAddToCart() {
   return useMutation({
     mutationFn: async ({ songId, licenseTierId }: { songId: string; licenseTierId: string }) => {
       if (!user) throw new Error('Not authenticated');
+      if (!isValidUUID(songId)) throw new Error('Invalid song ID');
+      if (!isValidUUID(licenseTierId)) throw new Error('Invalid license tier ID');
 
       // Fast path: First check the license tier type client-side
       const { data: licenseTier, error: tierError } = await supabase
@@ -135,14 +138,17 @@ export function useCartWithTotals() {
 
       if (error) throw error;
 
-      // Get seller profiles
-      const sellerIds = [...new Set(cartItems?.map(item => item.songs?.seller_id).filter(Boolean))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', sellerIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]));
+      // Get seller profiles - filter out invalid UUIDs
+      const sellerIds = filterValidUUIDs([...new Set(cartItems?.map(item => item.songs?.seller_id).filter(Boolean))]);
+      
+      let profileMap = new Map<string, string | null>();
+      if (sellerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', sellerIds);
+        profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      }
 
       // Get active reservations for exclusive items
       const exclusiveItems = cartItems?.filter(item => item.is_exclusive) || [];
