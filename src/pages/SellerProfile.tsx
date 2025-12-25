@@ -99,6 +99,14 @@ const SellerProfile = () => {
     return num.toString();
   };
 
+  const ensureHttps = (url: string): string => {
+    if (!url) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   if (isLoadingSeller) {
     return (
       <MainLayout>
@@ -178,7 +186,7 @@ const SellerProfile = () => {
             <div className="flex flex-wrap gap-4">
               {seller.website && (
                 <a
-                  href={seller.website}
+                  href={ensureHttps(seller.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-sm text-primary hover:underline"
@@ -190,7 +198,7 @@ const SellerProfile = () => {
               {seller.social_links && Object.entries(seller.social_links).map(([platform, url]) => (
                 <a
                   key={platform}
-                  href={url}
+                  href={ensureHttps(url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-sm text-primary hover:underline capitalize"
