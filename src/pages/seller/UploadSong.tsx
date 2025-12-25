@@ -695,7 +695,7 @@ export default function UploadSong() {
               <div className="flex flex-wrap gap-2">
                 {pricing.license_tiers.map((tier) => (
                   <div key={tier.license_type} className="px-3 py-1.5 rounded-md bg-muted text-sm">
-                    {LICENSE_TYPES.find(t => t.value === tier.license_type)?.label}: ${tier.price}
+                    {LICENSE_TYPES.find(t => t.value === tier.license_type)?.label}: ₹{tier.price}
                   </div>
                 ))}
               </div>
