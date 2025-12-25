@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { isValidUUID } from '@/lib/validation';
 
 export interface SellerTierInfo {
   tier_level: number;
@@ -33,7 +34,10 @@ export function useSellerTier(sellerId?: string) {
   return useQuery({
     queryKey: ['seller-tier', targetSellerId],
     queryFn: async (): Promise<SellerTierInfo | null> => {
-      if (!targetSellerId) return null;
+      // Validate UUID before RPC call to prevent database errors
+      if (!isValidUUID(targetSellerId)) {
+        return null;
+      }
 
       const { data, error } = await supabase.rpc('get_seller_tier', {
         p_seller_id: targetSellerId
@@ -51,7 +55,7 @@ export function useSellerTier(sellerId?: string) {
       
       return null;
     },
-    enabled: !!targetSellerId,
+    enabled: isValidUUID(targetSellerId),
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 }
@@ -63,7 +67,7 @@ export function useValidateSongPrice() {
     price: number,
     hasAudio: boolean
   ): Promise<PriceValidationResult> => {
-    if (!user?.id) {
+    if (!isValidUUID(user?.id)) {
       throw new Error('User not authenticated');
     }
 

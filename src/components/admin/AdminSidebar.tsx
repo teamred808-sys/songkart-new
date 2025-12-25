@@ -20,7 +20,8 @@ import {
   ClipboardList,
   Home,
   Bug,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ const navItems = [
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Star, label: 'Featured Content', path: '/admin/featured' },
   { icon: Sparkles, label: 'New Uploads', path: '/admin/new-uploads' },
+  { icon: MessageSquare, label: 'Ratings', path: '/admin/ratings' },
   { icon: Settings, label: 'Platform Settings', path: '/admin/settings' },
   { icon: ClipboardList, label: 'Activity Logs', path: '/admin/logs' },
   { icon: Bug, label: 'Bug Reports', path: '/admin/bugs' },

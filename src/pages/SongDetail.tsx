@@ -15,6 +15,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LicenseComparisonTable } from "@/components/songs/LicenseComparisonTable";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { Price } from "@/components/ui/Price";
+import { RatingDisplay } from "@/components/songs/RatingDisplay";
+import { RatingInput } from "@/components/songs/RatingInput";
+import { RatingsList } from "@/components/songs/RatingsList";
 import { useSong, useLicenseTiers } from "@/hooks/useSongs";
 import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
@@ -154,6 +157,12 @@ export default function SongDetail() {
                         </Badge>
                       )}
                     </div>
+                    {/* Rating Display */}
+                    <RatingDisplay 
+                      averageRating={song.average_rating || 0} 
+                      totalRatings={song.total_ratings || 0}
+                      showStars={true}
+                    />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -201,11 +210,12 @@ export default function SongDetail() {
               </div>
             </div>
 
-            {/* Tabs: Description & Lyrics Preview */}
+            {/* Tabs: Description, Lyrics Preview & Reviews */}
             <Tabs defaultValue="description" className="w-full">
               <TabsList>
                 <TabsTrigger value="description">Description</TabsTrigger>
                 {song.has_lyrics && <TabsTrigger value="lyrics">Lyrics Preview</TabsTrigger>}
+                <TabsTrigger value="reviews">Reviews</TabsTrigger>
               </TabsList>
               <TabsContent value="description" className="mt-4">
                 <p className="text-muted-foreground whitespace-pre-wrap">
@@ -228,6 +238,13 @@ export default function SongDetail() {
                   </Card>
                 </TabsContent>
               )}
+              <TabsContent value="reviews" className="mt-4 space-y-6">
+                {/* Rating Input */}
+                <RatingInput songId={id!} sellerId={song.seller?.id} />
+                
+                {/* Ratings List */}
+                <RatingsList songId={id!} />
+              </TabsContent>
             </Tabs>
           </div>
 

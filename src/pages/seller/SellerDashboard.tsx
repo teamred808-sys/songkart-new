@@ -5,6 +5,7 @@ import { RecentSales } from '@/components/seller/RecentSales';
 import { TopSongs } from '@/components/seller/TopSongs';
 import { SellerTierCard } from '@/components/seller/SellerTierCard';
 import { VerificationWarningBanner } from '@/components/seller/VerificationWarningBanner';
+import { SellerRatingsOverview } from '@/components/seller/SellerRatingsOverview';
 import { useSellerStats, useSellerTransactions, useSellerSongs } from '@/hooks/useSellerData';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -158,6 +159,9 @@ export default function SellerDashboard() {
         <EarningsChart data={stats?.monthlyEarnings} isLoading={statsLoading} />
         <RecentSales transactions={transactions} isLoading={txLoading} />
       </div>
+
+      {/* Ratings Overview */}
+      <SellerRatingsOverview />
 
       {/* Top Songs */}
       <TopSongs songs={songs} isLoading={songsLoading} />

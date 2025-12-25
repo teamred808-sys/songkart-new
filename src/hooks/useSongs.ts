@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidUUID } from "@/lib/validation";
 import type { SongFiltersState } from "@/components/songs/SongFilters";
 
 export interface Song {
@@ -23,6 +24,8 @@ export interface Song {
   is_featured: boolean | null;
   status: string;
   created_at: string;
+  average_rating: number | null;
+  total_ratings: number | null;
   genres?: { id: string; name: string } | null;
   moods?: { id: string; name: string } | null;
   seller?: { id: string; full_name: string | null; avatar_url: string | null; bio?: string | null; is_verified?: boolean | null } | null;
@@ -61,7 +64,13 @@ export function useMoods() {
 async function fetchSongsWithSellers(songs: any[]) {
   if (!songs.length) return [];
   
-  const sellerIds = [...new Set(songs.map(s => s.seller_id))];
+  // Filter out invalid seller IDs to prevent UUID errors
+  const sellerIds = [...new Set(songs.map(s => s.seller_id).filter(isValidUUID))];
+  
+  if (sellerIds.length === 0) {
+    return songs.map(song => ({ ...song, seller: null }));
+  }
+  
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, bio, is_verified")
@@ -71,7 +80,7 @@ async function fetchSongsWithSellers(songs: any[]) {
   
   return songs.map(song => ({
     ...song,
-    seller: profileMap.get(song.seller_id) || null
+    seller: isValidUUID(song.seller_id) ? profileMap.get(song.seller_id) || null : null
   }));
 }
 
@@ -165,6 +174,11 @@ export function useSong(id: string) {
   return useQuery({
     queryKey: ["song", id],
     queryFn: async () => {
+      // Validate UUID before querying
+      if (!isValidUUID(id)) {
+        throw new Error("Invalid song ID");
+      }
+      
       const { data, error } = await supabase
         .from("songs")
         .select(`
@@ -177,19 +191,23 @@ export function useSong(id: string) {
       
       if (error) throw error;
       
-      // Fetch seller profile
-      const { data: seller } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, bio, is_verified")
-        .eq("id", data.seller_id)
-        .single();
+      // Fetch seller profile only if seller_id is valid
+      let seller = null;
+      if (isValidUUID(data.seller_id)) {
+        const { data: sellerData } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, bio, is_verified")
+          .eq("id", data.seller_id)
+          .maybeSingle();
+        seller = sellerData;
+      }
       
       // Increment view count
       await supabase.rpc("increment_view_count", { song_uuid: id });
       
       return { ...data, seller } as Song;
     },
-    enabled: !!id,
+    enabled: isValidUUID(id),
   });
 }
 
@@ -197,6 +215,11 @@ export function useLicenseTiers(songId: string) {
   return useQuery({
     queryKey: ["license_tiers", songId],
     queryFn: async () => {
+      // Validate UUID before querying
+      if (!isValidUUID(songId)) {
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from("license_tiers")
         .select("*")
@@ -207,6 +230,6 @@ export function useLicenseTiers(songId: string) {
       if (error) throw error;
       return data;
     },
-    enabled: !!songId,
+    enabled: isValidUUID(songId),
   });
 }

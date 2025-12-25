@@ -140,6 +140,8 @@ export default function Browse() {
                     hasAudio={song.has_audio || false}
                     hasLyrics={song.has_lyrics || false}
                     playCount={song.play_count || 0}
+                    averageRating={song.average_rating}
+                    totalRatings={song.total_ratings}
                   />
                 ))}
               </div>
