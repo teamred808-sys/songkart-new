@@ -92,11 +92,20 @@ export function Footer() {
           <div>
             <h4 className="font-display font-semibold mb-4">Pages</h4>
             <ul className="space-y-2">
+              {/* Static Blog link */}
+              <li>
+                <Link 
+                  to="/blog" 
+                  className="text-muted-foreground hover:text-foreground transition-colors text-sm"
+                >
+                  Blog
+                </Link>
+              </li>
+              {/* Dynamic CMS pages */}
               {isPagesLoading ? (
                 <>
                   <li><Skeleton className="h-4 w-24" /></li>
                   <li><Skeleton className="h-4 w-20" /></li>
-                  <li><Skeleton className="h-4 w-28" /></li>
                 </>
               ) : cmsPages && cmsPages.length > 0 ? (
                 cmsPages.map((page) => (
@@ -109,9 +118,7 @@ export function Footer() {
                     </Link>
                   </li>
                 ))
-              ) : (
-                <li className="text-muted-foreground text-sm">No pages yet</li>
-              )}
+              ) : null}
             </ul>
           </div>
         </div>
