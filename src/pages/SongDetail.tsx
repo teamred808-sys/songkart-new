@@ -256,8 +256,8 @@ export default function SongDetail() {
                 <CardTitle className="text-lg flex items-center gap-2">
                   Seller
                   {song.seller?.is_verified && (
-                    <Badge variant="secondary" className="gap-1 text-xs">
-                      <Shield className="h-3 w-3" />
+                    <Badge variant="secondary" className="gap-1 text-xs bg-blue-500/10 border-blue-500/30 text-blue-500">
+                      <Shield className="h-3 w-3 animate-pulse" />
                       Verified
                     </Badge>
                   )}
@@ -277,7 +277,7 @@ export default function SongDetail() {
                         {song.seller?.full_name || "Unknown"}
                       </span>
                       {song.seller?.is_verified && (
-                        <BadgeCheck className="h-4 w-4 text-primary" />
+                        <BadgeCheck className="h-4 w-4 text-blue-500 animate-pulse" />
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-1">
