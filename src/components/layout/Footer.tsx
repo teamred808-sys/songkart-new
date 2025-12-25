@@ -3,6 +3,7 @@ import { Twitter, Instagram, Youtube, Mail } from 'lucide-react';
 import songkartLogo from '@/assets/songkart-logo.png';
 import { usePublishedPages } from '@/hooks/useCmsContent';
 import { Skeleton } from '@/components/ui/skeleton';
+import StartSellingButton from '@/components/home/StartSellingButton';
 
 export function Footer() {
   const { data: cmsPages, isLoading: isPagesLoading } = usePublishedPages();
@@ -71,9 +72,13 @@ export function Footer() {
             <h4 className="font-display font-semibold mb-4">For Sellers</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/auth?tab=signup" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                <StartSellingButton 
+                  variant="link" 
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground transition-colors text-sm p-0 h-auto font-normal"
+                >
                   Start Selling
-                </Link>
+                </StartSellingButton>
               </li>
               <li>
                 <Link to="/seller" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
