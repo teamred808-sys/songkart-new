@@ -408,7 +408,7 @@ export default function MySongs() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${Number(song.base_price).toFixed(2)}
+                        ₹{Number(song.base_price).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-medium">
