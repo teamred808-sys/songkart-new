@@ -98,7 +98,7 @@ export function RatingsList({
                 </span>
                 {rating.is_verified_purchase && (
                   <Badge variant="secondary" className="gap-1 text-xs">
-                    <BadgeCheck className="h-3 w-3" />
+                    <BadgeCheck className="h-3 w-3 text-blue-500" />
                     Verified
                   </Badge>
                 )}
