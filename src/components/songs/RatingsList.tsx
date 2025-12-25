@@ -97,8 +97,8 @@ export function RatingsList({
                   {rating.user_name || "Anonymous"}
                 </span>
                 {rating.is_verified_purchase && (
-                  <Badge variant="secondary" className="gap-1 text-xs">
-                    <BadgeCheck className="h-3 w-3 text-blue-500" />
+                  <Badge variant="secondary" className="gap-1 text-xs bg-blue-500/10 border-blue-500/30 text-blue-500">
+                    <BadgeCheck className="h-3 w-3 animate-pulse" />
                     Verified
                   </Badge>
                 )}

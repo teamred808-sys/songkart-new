@@ -135,7 +135,7 @@ export default function NewUploads() {
                         {song.seller_name || 'Unknown Artist'}
                       </span>
                       {song.seller_verified && (
-                        <BadgeCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        <BadgeCheck className="h-3.5 w-3.5 text-blue-500 animate-pulse flex-shrink-0" />
                       )}
                       <SellerTierBadge
                         tierLevel={song.seller_tier_level}

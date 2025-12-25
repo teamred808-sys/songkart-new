@@ -360,7 +360,7 @@ export default function NewUploadsManagement() {
                             {song.profiles?.full_name || 'Unknown'}
                           </span>
                           {song.profiles?.is_verified && (
-                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500" />
+                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500 animate-pulse" />
                           )}
                         </div>
                       </TableCell>
