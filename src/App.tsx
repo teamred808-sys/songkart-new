@@ -11,6 +11,7 @@ import { SellerLayout } from "@/components/seller/SellerLayout";
 import { BuyerLayout } from "@/components/buyer/BuyerLayout";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { PageLoader } from "@/components/ui/PageLoader";
+import HomepageGuard from "@/components/auth/HomepageGuard";
 
 // Eagerly loaded public pages (critical path)
 import Index from "./pages/Index";
@@ -86,11 +87,11 @@ const App = () => (
           <CurrencyProvider>
             <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/browse" element={<Browse />} />
-            <Route path="/sellers" element={<Sellers />} />
-            <Route path="/seller/:id" element={<SellerProfile />} />
-            <Route path="/song/:id" element={<SongDetail />} />
+            <Route path="/auth" element={<HomepageGuard><Auth /></HomepageGuard>} />
+            <Route path="/browse" element={<HomepageGuard><Browse /></HomepageGuard>} />
+            <Route path="/sellers" element={<HomepageGuard><Sellers /></HomepageGuard>} />
+            <Route path="/seller/:id" element={<HomepageGuard><SellerProfile /></HomepageGuard>} />
+            <Route path="/song/:id" element={<HomepageGuard><SongDetail /></HomepageGuard>} />
             
             {/* Buyer Dashboard Routes */}
             <Route path="/buyer" element={
@@ -153,14 +154,14 @@ const App = () => (
             </Route>
             
             {/* Blog Routes - must be before /:slug */}
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/blog" element={<HomepageGuard><Blog /></HomepageGuard>} />
+            <Route path="/blog/:slug" element={<HomepageGuard><BlogPost /></HomepageGuard>} />
             
             {/* Email Verification */}
             <Route path="/verify-email" element={<VerifyEmail />} />
             
             {/* Public CMS Pages */}
-            <Route path="/:slug" element={<ContentPage />} />
+            <Route path="/:slug" element={<HomepageGuard><ContentPage /></HomepageGuard>} />
             
             <Route path="*" element={<NotFound />} />
             </Routes>
