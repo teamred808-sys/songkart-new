@@ -9,6 +9,7 @@ import { Music, Heart, ShoppingCart, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { Price } from '@/components/ui/Price';
 
 export default function Favorites() {
   const { data: favorites, isLoading } = useFavorites();
@@ -136,7 +137,7 @@ export default function Favorites() {
                         )}
                       </div>
                       <span className="font-bold text-primary">
-                        ${Number(favorite.songs?.base_price || 0).toFixed(2)}
+                        <Price amount={Number(favorite.songs?.base_price || 0)} />
                       </span>
                     </div>
                   </CardContent>

@@ -245,7 +245,7 @@ export default function Analytics() {
                       <Play className="h-4 w-4" /> {song.play_count || 0}
                     </span>
                     <span className="font-semibold text-foreground w-16 text-right">
-                      ${Number(song.base_price).toFixed(2)}
+                      ₹{Number(song.base_price).toFixed(2)}
                     </span>
                   </div>
                 </div>

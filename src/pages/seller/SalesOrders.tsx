@@ -203,13 +203,13 @@ export default function SalesOrders() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${Number(tx.amount).toFixed(2)}
+                        ₹{Number(tx.amount).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        <span className="text-destructive">-${Number(tx.commission_amount).toFixed(2)}</span>
+                        <span className="text-destructive">-₹{Number(tx.commission_amount).toFixed(2)}</span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="font-semibold text-emerald-500">+${Number(tx.seller_amount).toFixed(2)}</span>
+                        <span className="font-semibold text-emerald-500">+₹{Number(tx.seller_amount).toFixed(2)}</span>
                       </TableCell>
                       <TableCell>
                         <Badge 
