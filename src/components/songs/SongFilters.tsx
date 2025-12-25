@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LANGUAGES } from "@/lib/constants";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useEffect } from "react";
 
 interface Genre {
   id: string;
@@ -53,12 +55,42 @@ interface SongFiltersProps {
 
 export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState(filters.search);
+  const [localPriceRange, setLocalPriceRange] = useState(filters.priceRange);
+  const [localBpmRange, setLocalBpmRange] = useState(filters.bpmRange);
 
-  const updateFilter = <K extends keyof SongFiltersState>(key: K, value: SongFiltersState[K]) => {
+  // Debounce search input
+  const debouncedSearch = useDebounce(localSearch, 300);
+  const debouncedPriceRange = useDebounce(localPriceRange, 300);
+  const debouncedBpmRange = useDebounce(localBpmRange, 300);
+
+  // Update filters when debounced values change
+  useEffect(() => {
+    if (debouncedSearch !== filters.search) {
+      onFiltersChange({ ...filters, search: debouncedSearch });
+    }
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (debouncedPriceRange[0] !== filters.priceRange[0] || debouncedPriceRange[1] !== filters.priceRange[1]) {
+      onFiltersChange({ ...filters, priceRange: debouncedPriceRange });
+    }
+  }, [debouncedPriceRange]);
+
+  useEffect(() => {
+    if (debouncedBpmRange[0] !== filters.bpmRange[0] || debouncedBpmRange[1] !== filters.bpmRange[1]) {
+      onFiltersChange({ ...filters, bpmRange: debouncedBpmRange });
+    }
+  }, [debouncedBpmRange]);
+
+  const updateFilter = useCallback(<K extends keyof SongFiltersState>(key: K, value: SongFiltersState[K]) => {
     onFiltersChange({ ...filters, [key]: value });
-  };
+  }, [filters, onFiltersChange]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
+    setLocalSearch("");
+    setLocalPriceRange([0, 50000]);
+    setLocalBpmRange([60, 200]);
     onFiltersChange({
       search: "",
       genre: "",
@@ -70,9 +102,9 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
       hasLyrics: false,
       sortBy: "newest",
     });
-  };
+  }, [onFiltersChange]);
 
-  const activeFiltersCount = [
+  const activeFiltersCount = useMemo(() => [
     filters.genre,
     filters.mood,
     filters.language,
@@ -80,7 +112,20 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
     filters.hasLyrics,
     filters.priceRange[0] > 0 || filters.priceRange[1] < 50000,
     filters.bpmRange[0] > 60 || filters.bpmRange[1] < 200,
-  ].filter(Boolean).length;
+  ].filter(Boolean).length, [filters]);
+
+  // Memoize genre and mood options
+  const genreOptions = useMemo(() => genres.map((genre) => (
+    <SelectItem key={genre.id} value={genre.id}>
+      {genre.name}
+    </SelectItem>
+  )), [genres]);
+
+  const moodOptions = useMemo(() => moods.map((mood) => (
+    <SelectItem key={mood.id} value={mood.id}>
+      {mood.name}
+    </SelectItem>
+  )), [moods]);
 
   return (
     <div className="space-y-4">
@@ -90,8 +135,8 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Search songs, artists, genres..."
-            value={filters.search}
-            onChange={(e) => updateFilter("search", e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-12 h-12 text-base bg-card/50 border-border/50 focus:border-primary/50"
           />
         </div>
@@ -132,6 +177,10 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
                 updateFilter={updateFilter}
                 genres={genres}
                 moods={moods}
+                localPriceRange={localPriceRange}
+                setLocalPriceRange={setLocalPriceRange}
+                localBpmRange={localBpmRange}
+                setLocalBpmRange={setLocalBpmRange}
               />
             </div>
             <div className="mt-6 flex gap-3">
@@ -154,11 +203,7 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Genres</SelectItem>
-            {genres.map((genre) => (
-              <SelectItem key={genre.id} value={genre.id}>
-                {genre.name}
-              </SelectItem>
-            ))}
+            {genreOptions}
           </SelectContent>
         </Select>
 
@@ -168,11 +213,7 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Moods</SelectItem>
-            {moods.map((mood) => (
-              <SelectItem key={mood.id} value={mood.id}>
-                {mood.name}
-              </SelectItem>
-            ))}
+            {moodOptions}
           </SelectContent>
         </Select>
 
@@ -224,11 +265,19 @@ function FilterContent({
   updateFilter,
   genres,
   moods,
+  localPriceRange,
+  setLocalPriceRange,
+  localBpmRange,
+  setLocalBpmRange,
 }: {
   filters: SongFiltersState;
   updateFilter: <K extends keyof SongFiltersState>(key: K, value: SongFiltersState[K]) => void;
   genres: Genre[];
   moods: Mood[];
+  localPriceRange: [number, number];
+  setLocalPriceRange: (value: [number, number]) => void;
+  localBpmRange: [number, number];
+  setLocalBpmRange: (value: [number, number]) => void;
 }) {
   return (
     <>
@@ -284,24 +333,24 @@ function FilterContent({
       </div>
 
       <div className="space-y-3">
-        <Label>Price Range: ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}</Label>
+        <Label>Price Range: ₹{localPriceRange[0]} - ₹{localPriceRange[1]}</Label>
         <Slider
-          value={filters.priceRange}
+          value={localPriceRange}
           min={0}
           max={50000}
           step={500}
-          onValueChange={(v) => updateFilter("priceRange", v as [number, number])}
+          onValueChange={(v) => setLocalPriceRange(v as [number, number])}
         />
       </div>
 
       <div className="space-y-3">
-        <Label>BPM Range: {filters.bpmRange[0]} - {filters.bpmRange[1]}</Label>
+        <Label>BPM Range: {localBpmRange[0]} - {localBpmRange[1]}</Label>
         <Slider
-          value={filters.bpmRange}
+          value={localBpmRange}
           min={60}
           max={200}
           step={5}
-          onValueChange={(v) => updateFilter("bpmRange", v as [number, number])}
+          onValueChange={(v) => setLocalBpmRange(v as [number, number])}
         />
       </div>
 
