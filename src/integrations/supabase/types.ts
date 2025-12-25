@@ -1509,6 +1509,64 @@ export type Database = {
         }
         Relationships: []
       }
+      rating_abuse_flags: {
+        Row: {
+          action_taken: string | null
+          created_at: string | null
+          flagged_by: string | null
+          id: string
+          rating_id: string
+          reason: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string | null
+          flagged_by?: string | null
+          id?: string
+          rating_id: string
+          reason: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string | null
+          flagged_by?: string | null
+          id?: string
+          rating_id?: string
+          reason?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_abuse_flags_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_abuse_flags_rating_id_fkey"
+            columns: ["rating_id"]
+            isOneToOne: false
+            referencedRelation: "song_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_abuse_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_tier_history: {
         Row: {
           created_at: string | null
@@ -1769,10 +1827,62 @@ export type Database = {
         }
         Relationships: []
       }
+      song_ratings: {
+        Row: {
+          created_at: string | null
+          device_fingerprint: string | null
+          id: string
+          ip_address: string | null
+          is_verified_purchase: boolean | null
+          rating: number
+          song_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          is_verified_purchase?: boolean | null
+          rating: number
+          song_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          is_verified_purchase?: boolean | null
+          rating?: number
+          song_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_ratings_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       songs: {
         Row: {
           approved_at: string | null
           audio_url: string | null
+          average_rating: number | null
           base_price: number
           bpm: number | null
           cover_image_url: string | null
@@ -1800,12 +1910,14 @@ export type Database = {
           seller_id: string | null
           status: Database["public"]["Enums"]["song_status"]
           title: string
+          total_ratings: number | null
           updated_at: string
           view_count: number | null
         }
         Insert: {
           approved_at?: string | null
           audio_url?: string | null
+          average_rating?: number | null
           base_price?: number
           bpm?: number | null
           cover_image_url?: string | null
@@ -1833,12 +1945,14 @@ export type Database = {
           seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title: string
+          total_ratings?: number | null
           updated_at?: string
           view_count?: number | null
         }
         Update: {
           approved_at?: string | null
           audio_url?: string | null
+          average_rating?: number | null
           base_price?: number
           bpm?: number | null
           cover_image_url?: string | null
@@ -1866,6 +1980,7 @@ export type Database = {
           seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title?: string
+          total_ratings?: number | null
           updated_at?: string
           view_count?: number | null
         }
@@ -2193,6 +2308,10 @@ export type Database = {
         Args: { p_action: string; p_pin_until?: string; p_song_id: string }
         Returns: Json
       }
+      admin_remove_rating: {
+        Args: { p_rating_id: string; p_reason: string }
+        Returns: Json
+      }
       calculate_and_update_tier: {
         Args: { p_seller_id: string }
         Returns: undefined
@@ -2218,11 +2337,22 @@ export type Database = {
           zone_multiplier: number
         }[]
       }
+      calculate_song_rating: {
+        Args: { p_song_id: string }
+        Returns: {
+          avg_rating: number
+          total_count: number
+        }[]
+      }
       check_self_purchase: {
         Args: { p_buyer_id: string; p_song_id: string }
         Returns: Json
       }
       check_upload_rate_limit: { Args: { p_seller_id: string }; Returns: Json }
+      flag_rating: {
+        Args: { p_rating_id: string; p_reason: string }
+        Returns: Json
+      }
       generate_order_number: { Args: never; Returns: string }
       get_country_pricing: {
         Args: { p_country_code: string }
@@ -2278,6 +2408,19 @@ export type Database = {
           tier_name: string
         }[]
       }
+      get_song_ratings: {
+        Args: { p_limit?: number; p_offset?: number; p_song_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          is_verified_purchase: boolean
+          rating: number
+          updated_at: string
+          user_avatar: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2291,6 +2434,15 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      submit_rating: {
+        Args: {
+          p_device_fingerprint?: string
+          p_ip_address?: string
+          p_rating: number
+          p_song_id: string
+        }
+        Returns: Json
+      }
       validate_song_price: {
         Args: { p_has_audio: boolean; p_price: number; p_seller_id: string }
         Returns: Json
