@@ -45,7 +45,7 @@ const contentSchema = z.object({
 
 const licenseTierSchema = z.object({
   license_type: z.enum(['personal', 'youtube', 'commercial', 'film', 'exclusive']),
-  price: z.number().min(0.01, 'Price must be at least $0.01'),
+  price: z.number().min(0.01, 'Price must be at least ₹0.01'),
   max_sales: z.number().optional(),
   terms: z.string().optional(),
 });
