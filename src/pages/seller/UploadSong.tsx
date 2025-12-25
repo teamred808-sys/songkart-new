@@ -534,7 +534,7 @@ export default function UploadSong() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="base_price">Base Price ($)</Label>
+              <Label htmlFor="base_price">Base Price (₹)</Label>
               <Input
                 id="base_price"
                 type="number"
@@ -586,7 +586,7 @@ export default function UploadSong() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <Label className="text-xs">Price ($)</Label>
+                          <Label className="text-xs">Price (₹)</Label>
                           <Input
                             type="number"
                             step="0.01"
