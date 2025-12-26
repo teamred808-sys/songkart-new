@@ -121,6 +121,15 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     const handlePlay = useCallback(async () => {
       if (isLoading) return;
 
+      // Guard: Don't attempt playback if no preview URL is available
+      if (!previewUrl) {
+        toast.error('Preview not available', {
+          description: 'This song preview is still being processed. Please try again later.'
+        });
+        setHasError(true);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setHasError(false);
