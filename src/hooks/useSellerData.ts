@@ -307,8 +307,8 @@ export function useDeleteSong() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
-      queryClient.invalidateQueries({ queryKey: ['seller-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-songs'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['seller-stats'], exact: false });
       toast({ title: 'Song deleted', description: 'Your song has been removed.' });
     },
     onError: (error: any) => {
