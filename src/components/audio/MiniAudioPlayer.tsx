@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Loader2, Volume2 } from 'lucide-react';
+import { Play, Pause, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSecurePlayback } from '@/hooks/useSecurePlayback';
 import { useAudioPlayerOptional } from '@/contexts/AudioPlayerContext';
+import { toast } from 'sonner';
 
 interface MiniAudioPlayerProps {
   songId: string;
@@ -22,6 +23,7 @@ export function MiniAudioPlayer({
 }: MiniAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -65,10 +67,11 @@ export function MiniAudioPlayer({
 
     try {
       setIsLoading(true);
+      setHasError(false);
 
-      // Get secure token
-      const token = await getToken(songId, 'preview');
-      if (!token) {
+      // Get secure token - returns { token, expiresAt, maxDuration }
+      const tokenData = await getToken(songId, 'preview');
+      if (!tokenData || !tokenData.token) {
         throw new Error('Failed to get playback token');
       }
 
@@ -89,17 +92,23 @@ export function MiniAudioPlayer({
           onEnded?.();
         });
 
-        audioRef.current.addEventListener('error', () => {
+        audioRef.current.addEventListener('error', (e) => {
+          console.error('Audio element error:', e);
           setIsPlaying(false);
           setIsLoading(false);
+          setHasError(true);
           stopProgressTracking();
           audioContext?.stop();
+          toast.error('Preview unavailable', {
+            description: 'This song preview could not be loaded'
+          });
         });
       }
 
-      // Set stream URL and play
-      const streamUrl = getStreamUrl(songId, token);
+      // Set stream URL with extracted token string and play
+      const streamUrl = getStreamUrl(songId, tokenData.token);
       audioRef.current.src = streamUrl;
+      
       await audioRef.current.play();
       
       setIsPlaying(true);
@@ -111,6 +120,10 @@ export function MiniAudioPlayer({
       console.error('Playback error:', error);
       setIsLoading(false);
       setIsPlaying(false);
+      setHasError(true);
+      toast.error('Unable to play preview', {
+        description: error instanceof Error ? error.message : 'Please try again'
+      });
     }
   };
 
@@ -175,6 +188,8 @@ export function MiniAudioPlayer({
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
+        ) : hasError ? (
+          <AlertCircle className="h-5 w-5 text-destructive" />
         ) : isPlaying ? (
           <Pause className="h-5 w-5" />
         ) : (
