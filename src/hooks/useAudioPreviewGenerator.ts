@@ -1,52 +1,88 @@
 import { useState, useCallback } from 'react';
 import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 
+// Static import for reliable CJS module resolution
+import * as lamejsModule from 'lamejs';
+
 // Cached Mp3Encoder class for reuse
 let cachedMp3Encoder: any = null;
 
 /**
- * Dynamically load and resolve Mp3Encoder from lamejs
- * Handles all possible Vite/bundler CJS→ESM interop scenarios
+ * Extract Mp3Encoder from a module with various possible structures
+ */
+function extractEncoder(module: any, source: string): any {
+  if (!module) return null;
+  
+  const keys = Object.keys(module || {});
+  console.log(`[lamejs:${source}] Module type: ${typeof module}, keys: [${keys.join(', ')}]`);
+  
+  // Pattern 1: Direct named export (module.Mp3Encoder)
+  if (typeof module.Mp3Encoder === 'function') {
+    console.log(`[lamejs:${source}] Found via direct named export`);
+    return module.Mp3Encoder;
+  }
+  
+  // Pattern 2: Vite ESM wrapper (module.default.Mp3Encoder)
+  if (module.default && typeof module.default.Mp3Encoder === 'function') {
+    console.log(`[lamejs:${source}] Found via default.Mp3Encoder`);
+    return module.default.Mp3Encoder;
+  }
+  
+  // Pattern 3: Double default wrapper (module.default.default.Mp3Encoder)
+  if (module.default?.default && typeof module.default.default.Mp3Encoder === 'function') {
+    console.log(`[lamejs:${source}] Found via default.default.Mp3Encoder`);
+    return module.default.default.Mp3Encoder;
+  }
+  
+  // Pattern 4: Module.default IS the encoder (unusual but possible)
+  if (typeof module.default === 'function' && module.default.length === 3) {
+    console.log(`[lamejs:${source}] Found via default (direct constructor)`);
+    return module.default;
+  }
+  
+  // Pattern 5: Check if module itself is the constructor
+  if (typeof module === 'function' && module.length === 3) {
+    console.log(`[lamejs:${source}] Module itself is the constructor`);
+    return module;
+  }
+  
+  console.log(`[lamejs:${source}] Could not find Mp3Encoder`);
+  return null;
+}
+
+/**
+ * Get Mp3Encoder class with robust CJS/ESM interop handling
+ * Uses static import first, then falls back to dynamic import
  */
 async function getMp3Encoder(): Promise<any> {
   if (cachedMp3Encoder) {
+    console.log('[lamejs] Using cached encoder');
     return cachedMp3Encoder;
   }
 
-  try {
-    console.log('[lamejs] Loading module...');
-    const module = await import('lamejs');
-    
-    console.log('[lamejs] Module keys:', Object.keys(module));
-    console.log('[lamejs] module.default:', typeof module.default, module.default ? Object.keys(module.default as object) : 'N/A');
-    
-    // Handle ALL possible module structures from Vite's CJS→ESM transformations:
-    // 1. ESM default export with Mp3Encoder property: module.default.Mp3Encoder
-    // 2. Direct named export: module.Mp3Encoder  
-    // 3. Nested default: module.default?.default?.Mp3Encoder
-    // 4. Module default IS the encoder: module.default (if it's a function)
-    const encoder = 
-      (module as any).default?.Mp3Encoder ||
-      (module as any).Mp3Encoder ||
-      (module as any).default?.default?.Mp3Encoder ||
-      ((typeof (module as any).default === 'function') ? (module as any).default : null);
-
-    if (!encoder || typeof encoder !== 'function') {
-      console.error('[lamejs] Could not find Mp3Encoder. Module structure:', {
-        keys: Object.keys(module),
-        defaultType: typeof module.default,
-        defaultKeys: module.default ? Object.keys(module.default as object) : [],
-      });
-      throw new Error('Mp3Encoder not found in lamejs module');
+  console.log('[lamejs] Resolving Mp3Encoder...');
+  
+  // First, try to extract from static import
+  let encoder = extractEncoder(lamejsModule, 'static');
+  
+  // If static import failed, try dynamic import
+  if (!encoder) {
+    console.log('[lamejs] Static import failed, trying dynamic import...');
+    try {
+      const dynamicModule = await import('lamejs');
+      encoder = extractEncoder(dynamicModule, 'dynamic');
+    } catch (dynamicError) {
+      console.error('[lamejs] Dynamic import also failed:', dynamicError);
     }
-
-    console.log('[lamejs] Mp3Encoder loaded successfully');
-    cachedMp3Encoder = encoder;
-    return encoder;
-  } catch (error) {
-    console.error('[lamejs] Failed to load module:', error);
-    throw new Error('Failed to load MP3 encoder library. Please refresh the page.');
   }
+
+  if (!encoder || typeof encoder !== 'function') {
+    throw new Error('Mp3Encoder not found. Please refresh the page and try again.');
+  }
+
+  console.log('[lamejs] Mp3Encoder resolved successfully');
+  cachedMp3Encoder = encoder;
+  return encoder;
 }
 
 // Supported audio formats for client-side preview generation

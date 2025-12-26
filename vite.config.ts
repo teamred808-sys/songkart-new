@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ['lamejs'],
+    esbuildOptions: {
+      mainFields: ['module', 'main'],
+    },
   },
   build: {
     rollupOptions: {
