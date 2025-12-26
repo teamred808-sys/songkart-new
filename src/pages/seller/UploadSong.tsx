@@ -38,7 +38,6 @@ const metadataSchema = z.object({
 const contentSchema = z.object({
   cover_image: z.any().optional(),
   audio_file: z.any().optional(),
-  preview_audio: z.any().optional(),
   full_lyrics: z.string().optional(),
   preview_lyrics: z.string().optional(),
 });
@@ -74,6 +73,7 @@ export default function UploadSong() {
   
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   // Form data state
@@ -170,7 +170,6 @@ export default function UploadSong() {
     try {
       let cover_image_url = null;
       let audio_url = null;
-      let preview_audio_url = null;
 
       // Upload cover image
       if (content.cover_image) {
@@ -186,12 +185,8 @@ export default function UploadSong() {
         audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
       }
 
-      // Upload preview audio
-      if (content.preview_audio) {
-        setUploadProgress(60);
-        const previewPath = `${user.id}/${Date.now()}-${content.preview_audio.name}`;
-        preview_audio_url = await uploadFile(content.preview_audio, 'song-previews', previewPath);
-      }
+      // Preview will be auto-generated after song creation
+      setUploadProgress(60);
 
       setUploadProgress(70);
 
@@ -208,7 +203,7 @@ export default function UploadSong() {
           language: metadata.language,
           cover_image_url,
           audio_url,
-          preview_audio_url,
+          preview_audio_url: null, // Will be auto-generated
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.base_price,
@@ -240,6 +235,41 @@ export default function UploadSong() {
         if (tiersError) throw tiersError;
       }
 
+      setUploadProgress(95);
+
+      // Auto-generate optimized preview if audio was uploaded
+      if (audio_url) {
+        setIsGeneratingPreview(true);
+        try {
+          // Extract the path from the full URL
+          const audioPath = audio_url.includes('song-audio/') 
+            ? audio_url.split('song-audio/')[1].split('?')[0]
+            : `${user.id}/${Date.now()}-audio.mp3`;
+          
+          console.log('Triggering preview generation for song:', song.id);
+          
+          const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
+            body: { songId: song.id, audioPath }
+          });
+          
+          if (previewError) {
+            console.error('Preview generation error:', previewError);
+            // Don't fail the upload, preview can be regenerated later
+            toast({
+              title: 'Song uploaded',
+              description: 'Preview generation is pending. It will be available shortly.',
+            });
+          } else {
+            console.log('Preview generated:', previewResult);
+          }
+        } catch (previewErr) {
+          console.error('Preview generation failed:', previewErr);
+          // Silent failure - preview can be regenerated
+        } finally {
+          setIsGeneratingPreview(false);
+        }
+      }
+
       setUploadProgress(100);
       
       toast({ 
@@ -257,6 +287,7 @@ export default function UploadSong() {
       });
     } finally {
       setIsSubmitting(false);
+      setIsGeneratingPreview(false);
     }
   };
 
@@ -471,22 +502,16 @@ export default function UploadSong() {
                 </label>
               </div>
 
+              {/* Auto-generated preview notice */}
               <div className="space-y-2">
-                <Label>Preview Audio (30-60 sec)</Label>
-                <label className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
-                  <div className="text-center">
-                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                    <span className="text-sm text-muted-foreground">
-                      {content.preview_audio?.name || 'Upload preview'}
-                    </span>
+                <Label>Preview Audio</Label>
+                <div className="flex items-center justify-center h-24 border-2 border-dashed border-border/50 rounded-lg bg-muted/30">
+                  <div className="text-center text-muted-foreground">
+                    <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                    <span className="text-sm">Auto-generated from full audio</span>
+                    <p className="text-xs mt-1">(45s, optimized for streaming)</p>
                   </div>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange('preview_audio', e.target.files?.[0] || null)}
-                  />
-                </label>
+                </div>
               </div>
             </div>
 
@@ -679,7 +704,7 @@ export default function UploadSong() {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Preview Audio:</dt>
-                    <dd>{content.preview_audio ? '✓ Uploaded' : 'Not uploaded'}</dd>
+                    <dd>{content.audio_file ? '✓ Auto-generated' : 'Pending audio upload'}</dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Lyrics:</dt>
@@ -726,10 +751,10 @@ export default function UploadSong() {
             </div>
 
             {/* Upload Progress */}
-            {isSubmitting && (
+            {(isSubmitting || isGeneratingPreview) && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Uploading...</span>
+                  <span>{isGeneratingPreview ? 'Generating preview...' : 'Uploading...'}</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <Progress value={uploadProgress} />
@@ -745,10 +770,10 @@ export default function UploadSong() {
                 disabled={isSubmitting || !ownershipConfirmed || !termsAccepted}
                 className="btn-glow"
               >
-                {isSubmitting ? (
+                {isSubmitting || isGeneratingPreview ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
+                    {isGeneratingPreview ? 'Generating Preview...' : 'Uploading...'}
                   </>
                 ) : (
                   <>
