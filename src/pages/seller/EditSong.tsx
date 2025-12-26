@@ -6,7 +6,6 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods, useSongLicenseTiers, useAddLicenseTier, useUpdateLicenseTier, useRemoveLicenseTier, LicenseTier } from '@/hooks/useSellerData';
-import { useAudioPreviewGenerator } from '@/hooks/useAudioPreviewGenerator';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,10 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag, Upload, Music } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag, Upload, Music, Server, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { PREVIEW_CONSTANTS, PREVIEW_MAX_SIZE_KB } from '@/lib/previewConstants';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
@@ -78,8 +77,8 @@ export default function EditSong() {
   // Audio/Preview regeneration state
   const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
   const [isRegeneratingPreview, setIsRegeneratingPreview] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement>(null);
-  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress, error: previewError } = useAudioPreviewGenerator();
 
   const form = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -219,31 +218,78 @@ export default function EditSong() {
     setNewAudioFile(file);
   };
 
-  // Regenerate preview from new audio file
+  // Upload new audio and trigger server-side preview regeneration
   const handleRegeneratePreview = async () => {
-    if (!newAudioFile || !id) return;
+    if (!newAudioFile || !id || !user?.id) return;
 
     setIsRegeneratingPreview(true);
+    setIsUploadingAudio(true);
+    
     try {
-      // Generate preview client-side
-      const previewResult = await generatePreview(newAudioFile);
-      if (!previewResult) {
-        throw new Error(previewError || 'Failed to generate preview');
-      }
+      // First, upload the new audio file
+      const audioPath = `${user.id}/${Date.now()}-${newAudioFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('song-audio')
+        .upload(audioPath, newAudioFile, { upsert: true });
 
-      // Validate and upload via edge function
-      const formData = new FormData();
-      formData.append('file', previewResult.blob, 'preview.mp3');
-      formData.append('songId', id); // Actual song ID for ownership verification and metadata update
+      if (uploadError) throw uploadError;
 
-      const { data, error } = await supabase.functions.invoke('validate-preview', {
-        body: formData,
+      const { data: { publicUrl } } = supabase.storage
+        .from('song-audio')
+        .getPublicUrl(audioPath);
+
+      // Update song with new audio URL
+      const { error: updateError } = await supabase
+        .from('songs')
+        .update({ 
+          audio_url: publicUrl,
+          has_audio: true,
+          preview_status: 'pending' // Reset for regeneration
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      setIsUploadingAudio(false);
+
+      // Trigger server-side preview generation
+      console.log('[EditSong] Triggering server-side preview generation...');
+      
+      const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
+        body: { 
+          songId: id, 
+          audioPath: publicUrl 
+        },
       });
 
-      if (error) throw error;
+      if (previewError) {
+        console.error('[EditSong] Preview generation failed:', previewError);
+        toast({ 
+          title: 'Preview generation failed', 
+          description: 'Audio was uploaded but preview generation failed. You can retry later.',
+          variant: 'destructive' 
+        });
+      } else if (previewResult?.success) {
+        console.log('[EditSong] Preview generated:', previewResult);
+        
+        // Refresh song data to get new preview URL
+        const { data: updatedSong } = await supabase
+          .from('songs')
+          .select('preview_audio_url, preview_duration_seconds, preview_file_size_bytes, preview_status')
+          .eq('id', id)
+          .single();
 
-      if (!data.valid) {
-        throw new Error(data.error || 'Preview validation failed');
+        if (updatedSong) {
+          setSong((prev: any) => ({ ...prev, ...updatedSong }));
+        }
+
+        toast({ title: 'Preview regenerated', description: 'Your song preview has been updated' });
+      } else {
+        toast({ 
+          title: 'Preview generation issue', 
+          description: previewResult?.error || 'Preview may not have been generated correctly',
+          variant: 'destructive' 
+        });
       }
 
       // Clear the file input
@@ -251,24 +297,55 @@ export default function EditSong() {
       if (audioInputRef.current) {
         audioInputRef.current.value = '';
       }
-
-      // Refresh song data to get new preview URL
-      const { data: updatedSong } = await supabase
-        .from('songs')
-        .select('preview_audio_url, preview_duration_seconds, preview_file_size_bytes')
-        .eq('id', id)
-        .single();
-
-      if (updatedSong) {
-        setSong((prev: any) => ({ ...prev, ...updatedSong }));
-      }
-
-      toast({ title: 'Preview regenerated', description: 'Your song preview has been updated' });
     } catch (error: any) {
       console.error('Preview regeneration failed:', error);
       toast({ 
         title: 'Preview regeneration failed', 
         description: error.message || 'Please try again', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsRegeneratingPreview(false);
+      setIsUploadingAudio(false);
+    }
+  };
+
+  // Retry preview generation for failed previews
+  const handleRetryPreview = async () => {
+    if (!id || !song?.audio_url) return;
+
+    setIsRegeneratingPreview(true);
+    try {
+      const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
+        body: { 
+          songId: id, 
+          audioPath: song.audio_url 
+        },
+      });
+
+      if (previewError) throw previewError;
+
+      if (previewResult?.success) {
+        // Refresh song data
+        const { data: updatedSong } = await supabase
+          .from('songs')
+          .select('preview_audio_url, preview_duration_seconds, preview_file_size_bytes, preview_status, preview_error')
+          .eq('id', id)
+          .single();
+
+        if (updatedSong) {
+          setSong((prev: any) => ({ ...prev, ...updatedSong }));
+        }
+
+        toast({ title: 'Preview generated', description: 'Your song preview is now ready' });
+      } else {
+        throw new Error(previewResult?.error || 'Preview generation failed');
+      }
+    } catch (error: any) {
+      console.error('Preview retry failed:', error);
+      toast({ 
+        title: 'Preview generation failed', 
+        description: error.message || 'Please try again later', 
         variant: 'destructive' 
       });
     } finally {
@@ -429,13 +506,12 @@ export default function EditSong() {
               Audio Preview
             </CardTitle>
             <CardDescription>
-              Upload a new audio file to regenerate the preview. The preview is a {PREVIEW_CONSTANTS.MAX_DURATION_SECONDS}-second, 
-              low-quality snippet used for browsing.
+              Previews are generated on our servers for maximum reliability (45 seconds, compressed MP3).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Current preview info */}
-            {song?.preview_audio_url && (
+            {song?.preview_audio_url && song?.preview_status === 'ready' && (
               <div className="p-3 bg-muted/50 rounded-lg text-sm">
                 <p className="font-medium mb-1">Current Preview</p>
                 <div className="flex flex-wrap gap-4 text-muted-foreground">
@@ -445,15 +521,63 @@ export default function EditSong() {
                   {song.preview_file_size_bytes && (
                     <span>Size: {Math.round(song.preview_file_size_bytes / 1024)} KB</span>
                   )}
+                  <Badge variant="secondary" className="text-xs">
+                    <Server className="h-3 w-3 mr-1" />
+                    Server generated
+                  </Badge>
                 </div>
               </div>
             )}
 
-            {!song?.preview_audio_url && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-600">
-                <AlertTriangle className="h-4 w-4 inline-block mr-2" />
-                No preview available for this song. Upload an audio file to generate one.
-              </div>
+            {/* Preview status indicators */}
+            {song?.preview_status === 'generating' && (
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>
+                  Preview is being generated on our servers. This may take a moment...
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {song?.preview_status === 'failed' && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span>Preview generation failed: {song.preview_error || 'Unknown error'}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRetryPreview}
+                    disabled={isRegeneratingPreview}
+                  >
+                    {isRegeneratingPreview ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {song?.preview_status === 'pending' && !song?.preview_audio_url && (
+              <Alert>
+                <Server className="h-4 w-4" />
+                <AlertDescription>
+                  Preview pending generation. Upload new audio to generate a preview.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!song?.preview_audio_url && song?.preview_status !== 'generating' && song?.preview_status !== 'pending' && (
+              <Alert variant="default" className="border-amber-500/30 bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-600">
+                  No preview available for this song. Upload an audio file to generate one.
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Upload new audio */}
@@ -466,51 +590,35 @@ export default function EditSong() {
                   type="file"
                   accept="audio/*"
                   onChange={handleAudioFileChange}
-                  disabled={isRegeneratingPreview || isGeneratingPreview}
+                  disabled={isRegeneratingPreview}
                   className="flex-1"
                 />
                 {newAudioFile && (
                   <Button
                     type="button"
                     onClick={handleRegeneratePreview}
-                    disabled={isRegeneratingPreview || isGeneratingPreview}
+                    disabled={isRegeneratingPreview}
                   >
-                    {isRegeneratingPreview || isGeneratingPreview ? (
+                    {isRegeneratingPreview ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    Regenerate Preview
+                    {isUploadingAudio ? 'Uploading...' : 'Upload & Generate Preview'}
                   </Button>
                 )}
               </div>
-              
-              {newAudioFile && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {newAudioFile.name}
-                </p>
-              )}
-
-              {/* Progress indicator */}
-              {isGeneratingPreview && (
+              {isRegeneratingPreview && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Generating preview...</span>
-                    <span>{previewProgress}%</span>
-                  </div>
-                  <Progress value={previewProgress} className="h-2" />
+                  <Progress value={isUploadingAudio ? 50 : 90} />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {isUploadingAudio ? 'Uploading audio...' : 'Generating preview on server...'}
+                  </p>
                 </div>
               )}
-
-              {isRegeneratingPreview && !isGeneratingPreview && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading and validating preview...
-                </div>
-              )}
-
               <p className="text-xs text-muted-foreground">
-                Previews are auto-generated as {PREVIEW_CONSTANTS.MAX_DURATION_SECONDS}s, {PREVIEW_CONSTANTS.CLIENT_TARGET_BITRATE_KBPS}kbps MP3 files (max {PREVIEW_MAX_SIZE_KB} KB).
+                Upload a new audio file to replace the current one and regenerate the preview.
+                The preview will be generated on our servers (45 seconds, 64kbps MP3).
               </p>
             </div>
           </CardContent>
@@ -525,158 +633,128 @@ export default function EditSong() {
             License Tiers
           </CardTitle>
           <CardDescription>
-            Manage the available license options for this song. You can add, remove, or update pricing for each license type.
+            Manage the license options available for this song.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Add New License Buttons */}
-          {availableLicenseTypes.length > 0 && (
-            <div className="space-y-3">
-              <Label>Add License Type</Label>
-              <div className="flex flex-wrap gap-2">
-                {availableLicenseTypes.map((license) => (
-                  <Button
-                    key={license.value}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAddLicenseTier(license.value)}
-                    disabled={addLicenseTier.isPending}
-                    className="gap-1"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {license.label}
-                  </Button>
-                ))}
-              </div>
+          {tiersLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
             </div>
-          )}
-
-          <Separator />
-
-          {/* Current License Tiers */}
-          <div className="space-y-3">
-            <Label>Current License Tiers</Label>
-            
-            {tiersLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            ) : !licenseTiers?.length ? (
-              <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
-                <Tag className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No license tiers configured</p>
-                <p className="text-sm text-muted-foreground">Add at least one license type above</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {licenseTiers.map((tier) => {
-                  const licenseInfo = LICENSE_TYPES.find(l => l.value === tier.license_type);
-                  const hasSales = (tier.current_sales || 0) > 0;
-                  
-                  return (
-                    <div
-                      key={tier.id}
-                      className={cn(
-                        "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border gap-4",
-                        hasSales 
-                          ? "border-amber-500/30 bg-amber-500/5"
-                          : "border-border bg-muted/30"
-                      )}
-                    >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{licenseInfo?.label || tier.license_type}</span>
-                          {tier.license_type === 'exclusive' && (
-                            <Badge variant="secondary" className="text-xs">One-time sale</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{licenseInfo?.description}</p>
-                        {hasSales && (
-                          <div className="flex items-center gap-1.5 text-xs text-amber-600">
-                            <ShoppingCart className="h-3 w-3" />
-                            <span>{tier.current_sales} sale{tier.current_sales !== 1 ? 's' : ''}</span>
-                            <span className="text-muted-foreground">· Cannot remove</span>
+          ) : (
+            <>
+              {/* Existing Tiers */}
+              {licenseTiers && licenseTiers.length > 0 ? (
+                <div className="space-y-4">
+                  {licenseTiers.map((tier) => {
+                    const licenseInfo = LICENSE_TYPES.find(l => l.value === tier.license_type);
+                    return (
+                      <div key={tier.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{licenseInfo?.label || tier.license_type}</h4>
+                            {tier.license_type === 'exclusive' && tier.current_sales && tier.current_sales > 0 && (
+                              <Badge variant="secondary">
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Sold
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`price-${tier.id}`} className="text-sm text-muted-foreground whitespace-nowrap">
-                            Price (₹)
-                          </Label>
-                          <Input
-                            id={`price-${tier.id}`}
-                            type="number"
-                            step="0.01"
-                            value={tierPrices[tier.id] || tier.price}
-                            onChange={(e) => setTierPrices(prev => ({ 
-                              ...prev, 
-                              [tier.id]: parseFloat(e.target.value) || 0 
-                            }))}
-                            className="w-24"
-                          />
-                          {tierPrices[tier.id] !== tier.price && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() => handleUpdateTierPrice(tier.id)}
-                              disabled={updateLicenseTier.isPending}
-                            >
-                              {updateLicenseTier.isPending ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                'Update'
-                              )}
-                            </Button>
-                          )}
+                          <p className="text-sm text-muted-foreground">{licenseInfo?.description}</p>
                         </div>
-                        
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setTierToRemove(tier)}
-                          disabled={hasSales || removeLicenseTier.isPending}
-                          className={cn(
-                            "h-8 w-8",
-                            hasSales && "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={tierPrices[tier.id] || tier.price}
+                              onChange={(e) => setTierPrices(prev => ({ 
+                                ...prev, 
+                                [tier.id]: parseFloat(e.target.value) || 0 
+                              }))}
+                              className="w-24"
+                            />
+                            {tierPrices[tier.id] !== tier.price && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUpdateTierPrice(tier.id)}
+                                disabled={updateLicenseTier.isPending}
+                              >
+                                {updateLicenseTier.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  'Save'
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setTierToRemove(tier)}
+                            disabled={tier.license_type === 'exclusive' && tier.current_sales && tier.current_sales > 0}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">
+                  No license tiers configured. Add one below.
+                </p>
+              )}
+
+              <Separator />
+
+              {/* Add New Tier */}
+              {availableLicenseTypes.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Add License Tier</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableLicenseTypes.map((lt) => (
+                      <Button
+                        key={lt.value}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddLicenseTier(lt.value)}
+                        disabled={addLicenseTier.isPending}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        {lt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Remove License Confirmation Dialog */}
+      {/* Remove Tier Confirmation Dialog */}
       <AlertDialog open={!!tierToRemove} onOpenChange={() => setTierToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Remove License Tier
-            </AlertDialogTitle>
+            <AlertDialogTitle>Remove License Tier?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove the <strong>{LICENSE_TYPES.find(l => l.value === tierToRemove?.license_type)?.label}</strong> license tier? 
-              This will prevent buyers from purchasing this license type.
+              Are you sure you want to remove the {LICENSE_TYPES.find(l => l.value === tierToRemove?.license_type)?.label} license tier? 
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleRemoveLicenseTier} 
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Remove License
+            <AlertDialogAction onClick={handleRemoveLicenseTier}>
+              {removeLicenseTier.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
