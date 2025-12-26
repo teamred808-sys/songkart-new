@@ -171,6 +171,13 @@ export default function UploadSong() {
       let cover_image_url = null;
       let audio_url = null;
       let preview_audio_url = null;
+      
+      // Store validated metadata from server (declared at function scope)
+      let validatedPreviewMetadata: {
+        duration_seconds: number;
+        file_size_bytes: number;
+        validated_at: string;
+      } | null = null;
 
       // Upload cover image
       if (content.cover_image) {
@@ -214,14 +221,20 @@ export default function UploadSong() {
             return;
           }
           
+          // Use server-validated data (not client-provided)
           preview_audio_url = validationResult.data.preview_url;
-          console.log(`Preview validated and uploaded: ${(validationResult.data.file_size_bytes / 1024).toFixed(1)} KB, ${validationResult.data.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
+          validatedPreviewMetadata = {
+            duration_seconds: validationResult.data.duration_seconds,
+            file_size_bytes: validationResult.data.file_size_bytes,
+            validated_at: validationResult.data.validated_at,
+          };
+          console.log(`Preview validated and uploaded: ${(validatedPreviewMetadata.file_size_bytes / 1024).toFixed(1)} KB, ${validatedPreviewMetadata.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
         }
       }
 
       setUploadProgress(70);
 
-      // Create song record
+      // Create song record with SERVER-VALIDATED preview metadata
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
@@ -241,8 +254,10 @@ export default function UploadSong() {
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
+          // Use server-validated metadata, not hardcoded/client values
           preview_generated_at: preview_audio_url ? new Date().toISOString() : null,
-          preview_duration_seconds: preview_audio_url ? 45 : null,
+          preview_duration_seconds: validatedPreviewMetadata?.duration_seconds || null,
+          preview_file_size_bytes: validatedPreviewMetadata?.file_size_bytes || null,
         })
         .select()
         .single();
