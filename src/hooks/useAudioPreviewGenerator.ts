@@ -1,12 +1,53 @@
 import { useState, useCallback } from 'react';
-import * as lamejsModule from 'lamejs';
 import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 
-// Handle CJS/ESM interop - lamejs uses module.exports which Vite wraps differently
-const getLamejs = () => {
-  const mod = lamejsModule as any;
-  return mod.default || mod;
-};
+// Cached Mp3Encoder class for reuse
+let cachedMp3Encoder: any = null;
+
+/**
+ * Dynamically load and resolve Mp3Encoder from lamejs
+ * Handles all possible Vite/bundler CJS→ESM interop scenarios
+ */
+async function getMp3Encoder(): Promise<any> {
+  if (cachedMp3Encoder) {
+    return cachedMp3Encoder;
+  }
+
+  try {
+    console.log('[lamejs] Loading module...');
+    const module = await import('lamejs');
+    
+    console.log('[lamejs] Module keys:', Object.keys(module));
+    console.log('[lamejs] module.default:', typeof module.default, module.default ? Object.keys(module.default as object) : 'N/A');
+    
+    // Handle ALL possible module structures from Vite's CJS→ESM transformations:
+    // 1. ESM default export with Mp3Encoder property: module.default.Mp3Encoder
+    // 2. Direct named export: module.Mp3Encoder  
+    // 3. Nested default: module.default?.default?.Mp3Encoder
+    // 4. Module default IS the encoder: module.default (if it's a function)
+    const encoder = 
+      (module as any).default?.Mp3Encoder ||
+      (module as any).Mp3Encoder ||
+      (module as any).default?.default?.Mp3Encoder ||
+      ((typeof (module as any).default === 'function') ? (module as any).default : null);
+
+    if (!encoder || typeof encoder !== 'function') {
+      console.error('[lamejs] Could not find Mp3Encoder. Module structure:', {
+        keys: Object.keys(module),
+        defaultType: typeof module.default,
+        defaultKeys: module.default ? Object.keys(module.default as object) : [],
+      });
+      throw new Error('Mp3Encoder not found in lamejs module');
+    }
+
+    console.log('[lamejs] Mp3Encoder loaded successfully');
+    cachedMp3Encoder = encoder;
+    return encoder;
+  } catch (error) {
+    console.error('[lamejs] Failed to load module:', error);
+    throw new Error('Failed to load MP3 encoder library. Please refresh the page.');
+  }
+}
 
 // Supported audio formats for client-side preview generation
 const SUPPORTED_AUDIO_TYPES = [
@@ -309,10 +350,10 @@ export function useAudioPreviewGenerator() {
       setState(prev => ({ ...prev, progress: 80 }));
 
       // Step 8: Encode to MP3 (64 kbps for small file size)
-      console.log('[Preview Generator] Encoding to MP3...');
+      console.log('[Preview Generator] Loading MP3 encoder...');
       let mp3Blob: Blob;
       try {
-        mp3Blob = encodeMP3(renderedBuffer);
+        mp3Blob = await encodeMP3(renderedBuffer);
       } catch (encodeError: any) {
         console.error('[Preview Generator] Encode failed:', encodeError);
         
@@ -341,15 +382,6 @@ export function useAudioPreviewGenerator() {
       };
     } catch (error: any) {
       console.error('[Preview Generator] Unexpected error:', error);
-      
-      // Log lamejs availability for debugging
-      try {
-        const lamejs = getLamejs();
-        console.error('[Preview Generator] lamejs available:', typeof lamejs);
-        console.error('[Preview Generator] Mp3Encoder available:', typeof lamejs?.Mp3Encoder);
-      } catch (e) {
-        console.error('[Preview Generator] Could not check lamejs:', e);
-      }
       
       const previewError = createError(
         'unknown',
@@ -388,7 +420,7 @@ export function useAudioPreviewGenerator() {
  * Encode an AudioBuffer to MP3 format using lamejs
  * Output: 64 kbps mono MP3
  */
-function encodeMP3(audioBuffer: AudioBuffer): Blob {
+async function encodeMP3(audioBuffer: AudioBuffer): Promise<Blob> {
   // Validate audio buffer before processing
   if (audioBuffer.duration <= 0 || !isFinite(audioBuffer.duration)) {
     throw new Error('Audio buffer has invalid duration. The audio file may be corrupted or empty.');
@@ -408,16 +440,13 @@ function encodeMP3(audioBuffer: AudioBuffer): Blob {
     samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
   
-  // Get Mp3Encoder with CJS/ESM interop fallback
-  const lamejs = getLamejs();
-  const Mp3EncoderClass = lamejs.Mp3Encoder;
-  
-  if (!Mp3EncoderClass) {
-    throw new Error('Mp3Encoder not available. The lamejs library may not have loaded correctly. Please refresh the page.');
-  }
+  // Get Mp3Encoder with dynamic import for reliable CJS/ESM interop
+  console.log('[MP3 Encoder] Getting encoder...');
+  const Mp3EncoderClass = await getMp3Encoder();
   
   // Initialize MP3 encoder (mono, 44100Hz, 64kbps)
   const mp3encoder = new Mp3EncoderClass(1, sampleRate, PREVIEW_BITRATE);
+  console.log('[MP3 Encoder] Encoder initialized, starting encoding...');
   
   // Encode in chunks and collect as BlobParts
   const mp3Data: BlobPart[] = [];
