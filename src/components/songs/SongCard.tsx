@@ -1,6 +1,6 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Music, FileText, Play, Heart, Star } from "lucide-react";
+import { Music, FileText, Play, Pause, Heart, Star, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { Price } from "@/components/ui/Price";
 import { RatingBadge } from "@/components/songs/RatingDisplay";
-
+import { MiniAudioPlayer } from "@/components/audio/MiniAudioPlayer";
+import { useAudioPlayerOptional } from "@/contexts/AudioPlayerContext";
 interface SongCardProps {
   id: string;
   title: string;
@@ -48,6 +49,22 @@ export const SongCard = memo(function SongCard({
   totalRatings,
   sellerTier,
 }: SongCardProps) {
+  const [showPlayer, setShowPlayer] = useState(false);
+  const audioContext = useAudioPlayerOptional();
+  const isCurrentlyPlaying = audioContext?.isPlaying(id) ?? false;
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (hasAudio) {
+      setShowPlayer(true);
+    }
+  };
+
+  const handlePlayerEnded = () => {
+    setShowPlayer(false);
+  };
+
   return (
     <Link to={`/song/${id}`}>
       <Card className={cn(
@@ -69,11 +86,36 @@ export const SongCard = memo(function SongCard({
             </div>
           )}
           
-          {/* Overlay on hover */}
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-            <Button size="icon" className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90">
-              <Play className="h-6 w-6 ml-0.5" />
-            </Button>
+          {/* Overlay on hover - show play button if has audio */}
+          <div className={cn(
+            "absolute inset-0 bg-black/60 transition-opacity duration-300 flex items-center justify-center",
+            showPlayer || isCurrentlyPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
+            {showPlayer ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                <MiniAudioPlayer 
+                  songId={id} 
+                  onEnded={handlePlayerEnded}
+                  className="px-3"
+                />
+              </div>
+            ) : hasAudio ? (
+              <Button 
+                size="icon" 
+                className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
+                onClick={handlePlayClick}
+              >
+                <Play className="h-6 w-6 ml-0.5" />
+              </Button>
+            ) : (
+              <Button 
+                size="icon" 
+                className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <FileText className="h-6 w-6" />
+              </Button>
+            )}
           </div>
 
           {/* Content type badges */}
