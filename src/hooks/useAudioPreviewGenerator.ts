@@ -1,11 +1,36 @@
 import { useState, useCallback } from 'react';
 import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 
-// Static import for reliable CJS module resolution
-import * as lamejsModule from 'lamejs';
+// Use default import for better CJS-to-ESM interop in Vite
+import lamejsDefault from 'lamejs';
 
 // Cached Mp3Encoder class for reuse (can be reset on failure)
 let cachedMp3Encoder: any = null;
+
+// Declare window.lamejs for global fallback
+declare global {
+  interface Window {
+    lamejs?: { Mp3Encoder?: any };
+  }
+}
+
+/**
+ * Validate that an encoder has the required methods
+ */
+function isValidEncoder(encoder: any): boolean {
+  if (typeof encoder !== 'function') return false;
+  
+  // Try to instantiate and check for required methods
+  try {
+    const testInstance = new encoder(1, 44100, 64);
+    return (
+      typeof testInstance.encodeBuffer === 'function' &&
+      typeof testInstance.flush === 'function'
+    );
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Extract Mp3Encoder from a module with various possible structures
@@ -16,43 +41,43 @@ function extractEncoder(module: any, source: string): any {
   const keys = Object.keys(module || {});
   console.log(`[lamejs:${source}] Module type: ${typeof module}, keys: [${keys.join(', ')}]`);
   
-  // Pattern 1: Direct named export (module.Mp3Encoder)
+  // Pattern 1: Direct property (CJS default export pattern - MOST COMMON)
   if (typeof module.Mp3Encoder === 'function') {
-    console.log(`[lamejs:${source}] Found via direct named export`);
+    console.log(`[lamejs:${source}] Found via direct Mp3Encoder property`);
     return module.Mp3Encoder;
   }
   
-  // Pattern 2: Vite ESM wrapper (module.default.Mp3Encoder)
+  // Pattern 2: Vite synthesized default (module.default.Mp3Encoder)
   if (module.default && typeof module.default.Mp3Encoder === 'function') {
     console.log(`[lamejs:${source}] Found via default.Mp3Encoder`);
     return module.default.Mp3Encoder;
   }
   
-  // Pattern 3: Double default wrapper (module.default.default.Mp3Encoder)
+  // Pattern 3: Double default wrapper
   if (module.default?.default && typeof module.default.default.Mp3Encoder === 'function') {
     console.log(`[lamejs:${source}] Found via default.default.Mp3Encoder`);
     return module.default.default.Mp3Encoder;
   }
   
-  // Pattern 4: Module.default IS the encoder (unusual but possible)
+  // Pattern 4: Module.default IS the encoder constructor
   if (typeof module.default === 'function' && module.default.length === 3) {
-    console.log(`[lamejs:${source}] Found via default (direct constructor)`);
+    console.log(`[lamejs:${source}] Found via default as constructor`);
     return module.default;
   }
   
-  // Pattern 5: Check if module itself is the constructor
+  // Pattern 5: Module itself is the constructor
   if (typeof module === 'function' && module.length === 3) {
     console.log(`[lamejs:${source}] Module itself is the constructor`);
     return module;
   }
   
-  console.log(`[lamejs:${source}] Could not find Mp3Encoder`);
+  console.log(`[lamejs:${source}] Could not find Mp3Encoder in module`);
   return null;
 }
 
 /**
  * Get Mp3Encoder class with robust CJS/ESM interop handling
- * Uses static import first, then falls back to dynamic import
+ * Uses multiple fallback strategies for maximum reliability
  * @param forceRefresh - If true, bypasses cache and re-resolves the encoder
  */
 async function getLamejsEncoder(forceRefresh = false): Promise<any> {
@@ -63,27 +88,43 @@ async function getLamejsEncoder(forceRefresh = false): Promise<any> {
 
   console.log(`[lamejs] Resolving Mp3Encoder (forceRefresh: ${forceRefresh})...`);
   
-  // First, try to extract from static import
-  let encoder = extractEncoder(lamejsModule, 'static');
+  let encoder: any = null;
+
+  // Strategy 1: Extract from default import (Vite CJS interop)
+  encoder = extractEncoder(lamejsDefault, 'default-import');
+  if (encoder && isValidEncoder(encoder)) {
+    console.log('[lamejs] Mp3Encoder resolved via default import');
+    cachedMp3Encoder = encoder;
+    return encoder;
+  }
   
-  // If static import failed, try dynamic import
-  if (!encoder) {
-    console.log('[lamejs] Static import failed, trying dynamic import...');
-    try {
-      const dynamicModule = await import('lamejs');
-      encoder = extractEncoder(dynamicModule, 'dynamic');
-    } catch (dynamicError) {
-      console.error('[lamejs] Dynamic import also failed:', dynamicError);
+  // Strategy 2: Dynamic import with fresh module resolution
+  console.log('[lamejs] Default import failed, trying dynamic import...');
+  try {
+    // Small delay to allow Vite module resolution to stabilize
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const dynamicModule = await import('lamejs');
+    encoder = extractEncoder(dynamicModule, 'dynamic');
+    if (encoder && isValidEncoder(encoder)) {
+      console.log('[lamejs] Mp3Encoder resolved via dynamic import');
+      cachedMp3Encoder = encoder;
+      return encoder;
+    }
+  } catch (dynamicError) {
+    console.warn('[lamejs] Dynamic import failed:', dynamicError);
+  }
+  
+  // Strategy 3: Global window.lamejs fallback (some bundlers attach to global)
+  if (typeof window !== 'undefined' && window.lamejs?.Mp3Encoder) {
+    encoder = window.lamejs.Mp3Encoder;
+    if (isValidEncoder(encoder)) {
+      console.log('[lamejs] Mp3Encoder resolved via window.lamejs');
+      cachedMp3Encoder = encoder;
+      return encoder;
     }
   }
 
-  if (!encoder || typeof encoder !== 'function') {
-    throw new Error('lamejs Mp3Encoder not found');
-  }
-
-  console.log('[lamejs] Mp3Encoder resolved successfully');
-  cachedMp3Encoder = encoder;
-  return encoder;
+  throw new Error('lamejs Mp3Encoder not found after all resolution strategies');
 }
 
 /**
