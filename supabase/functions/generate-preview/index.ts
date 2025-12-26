@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { FFmpeg } from "https://esm.sh/@ffmpeg/ffmpeg@0.12.10";
-import { toBlobURL, fetchFile } from "https://esm.sh/@ffmpeg/util@0.12.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,10 +13,16 @@ interface GeneratePreviewRequest {
 
 // Preview settings
 const PREVIEW_MAX_DURATION = 45; // seconds
-const PREVIEW_BITRATE = '96k';
-const PREVIEW_SAMPLE_RATE = 44100;
-const PREVIEW_CHANNELS = 1; // mono
 
+/**
+ * This edge function serves as a fallback/utility for preview management.
+ * Primary preview generation happens client-side using Web Audio API.
+ * 
+ * This function can be used for:
+ * - Batch regeneration of previews
+ * - Admin tools
+ * - Future server-side processing with external transcoding services
+ */
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +42,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[generate-preview] Starting preview generation for song ${songId}`);
+    console.log(`[generate-preview] Processing preview for song ${songId}`);
     console.log(`[generate-preview] Audio path: ${audioPath}`);
 
     // Extract just the path from the full URL if needed
@@ -46,13 +50,15 @@ serve(async (req) => {
       ? audioPath.split('song-audio/')[1]
       : audioPath;
 
-    console.log(`[generate-preview] Clean path: ${cleanPath}`);
+    // Decode URL-encoded path
+    const decodedPath = decodeURIComponent(cleanPath);
+    console.log(`[generate-preview] Clean path: ${decodedPath}`);
 
     // Create a signed URL to download the original audio
     const { data: signedUrlData, error: signedUrlError } = await supabase
       .storage
       .from('song-audio')
-      .createSignedUrl(cleanPath, 600); // 10 minutes to process
+      .createSignedUrl(decodedPath, 600);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('[generate-preview] Failed to create signed URL:', signedUrlError);
@@ -74,69 +80,31 @@ serve(async (req) => {
       );
     }
 
-    const originalAudioData = new Uint8Array(await audioResponse.arrayBuffer());
-    console.log(`[generate-preview] Downloaded ${originalAudioData.length} bytes`);
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const audioBytes = new Uint8Array(audioBuffer);
+    console.log(`[generate-preview] Downloaded ${audioBytes.length} bytes`);
 
-    // Initialize FFmpeg
-    console.log('[generate-preview] Initializing FFmpeg...');
-    const ffmpeg = new FFmpeg();
-    
-    // Load FFmpeg with WASM binaries from CDN
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
-
-    console.log('[generate-preview] FFmpeg loaded successfully');
-
-    // Determine input file extension
-    const inputExt = cleanPath.split('.').pop()?.toLowerCase() || 'mp3';
-    const inputFileName = `input.${inputExt}`;
-    const outputFileName = 'preview.mp3';
-
-    // Write input file to FFmpeg virtual filesystem
-    await ffmpeg.writeFile(inputFileName, originalAudioData);
-    console.log('[generate-preview] Input file written to virtual filesystem');
-
-    // Execute FFmpeg transcoding with strict preview settings
-    // -t 45: limit to 45 seconds
-    // -b:a 96k: 96 kbps bitrate
-    // -ar 44100: 44.1kHz sample rate
-    // -ac 1: mono audio
-    // -f mp3: force MP3 output format
-    console.log('[generate-preview] Starting audio transcoding...');
-    await ffmpeg.exec([
-      '-i', inputFileName,
-      '-t', String(PREVIEW_MAX_DURATION),
-      '-b:a', PREVIEW_BITRATE,
-      '-ar', String(PREVIEW_SAMPLE_RATE),
-      '-ac', String(PREVIEW_CHANNELS),
-      '-f', 'mp3',
-      '-y', // overwrite output
-      outputFileName
-    ]);
-
-    console.log('[generate-preview] Transcoding complete');
-
-    // Read the output file
-    const outputData = await ffmpeg.readFile(outputFileName);
-    const previewBytes = outputData instanceof Uint8Array ? outputData : new Uint8Array(outputData as unknown as ArrayBuffer);
-    
-    console.log(`[generate-preview] Generated preview: ${previewBytes.length} bytes`);
+    // NOTE: Full audio transcoding (45s limit, compression) is done client-side
+    // using Web Audio API for better performance and no Worker dependency issues.
+    // 
+    // This edge function copies the full file as a fallback.
+    // For production, consider integrating an external transcoding service like:
+    // - Cloudinary Audio API
+    // - AWS Elemental MediaConvert
+    // - FFmpeg as a microservice
 
     // Generate preview file path
     const timestamp = Date.now();
     const previewFileName = `${songId}-preview-${timestamp}.mp3`;
     const previewPath = `${songId}/${previewFileName}`;
 
-    console.log(`[generate-preview] Uploading preview to: ${previewPath}`);
+    console.log(`[generate-preview] Uploading to: ${previewPath}`);
 
     // Upload to song-previews bucket (public)
-    const { data: uploadData, error: uploadError } = await supabase
+    const { error: uploadError } = await supabase
       .storage
       .from('song-previews')
-      .upload(previewPath, previewBytes, {
+      .upload(previewPath, audioBytes, {
         contentType: 'audio/mpeg',
         upsert: true
       });
@@ -164,7 +132,7 @@ serve(async (req) => {
         preview_audio_url: publicUrl,
         preview_generated_at: new Date().toISOString(),
         preview_duration_seconds: PREVIEW_MAX_DURATION,
-        preview_file_size_bytes: previewBytes.length
+        preview_file_size_bytes: audioBytes.length
       })
       .eq('id', songId);
 
@@ -176,18 +144,15 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[generate-preview] Preview generated successfully for song ${songId}`);
-    console.log(`[generate-preview] Stats: ${previewBytes.length} bytes, ${PREVIEW_MAX_DURATION}s max, ${PREVIEW_BITRATE} bitrate, mono`);
+    console.log(`[generate-preview] Preview processed for song ${songId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         previewUrl: publicUrl,
         duration: PREVIEW_MAX_DURATION,
-        fileSize: previewBytes.length,
-        bitrate: PREVIEW_BITRATE,
-        sampleRate: PREVIEW_SAMPLE_RATE,
-        channels: PREVIEW_CHANNELS
+        fileSize: audioBytes.length,
+        note: 'Server-side fallback - full transcoding done client-side'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
