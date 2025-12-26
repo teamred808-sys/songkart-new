@@ -19,9 +19,11 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Audio file size limits
+// File size limits
 const MAX_AUDIO_FILE_SIZE_MB = 200;
 const MAX_AUDIO_FILE_SIZE_BYTES = MAX_AUDIO_FILE_SIZE_MB * 1024 * 1024;
+const MAX_COVER_FILE_SIZE_MB = 20;
+const MAX_COVER_FILE_SIZE_BYTES = MAX_COVER_FILE_SIZE_MB * 1024 * 1024;
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
@@ -123,6 +125,19 @@ export default function UploadSong() {
         toast({ 
           title: 'File too large', 
           description: `Your audio file is ${fileSizeMB} MB. Maximum allowed size is ${MAX_AUDIO_FILE_SIZE_MB} MB. Try using MP3 format for smaller file sizes.`,
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+    
+    // Validate cover image file size
+    if (field === 'cover_image' && file) {
+      if (file.size > MAX_COVER_FILE_SIZE_BYTES) {
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        toast({ 
+          title: 'Cover image too large', 
+          description: `Your image is ${fileSizeMB} MB. Maximum allowed size is ${MAX_COVER_FILE_SIZE_MB} MB. Try compressing the image or using JPG format.`,
           variant: 'destructive' 
         });
         return;
