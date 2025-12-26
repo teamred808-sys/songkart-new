@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Audio file size limits
@@ -75,10 +75,25 @@ export default function UploadSong() {
   const { user } = useAuth();
   const { data: genres } = useGenres();
   const { data: moods } = useMoods();
-  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress } = useAudioPreviewGenerator();
+  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress, error: previewError } = useAudioPreviewGenerator();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewGenerationPhase, setPreviewGenerationPhase] = useState<'idle' | 'generating' | 'validating'>('idle');
+
+  // Warn user before leaving during upload/preview generation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSubmitting || isGeneratingPreview) {
+        e.preventDefault();
+        e.returnValue = 'Your upload is in progress. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isSubmitting, isGeneratingPreview]);
   
   // Form data state
   const [metadata, setMetadata] = useState<MetadataForm | null>(null);
@@ -205,48 +220,65 @@ export default function UploadSong() {
 
       // Upload audio file
       if (content.audio_file) {
-        setUploadProgress(40);
+        setUploadProgress(30);
         const audioPath = `${user.id}/${Date.now()}-${content.audio_file.name}`;
         audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
 
         // Generate optimized preview client-side (45s max, mono, compressed)
-        setUploadProgress(50);
+        setUploadProgress(40);
+        setPreviewGenerationPhase('generating');
         console.log('Generating optimized preview client-side...');
+        
         const previewResult = await generatePreview(content.audio_file);
         
-        if (previewResult) {
-          setUploadProgress(60);
-          
-          // Validate preview through edge function before saving
-          const formData = new FormData();
-          formData.append('file', previewResult.blob, 'preview.mp3');
-          formData.append('songId', 'pending'); // Will be updated after song creation
-          
-          const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-preview', {
-            body: formData,
+        // MANDATORY: Block upload if preview generation fails
+        if (!previewResult) {
+          console.error('Preview generation failed:', previewError);
+          toast({ 
+            title: 'Preview Generation Failed', 
+            description: 'Could not generate audio preview. Please try a different audio file format (MP3 recommended) or refresh the page and try again.',
+            variant: 'destructive' 
           });
-          
-          if (validationError || !validationResult?.success) {
-            const errorMessage = validationResult?.message || validationError?.message || 'Preview validation failed';
-            console.error('Preview validation failed:', errorMessage);
-            toast({ 
-              title: 'Preview Validation Failed', 
-              description: `${errorMessage}. Please try again.`,
-              variant: 'destructive' 
-            });
-            setIsSubmitting(false);
-            return;
-          }
-          
-          // Use server-validated data (not client-provided)
-          preview_audio_url = validationResult.data.preview_url;
-          validatedPreviewMetadata = {
-            duration_seconds: validationResult.data.duration_seconds,
-            file_size_bytes: validationResult.data.file_size_bytes,
-            validated_at: validationResult.data.validated_at,
-          };
-          console.log(`Preview validated and uploaded: ${(validatedPreviewMetadata.file_size_bytes / 1024).toFixed(1)} KB, ${validatedPreviewMetadata.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
+          setIsSubmitting(false);
+          setPreviewGenerationPhase('idle');
+          return;
         }
+        
+        setUploadProgress(60);
+        setPreviewGenerationPhase('validating');
+        
+        // Validate preview through edge function before saving
+        const formData = new FormData();
+        formData.append('file', previewResult.blob, 'preview.mp3');
+        formData.append('songId', 'pending'); // Will be updated after song creation
+        
+        const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-preview', {
+          body: formData,
+        });
+        
+        if (validationError || !validationResult?.success) {
+          const errorMessage = validationResult?.message || validationError?.message || 'Preview validation failed';
+          console.error('Preview validation failed:', errorMessage);
+          toast({ 
+            title: 'Preview Validation Failed', 
+            description: `${errorMessage}. Please try again with a different audio file.`,
+            variant: 'destructive' 
+          });
+          setIsSubmitting(false);
+          setPreviewGenerationPhase('idle');
+          return;
+        }
+        
+        setPreviewGenerationPhase('idle');
+        
+        // Use server-validated data (not client-provided)
+        preview_audio_url = validationResult.data.preview_url;
+        validatedPreviewMetadata = {
+          duration_seconds: validationResult.data.duration_seconds,
+          file_size_bytes: validationResult.data.file_size_bytes,
+          validated_at: validationResult.data.validated_at,
+        };
+        console.log(`Preview validated and uploaded: ${(validatedPreviewMetadata.file_size_bytes / 1024).toFixed(1)} KB, ${validatedPreviewMetadata.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
       }
 
       setUploadProgress(70);
@@ -317,10 +349,49 @@ export default function UploadSong() {
       });
     } finally {
       setIsSubmitting(false);
+      setPreviewGenerationPhase('idle');
     }
   };
 
+  // Preview generation in progress - show blocking overlay
+  const showPreviewOverlay = isSubmitting && (isGeneratingPreview || previewGenerationPhase !== 'idle');
+
   return (
+    <>
+      {/* Preview Generation Overlay - blocks interaction during processing */}
+      {showPreviewOverlay && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="w-[90%] max-w-md mx-4">
+            <CardContent className="pt-6">
+              <div className="space-y-4 text-center">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
+                <h3 className="text-lg font-semibold">
+                  {previewGenerationPhase === 'generating' 
+                    ? 'Generating Audio Preview' 
+                    : previewGenerationPhase === 'validating'
+                    ? 'Validating Preview'
+                    : 'Processing Audio'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {previewGenerationPhase === 'generating' 
+                    ? 'Creating a 45-second compressed preview from your audio...'
+                    : previewGenerationPhase === 'validating'
+                    ? 'Verifying preview meets quality requirements...'
+                    : 'Please wait while we process your audio file...'}
+                </p>
+                <Progress value={isGeneratingPreview ? previewProgress : 100} className="w-full" />
+                <p className="text-xs text-muted-foreground">
+                  {isGeneratingPreview ? `${previewProgress}% complete` : 'Finalizing...'}
+                </p>
+                <div className="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-500 mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-xs font-medium">Please stay on this page</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     <div className="p-6 lg:p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
@@ -542,11 +613,26 @@ export default function UploadSong() {
               {/* Auto-generated preview notice */}
               <div className="space-y-2">
                 <Label>Preview Audio</Label>
-                <div className="flex items-center justify-center h-24 border-2 border-dashed border-border/50 rounded-lg bg-muted/30">
+                <div className={cn(
+                  "flex items-center justify-center h-24 border-2 border-dashed rounded-lg",
+                  content.audio_file 
+                    ? "border-green-500/50 bg-green-500/5" 
+                    : "border-border/50 bg-muted/30"
+                )}>
                   <div className="text-center text-muted-foreground">
-                    <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                    <span className="text-sm">Auto-generated from full audio</span>
-                    <p className="text-xs mt-1">(45s, optimized for streaming)</p>
+                    {content.audio_file ? (
+                      <>
+                        <CheckCircle className="h-6 w-6 mx-auto mb-1 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400">Preview will be auto-generated</span>
+                        <p className="text-xs mt-1">(45s, ~64kbps MP3)</p>
+                      </>
+                    ) : (
+                      <>
+                        <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                        <span className="text-sm">Auto-generated from full audio</span>
+                        <p className="text-xs mt-1">(45s, optimized for streaming)</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -828,5 +914,6 @@ export default function UploadSong() {
         </Card>
       )}
     </div>
+    </>
   );
 }
