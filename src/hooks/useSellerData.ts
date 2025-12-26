@@ -303,12 +303,23 @@ export function useDeleteSong() {
         .from('songs')
         .delete()
         .eq('id', songId)
-        // Ensure we actually deleted a row (RLS-denied deletes can return 204 with no error)
         .select('id');
 
       if (error) throw error;
+      
+      // If no rows returned, the delete was blocked by RLS
       if (!data || data.length === 0) {
-        throw new Error('Unable to delete this song. Please try again.');
+        // Check if song has sales
+        const { data: salesData } = await supabase
+          .from('order_items')
+          .select('id')
+          .eq('song_id', songId)
+          .limit(1);
+        
+        if (salesData && salesData.length > 0) {
+          throw new Error('Cannot delete this song because it has existing sales.');
+        }
+        throw new Error('Unable to delete this song. Only pending, rejected, or approved songs with no sales can be deleted.');
       }
 
       return songId;
