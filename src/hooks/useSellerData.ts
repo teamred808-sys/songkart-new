@@ -367,3 +367,123 @@ export function useUpdateSellerDynamicPricing() {
     },
   });
 }
+
+// License Tier Management
+export function useAddLicenseTier() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { 
+      song_id: string; 
+      license_type: 'personal' | 'youtube' | 'commercial' | 'film' | 'exclusive'; 
+      price: number; 
+      terms?: string;
+      max_sales?: number;
+    }) => {
+      const { error } = await supabase
+        .from('license_tiers')
+        .insert({
+          song_id: data.song_id,
+          license_type: data.license_type,
+          price: data.price,
+          terms: data.terms || null,
+          max_sales: data.max_sales || null,
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
+      queryClient.invalidateQueries({ queryKey: ['license-tiers'] });
+      toast({ title: 'License added', description: 'New license tier has been added.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useUpdateLicenseTier() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: { 
+      tier_id: string; 
+      price?: number; 
+      terms?: string;
+      is_available?: boolean;
+    }) => {
+      const updateData: Record<string, any> = {};
+      if (data.price !== undefined) updateData.price = data.price;
+      if (data.terms !== undefined) updateData.terms = data.terms;
+      if (data.is_available !== undefined) updateData.is_available = data.is_available;
+      
+      const { error } = await supabase
+        .from('license_tiers')
+        .update(updateData)
+        .eq('id', data.tier_id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
+      toast({ title: 'License updated', description: 'License tier has been updated.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useRemoveLicenseTier() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (tierId: string) => {
+      // First check if there are any sales
+      const { data: tier, error: fetchError } = await supabase
+        .from('license_tiers')
+        .select('current_sales')
+        .eq('id', tierId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      if (tier?.current_sales && tier.current_sales > 0) {
+        throw new Error('Cannot remove license tier with existing sales');
+      }
+      
+      const { error } = await supabase
+        .from('license_tiers')
+        .delete()
+        .eq('id', tierId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
+      toast({ title: 'License removed', description: 'License tier has been removed.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+// Fetch license tiers for a specific song
+export function useSongLicenseTiers(songId: string) {
+  return useQuery({
+    queryKey: ['license-tiers', songId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('license_tiers')
+        .select('*')
+        .eq('song_id', songId)
+        .order('price', { ascending: true });
+      
+      if (error) throw error;
+      return data as LicenseTier[];
+    },
+    enabled: !!songId,
+  });
+}

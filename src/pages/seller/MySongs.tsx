@@ -121,6 +121,27 @@ export default function MySongs() {
     );
   };
 
+  // Calculate total sales for a song
+  const getTotalSales = (song: SellerSong) => {
+    return song.license_tiers?.reduce((sum, t) => sum + (t.current_sales || 0), 0) || 0;
+  };
+
+  // Check if song can be deleted
+  const canDeleteSong = (song: SellerSong) => {
+    const totalSales = getTotalSales(song);
+    // Can delete: pending songs, rejected songs, or approved songs with no sales
+    return song.status === 'pending' || song.status === 'rejected' || totalSales === 0;
+  };
+
+  // Get delete warning message
+  const getDeleteWarning = (song: SellerSong) => {
+    const totalSales = getTotalSales(song);
+    if (totalSales > 0) {
+      return `This song has ${totalSales} sale${totalSales > 1 ? 's' : ''} and cannot be deleted.`;
+    }
+    return null;
+  };
+
   const toggleRejection = (id: string) => {
     setExpandedRejections(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -438,13 +459,24 @@ export default function MySongs() {
                                 <Edit className="mr-2 h-4 w-4" /> Edit Song
                               </Link>
                             </DropdownMenuItem>
-                            {song.status === 'pending' && (
+                            {canDeleteSong(song) ? (
                               <DropdownMenuItem 
                                 onClick={() => setDeleteId(song.id)}
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
                               </DropdownMenuItem>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center px-2 py-1.5 text-sm text-muted-foreground opacity-50 cursor-not-allowed">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  {getDeleteWarning(song)}
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
