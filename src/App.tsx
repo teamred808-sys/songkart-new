@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SellerLayout } from "@/components/seller/SellerLayout";
 import { BuyerLayout } from "@/components/buyer/BuyerLayout";
@@ -85,6 +86,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CurrencyProvider>
+            <AudioPlayerProvider>
             <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<HomepageGuard><Auth /></HomepageGuard>} />
@@ -165,6 +167,7 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
             </Routes>
+            </AudioPlayerProvider>
           </CurrencyProvider>
         </AuthProvider>
       </BrowserRouter>
