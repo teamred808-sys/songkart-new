@@ -1906,9 +1906,11 @@ export type Database = {
           play_count: number | null
           preview_audio_url: string | null
           preview_duration_seconds: number | null
+          preview_error: string | null
           preview_file_size_bytes: number | null
           preview_generated_at: string | null
           preview_lyrics: string | null
+          preview_status: string | null
           rejection_reason: string | null
           seller_id: string | null
           status: Database["public"]["Enums"]["song_status"]
@@ -1944,9 +1946,11 @@ export type Database = {
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
+          preview_error?: string | null
           preview_file_size_bytes?: number | null
           preview_generated_at?: string | null
           preview_lyrics?: string | null
+          preview_status?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
@@ -1982,9 +1986,11 @@ export type Database = {
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
+          preview_error?: string | null
           preview_file_size_bytes?: number | null
           preview_generated_at?: string | null
           preview_lyrics?: string | null
+          preview_status?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
           status?: Database["public"]["Enums"]["song_status"]
