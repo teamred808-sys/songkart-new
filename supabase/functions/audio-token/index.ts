@@ -64,7 +64,7 @@ serve(async (req) => {
       .eq('key', 'abuse_threshold_plays_per_hour')
       .single();
     
-    const threshold = thresholdSetting?.value ? parseInt(thresholdSetting.value) : 50;
+    const threshold = thresholdSetting?.value ? (typeof thresholdSetting.value === 'number' ? thresholdSetting.value : parseInt(String(thresholdSetting.value))) : 50;
 
     if (recentSessions && recentSessions > threshold) {
       // Flag as abuse
@@ -130,7 +130,7 @@ serve(async (req) => {
       .eq('key', 'session_token_expiry_minutes')
       .single();
     
-    const expiryMinutes = expirySetting?.value ? parseInt(expirySetting.value) : 15;
+    const expiryMinutes = expirySetting?.value ? (typeof expirySetting.value === 'number' ? expirySetting.value : parseInt(String(expirySetting.value))) : 15;
 
     // Generate unique session token
     const sessionToken = crypto.randomUUID() + '-' + Date.now().toString(36);
@@ -172,7 +172,8 @@ serve(async (req) => {
       .eq('key', 'preview_duration_seconds')
       .single();
     
-    const durationConfig = durationSetting?.value ? JSON.parse(durationSetting.value) : { default: 45 };
+    // Value is already an object from Supabase JSON column, no need to parse
+    const durationConfig = durationSetting?.value ? (typeof durationSetting.value === 'string' ? JSON.parse(durationSetting.value) : durationSetting.value) : { default: 45 };
 
     console.log(`Audio token generated for song ${songId}, type: ${type}, user: ${userId || 'anonymous'}`);
 
