@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods } from '@/hooks/useSellerData';
+import { useAudioPreviewGenerator } from '@/hooks/useAudioPreviewGenerator';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,10 +71,9 @@ export default function UploadSong() {
   const { user } = useAuth();
   const { data: genres } = useGenres();
   const { data: moods } = useMoods();
-  
+  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress } = useAudioPreviewGenerator();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   // Form data state
@@ -170,6 +170,7 @@ export default function UploadSong() {
     try {
       let cover_image_url = null;
       let audio_url = null;
+      let preview_audio_url = null;
 
       // Upload cover image
       if (content.cover_image) {
@@ -183,10 +184,33 @@ export default function UploadSong() {
         setUploadProgress(40);
         const audioPath = `${user.id}/${Date.now()}-${content.audio_file.name}`;
         audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
-      }
 
-      // Preview will be auto-generated after song creation
-      setUploadProgress(60);
+        // Generate optimized preview client-side (45s max, mono, compressed)
+        setUploadProgress(50);
+        console.log('Generating optimized preview client-side...');
+        const previewResult = await generatePreview(content.audio_file);
+        
+        if (previewResult) {
+          setUploadProgress(60);
+          const previewPath = `${user.id}/${Date.now()}-preview.wav`;
+          const { error: previewUploadError } = await supabase.storage
+            .from('song-previews')
+            .upload(previewPath, previewResult.blob, { 
+              contentType: 'audio/wav',
+              upsert: true 
+            });
+          
+          if (!previewUploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('song-previews')
+              .getPublicUrl(previewPath);
+            preview_audio_url = publicUrl;
+            console.log(`Preview generated: ${(previewResult.size / 1024).toFixed(1)} KB, ${previewResult.duration.toFixed(1)}s`);
+          } else {
+            console.error('Preview upload error:', previewUploadError);
+          }
+        }
+      }
 
       setUploadProgress(70);
 
@@ -203,13 +227,15 @@ export default function UploadSong() {
           language: metadata.language,
           cover_image_url,
           audio_url,
-          preview_audio_url: null, // Will be auto-generated
+          preview_audio_url,
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.base_price,
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
+          preview_generated_at: preview_audio_url ? new Date().toISOString() : null,
+          preview_duration_seconds: preview_audio_url ? 45 : null,
         })
         .select()
         .single();
@@ -235,41 +261,6 @@ export default function UploadSong() {
         if (tiersError) throw tiersError;
       }
 
-      setUploadProgress(95);
-
-      // Auto-generate optimized preview if audio was uploaded
-      if (audio_url) {
-        setIsGeneratingPreview(true);
-        try {
-          // Extract the path from the full URL
-          const audioPath = audio_url.includes('song-audio/') 
-            ? audio_url.split('song-audio/')[1].split('?')[0]
-            : `${user.id}/${Date.now()}-audio.mp3`;
-          
-          console.log('Triggering preview generation for song:', song.id);
-          
-          const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
-            body: { songId: song.id, audioPath }
-          });
-          
-          if (previewError) {
-            console.error('Preview generation error:', previewError);
-            // Don't fail the upload, preview can be regenerated later
-            toast({
-              title: 'Song uploaded',
-              description: 'Preview generation is pending. It will be available shortly.',
-            });
-          } else {
-            console.log('Preview generated:', previewResult);
-          }
-        } catch (previewErr) {
-          console.error('Preview generation failed:', previewErr);
-          // Silent failure - preview can be regenerated
-        } finally {
-          setIsGeneratingPreview(false);
-        }
-      }
-
       setUploadProgress(100);
       
       toast({ 
@@ -287,7 +278,6 @@ export default function UploadSong() {
       });
     } finally {
       setIsSubmitting(false);
-      setIsGeneratingPreview(false);
     }
   };
 
@@ -754,20 +744,24 @@ export default function UploadSong() {
             {(isSubmitting || isGeneratingPreview) && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>{isGeneratingPreview ? 'Generating preview...' : 'Uploading...'}</span>
-                  <span>{uploadProgress}%</span>
+                  <span>
+                    {isGeneratingPreview 
+                      ? `Generating preview... ${previewProgress}%` 
+                      : `Uploading... ${uploadProgress}%`}
+                  </span>
+                  <span>{isGeneratingPreview ? previewProgress : uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} />
+                <Progress value={isGeneratingPreview ? previewProgress : uploadProgress} />
               </div>
             )}
 
             <div className="flex justify-between">
-              <Button type="button" variant="outline" onClick={() => setStep(3)} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={() => setStep(3)} disabled={isSubmitting || isGeneratingPreview}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
               <Button 
                 onClick={handleSubmit}
-                disabled={isSubmitting || !ownershipConfirmed || !termsAccepted}
+                disabled={isSubmitting || isGeneratingPreview || !ownershipConfirmed || !termsAccepted}
                 className="btn-glow"
               >
                 {isSubmitting || isGeneratingPreview ? (
