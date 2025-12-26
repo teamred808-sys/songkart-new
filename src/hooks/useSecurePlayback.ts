@@ -76,7 +76,7 @@ export function useSecurePlayback() {
     }
   }, [user?.id]);
 
-  const reportAbuse = useCallback(async (flagType: string, details?: Record<string, any>) => {
+  const reportAbuse = useCallback(async (flagType: string, details?: Record<string, unknown>) => {
     try {
       await supabase.functions.invoke('check-abuse', {
         body: {
@@ -92,6 +92,25 @@ export function useSecurePlayback() {
     }
   }, [user?.id]);
 
+  // Get direct public URL for preview (bypasses edge function for speed)
+  const getDirectPreviewUrl = useCallback((previewAudioUrl: string | null): string | null => {
+    if (!previewAudioUrl) return null;
+    
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    
+    // If it's already a full URL, return it
+    if (previewAudioUrl.startsWith('http')) {
+      return previewAudioUrl;
+    }
+    
+    // Extract path and build public URL from song-previews bucket
+    const path = previewAudioUrl.includes('song-previews/') 
+      ? previewAudioUrl.split('song-previews/')[1]
+      : previewAudioUrl;
+    
+    return `${baseUrl}/storage/v1/object/public/song-previews/${path}`;
+  }, []);
+
   const getToken = useCallback(async (songId: string, type: 'preview' | 'purchased' = 'preview') => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -106,9 +125,6 @@ export function useSecurePlayback() {
         }));
         return null;
       }
-
-      // Get auth token if user is logged in
-      const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('audio-token', {
         body: {
@@ -139,12 +155,13 @@ export function useSecurePlayback() {
       }
 
       return data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to get audio token:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get playback token';
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: err.message || 'Failed to get playback token'
+        error: errorMessage
       }));
       return null;
     }
@@ -180,6 +197,7 @@ export function useSecurePlayback() {
     ...state,
     getToken,
     getStreamUrl,
+    getDirectPreviewUrl,
     invalidateToken,
     checkAbuse,
     reportAbuse,

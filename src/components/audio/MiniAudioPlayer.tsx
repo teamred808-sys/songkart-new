@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 interface MiniAudioPlayerProps {
   songId: string;
+  previewUrl?: string | null;
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
@@ -25,6 +26,7 @@ export interface MiniAudioPlayerHandle {
 export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayerProps>(
   function MiniAudioPlayer({
     songId,
+    previewUrl,
     onPlay,
     onPause,
     onEnded,
@@ -38,8 +40,9 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     const [currentTime, setCurrentTime] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const progressIntervalRef = useRef<number | null>(null);
+    const hasStartedRef = useRef(false);
     
-    const { getToken, getStreamUrl } = useSecurePlayback();
+    const { getDirectPreviewUrl, getToken, getStreamUrl, checkAbuse } = useSecurePlayback();
     const audioContext = useAudioPlayerOptional();
 
     // Stop if another song starts playing
@@ -71,54 +74,94 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
       }
     }, []);
 
+    const setupAudioElement = useCallback(() => {
+      if (audioRef.current) return audioRef.current;
+      
+      const audio = new Audio();
+      audio.preload = 'metadata'; // Only load metadata initially
+      audio.crossOrigin = 'anonymous';
+      
+      // Disable download/context menu
+      audio.addEventListener('contextmenu', (e) => e.preventDefault());
+      
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setProgress(0);
+        setCurrentTime(0);
+        stopProgressTracking();
+        audioContext?.stop();
+        hasStartedRef.current = false;
+        onEnded?.();
+      });
+
+      audio.addEventListener('error', (e) => {
+        console.error('Audio element error:', e);
+        setIsPlaying(false);
+        setIsLoading(false);
+        setHasError(true);
+        stopProgressTracking();
+        audioContext?.stop();
+        hasStartedRef.current = false;
+        toast.error('Preview unavailable', {
+          description: 'This song preview could not be loaded'
+        });
+      });
+
+      // Start playback as soon as we have enough data
+      audio.addEventListener('canplay', () => {
+        if (hasStartedRef.current && audio.paused) {
+          audio.play().catch(console.error);
+        }
+      });
+
+      audioRef.current = audio;
+      return audio;
+    }, [stopProgressTracking, audioContext, onEnded]);
+
     const handlePlay = useCallback(async () => {
       if (isLoading) return;
 
       try {
         setIsLoading(true);
         setHasError(false);
+        hasStartedRef.current = true;
 
-        // Get secure token - returns { token, expiresAt, maxDuration }
+        const audio = setupAudioElement();
+
+        // Try direct public URL first for instant playback
+        const directUrl = getDirectPreviewUrl(previewUrl || null);
+        
+        if (directUrl) {
+          // Use direct CDN URL for fastest loading
+          audio.src = directUrl;
+          
+          // Start playback immediately
+          try {
+            await audio.play();
+            setIsPlaying(true);
+            setIsLoading(false);
+            startProgressTracking();
+            audioContext?.play(songId);
+            onPlay?.();
+            
+            // Log play asynchronously in background (don't block playback)
+            checkAbuse().catch(() => {}); // Just for tracking
+            return;
+          } catch (playError) {
+            console.warn('Direct playback failed, falling back to token:', playError);
+          }
+        }
+
+        // Fallback: Use token-based streaming if direct URL fails or doesn't exist
         const tokenData = await getToken(songId, 'preview');
         if (!tokenData || !tokenData.token) {
           throw new Error('Failed to get playback token');
         }
 
-        // Create audio element if needed
-        if (!audioRef.current) {
-          audioRef.current = new Audio();
-          audioRef.current.preload = 'none';
-          
-          // Disable download/context menu
-          audioRef.current.addEventListener('contextmenu', (e) => e.preventDefault());
-          
-          audioRef.current.addEventListener('ended', () => {
-            setIsPlaying(false);
-            setProgress(0);
-            setCurrentTime(0);
-            stopProgressTracking();
-            audioContext?.stop();
-            onEnded?.();
-          });
-
-          audioRef.current.addEventListener('error', (e) => {
-            console.error('Audio element error:', e);
-            setIsPlaying(false);
-            setIsLoading(false);
-            setHasError(true);
-            stopProgressTracking();
-            audioContext?.stop();
-            toast.error('Preview unavailable', {
-              description: 'This song preview could not be loaded'
-            });
-          });
-        }
-
-        // Set stream URL with extracted token string and play
         const streamUrl = getStreamUrl(songId, tokenData.token);
-        audioRef.current.src = streamUrl;
+        audio.src = streamUrl;
         
-        await audioRef.current.play();
+        await audio.play();
         
         setIsPlaying(true);
         setIsLoading(false);
@@ -130,11 +173,12 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
         setIsLoading(false);
         setIsPlaying(false);
         setHasError(true);
+        hasStartedRef.current = false;
         toast.error('Unable to play preview', {
           description: error instanceof Error ? error.message : 'Please try again'
         });
       }
-    }, [isLoading, songId, getToken, getStreamUrl, stopProgressTracking, audioContext, onEnded, startProgressTracking, onPlay]);
+    }, [isLoading, songId, previewUrl, setupAudioElement, getDirectPreviewUrl, getToken, getStreamUrl, checkAbuse, stopProgressTracking, audioContext, startProgressTracking, onPlay]);
 
     const handlePause = useCallback(() => {
       if (audioRef.current) {
@@ -153,6 +197,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
       setIsPlaying(false);
       setProgress(0);
       setCurrentTime(0);
+      hasStartedRef.current = false;
       stopProgressTracking();
     }, [stopProgressTracking]);
 

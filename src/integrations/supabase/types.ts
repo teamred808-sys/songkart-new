@@ -1905,6 +1905,9 @@ export type Database = {
           new_uploads_pinned_until: string | null
           play_count: number | null
           preview_audio_url: string | null
+          preview_duration_seconds: number | null
+          preview_file_size_bytes: number | null
+          preview_generated_at: string | null
           preview_lyrics: string | null
           rejection_reason: string | null
           seller_id: string | null
@@ -1940,6 +1943,9 @@ export type Database = {
           new_uploads_pinned_until?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
+          preview_duration_seconds?: number | null
+          preview_file_size_bytes?: number | null
+          preview_generated_at?: string | null
           preview_lyrics?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
@@ -1975,6 +1981,9 @@ export type Database = {
           new_uploads_pinned_until?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
+          preview_duration_seconds?: number | null
+          preview_file_size_bytes?: number | null
+          preview_generated_at?: string | null
           preview_lyrics?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
