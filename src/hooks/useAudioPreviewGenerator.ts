@@ -4,7 +4,7 @@ import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 // Static import for reliable CJS module resolution
 import * as lamejsModule from 'lamejs';
 
-// Cached Mp3Encoder class for reuse
+// Cached Mp3Encoder class for reuse (can be reset on failure)
 let cachedMp3Encoder: any = null;
 
 /**
@@ -53,14 +53,15 @@ function extractEncoder(module: any, source: string): any {
 /**
  * Get Mp3Encoder class with robust CJS/ESM interop handling
  * Uses static import first, then falls back to dynamic import
+ * @param forceRefresh - If true, bypasses cache and re-resolves the encoder
  */
-async function getMp3Encoder(): Promise<any> {
-  if (cachedMp3Encoder) {
+async function getLamejsEncoder(forceRefresh = false): Promise<any> {
+  if (cachedMp3Encoder && !forceRefresh) {
     console.log('[lamejs] Using cached encoder');
     return cachedMp3Encoder;
   }
 
-  console.log('[lamejs] Resolving Mp3Encoder...');
+  console.log(`[lamejs] Resolving Mp3Encoder (forceRefresh: ${forceRefresh})...`);
   
   // First, try to extract from static import
   let encoder = extractEncoder(lamejsModule, 'static');
@@ -77,12 +78,20 @@ async function getMp3Encoder(): Promise<any> {
   }
 
   if (!encoder || typeof encoder !== 'function') {
-    throw new Error('Mp3Encoder not found. Please refresh the page and try again.');
+    throw new Error('lamejs Mp3Encoder not found');
   }
 
   console.log('[lamejs] Mp3Encoder resolved successfully');
   cachedMp3Encoder = encoder;
   return encoder;
+}
+
+/**
+ * Clear the cached encoder (used when encoding fails to force a fresh resolution)
+ */
+function clearEncoderCache(): void {
+  cachedMp3Encoder = null;
+  console.log('[lamejs] Encoder cache cleared');
 }
 
 // Supported audio formats for client-side preview generation
@@ -142,6 +151,10 @@ interface PreviewResult {
 const PREVIEW_MAX_DURATION = PREVIEW_CONSTANTS.MAX_DURATION_SECONDS;
 const PREVIEW_SAMPLE_RATE = PREVIEW_CONSTANTS.SAMPLE_RATE;
 const PREVIEW_BITRATE = PREVIEW_CONSTANTS.CLIENT_TARGET_BITRATE_KBPS;
+
+// Encoding retry configuration
+const MAX_ENCODE_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 100;
 
 /**
  * Detect browser limitations that may affect audio processing
@@ -214,8 +227,39 @@ function createError(
 }
 
 /**
- * Client-side audio preview generator using Web Audio API + lamejs MP3 encoder
- * Generates a compressed 64kbps MP3 preview from the original audio file
+ * Validate MP3 blob output
+ * Returns null if valid, or an error string if invalid
+ */
+function validateMp3Output(blob: Blob | null, attempt: number): string | null {
+  if (!blob) {
+    return `Attempt ${attempt}: produced null output`;
+  }
+  
+  if (blob.size === 0) {
+    return `Attempt ${attempt}: produced empty blob`;
+  }
+  
+  if (blob.size < PREVIEW_CONSTANTS.MIN_FILE_SIZE_BYTES) {
+    return `Attempt ${attempt}: output too small: ${blob.size} bytes (min: ${PREVIEW_CONSTANTS.MIN_FILE_SIZE_BYTES})`;
+  }
+  
+  if (blob.size > PREVIEW_CONSTANTS.MAX_FILE_SIZE_BYTES) {
+    return `Attempt ${attempt}: output too large: ${blob.size} bytes (max: ${PREVIEW_CONSTANTS.MAX_FILE_SIZE_BYTES})`;
+  }
+  
+  return null;
+}
+
+/**
+ * Delay helper for retry backoff
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Client-side audio preview generator using Web Audio API + MP3 encoder
+ * Uses lamejs with automatic retry and cache refresh on failure
  */
 export function useAudioPreviewGenerator() {
   const [state, setState] = useState<PreviewGeneratorState>({
@@ -386,19 +430,19 @@ export function useAudioPreviewGenerator() {
 
       setState(prev => ({ ...prev, progress: 80 }));
 
-      // Step 8: Encode to MP3 (64 kbps for small file size)
-      console.log('[Preview Generator] Loading MP3 encoder...');
+      // Step 8: Encode to MP3 with retry logic
+      console.log('[Preview Generator] Starting MP3 encoding with retry strategy...');
       let mp3Blob: Blob;
       try {
-        mp3Blob = await encodeMP3(renderedBuffer);
+        mp3Blob = await encodeMp3WithRetry(renderedBuffer);
       } catch (encodeError: any) {
-        console.error('[Preview Generator] Encode failed:', encodeError);
+        console.error('[Preview Generator] All encoding attempts failed:', encodeError);
         
         const error = createError(
           'encoder_unavailable',
           `MP3 encoding failed: ${encodeError.message || encodeError}`,
-          'MP3 encoding failed',
-          'There was an issue with the audio encoder. Please refresh the page and try again.'
+          'Could not generate audio preview',
+          'Try refreshing the page, or re-export the file as MP3 or standard WAV (16-bit PCM). Desktop Chrome/Firefox recommended.'
         );
         setState(prev => ({ ...prev, error }));
         await audioContext.close();
@@ -491,40 +535,56 @@ function normalizeAudioData(channelData: Float32Array): Float32Array {
 }
 
 /**
- * Encode an AudioBuffer to MP3 format using lamejs
- * Output: 64 kbps mono MP3
+ * Prepare audio data from AudioBuffer for encoding
+ * Returns mono Float32 samples normalized to [-1, 1]
  */
-async function encodeMP3(audioBuffer: AudioBuffer): Promise<Blob> {
-  // Validate audio buffer before processing
+function prepareAudioData(audioBuffer: AudioBuffer): Float32Array {
   if (audioBuffer.duration <= 0 || !isFinite(audioBuffer.duration)) {
-    throw new Error('Audio buffer has invalid duration. The audio file may be corrupted or empty.');
+    throw new Error('Audio buffer has invalid duration');
   }
   
   const rawChannelData = audioBuffer.getChannelData(0); // Mono
-  const sampleRate = audioBuffer.sampleRate;
   
   if (rawChannelData.length === 0) {
-    throw new Error('Audio buffer contains no samples.');
+    throw new Error('Audio buffer contains no samples');
   }
   
-  // Normalize audio to prevent clipping (especially important for 24-bit WAV sources)
-  const channelData = normalizeAudioData(rawChannelData);
-  
-  // Convert Float32Array to Int16Array for lamejs
+  // Normalize audio to prevent clipping
+  return normalizeAudioData(rawChannelData);
+}
+
+/**
+ * Convert Float32 samples to Int16 for lamejs
+ * Sanitizes NaN/Infinity values to prevent encoder issues
+ */
+function floatToInt16(channelData: Float32Array): Int16Array {
   const samples = new Int16Array(channelData.length);
   for (let i = 0; i < channelData.length; i++) {
-    // Clamp to [-1, 1] range (should already be in range after normalization, but safety first)
-    const s = Math.max(-1, Math.min(1, channelData[i]));
+    // Sanitize NaN/Infinity to 0
+    let s = channelData[i];
+    if (!isFinite(s)) s = 0;
+    // Clamp to [-1, 1] range
+    s = Math.max(-1, Math.min(1, s));
     samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
+  return samples;
+}
+
+/**
+ * Encode MP3 using lamejs - single attempt
+ * @param audioBuffer - The audio buffer to encode
+ * @param forceRefresh - Whether to force a fresh encoder resolution
+ */
+async function encodeMp3Single(audioBuffer: AudioBuffer, forceRefresh: boolean): Promise<Blob> {
+  const channelData = prepareAudioData(audioBuffer);
+  const samples = floatToInt16(channelData);
+  const sampleRate = audioBuffer.sampleRate;
   
   // Get Mp3Encoder with dynamic import for reliable CJS/ESM interop
-  console.log('[MP3 Encoder] Getting encoder...');
-  const Mp3EncoderClass = await getMp3Encoder();
+  const Mp3EncoderClass = await getLamejsEncoder(forceRefresh);
   
   // Initialize MP3 encoder (mono, 44100Hz, 64kbps)
   const mp3encoder = new Mp3EncoderClass(1, sampleRate, PREVIEW_BITRATE);
-  console.log('[MP3 Encoder] Encoder initialized, starting encoding...');
   
   // Encode in chunks and collect as BlobParts
   const mp3Data: BlobPart[] = [];
@@ -550,8 +610,57 @@ async function encodeMP3(audioBuffer: AudioBuffer): Promise<Blob> {
   }
   
   if (mp3Data.length === 0) {
-    throw new Error('MP3 encoding produced no output. The audio file may be too short or corrupted.');
+    throw new Error('lamejs produced no output');
   }
   
   return new Blob(mp3Data, { type: 'audio/mp3' });
+}
+
+/**
+ * Encode MP3 with automatic retry on failure
+ * - First attempt uses cached encoder
+ * - Subsequent attempts force encoder refresh
+ * - Only shows error to user after all attempts fail
+ */
+async function encodeMp3WithRetry(audioBuffer: AudioBuffer): Promise<Blob> {
+  const errors: string[] = [];
+  
+  for (let attempt = 1; attempt <= MAX_ENCODE_ATTEMPTS; attempt++) {
+    const forceRefresh = attempt > 1; // Refresh encoder cache on retry
+    
+    console.log(`[MP3 Encoder] Attempt ${attempt}/${MAX_ENCODE_ATTEMPTS} (forceRefresh: ${forceRefresh})`);
+    
+    try {
+      const blob = await encodeMp3Single(audioBuffer, forceRefresh);
+      const validationError = validateMp3Output(blob, attempt);
+      
+      if (!validationError) {
+        console.log(`[MP3 Encoder] Attempt ${attempt} succeeded: ${(blob.size / 1024).toFixed(1)} KB`);
+        return blob;
+      }
+      
+      // Validation failed
+      errors.push(validationError);
+      console.warn(`[MP3 Encoder] ${validationError}`);
+      
+      // Clear cache for next attempt
+      clearEncoderCache();
+      
+    } catch (error: any) {
+      const errorMsg = `Attempt ${attempt}: ${error.message || 'Unknown error'}`;
+      errors.push(errorMsg);
+      console.warn(`[MP3 Encoder] ${errorMsg}`);
+      
+      // Clear cache for next attempt
+      clearEncoderCache();
+    }
+    
+    // Wait before retry (except on last attempt)
+    if (attempt < MAX_ENCODE_ATTEMPTS) {
+      await delay(RETRY_DELAY_MS * attempt); // Progressive backoff
+    }
+  }
+  
+  // All attempts failed
+  throw new Error(`All ${MAX_ENCODE_ATTEMPTS} encoding attempts failed: ${errors.join('; ')}`);
 }
