@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import lamejs from 'lamejs';
+import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 
 interface PreviewGeneratorState {
   isGenerating: boolean;
@@ -13,9 +14,10 @@ interface PreviewResult {
   size: number;
 }
 
-const PREVIEW_MAX_DURATION = 45; // seconds
-const PREVIEW_SAMPLE_RATE = 44100;
-const PREVIEW_BITRATE = 64; // 64 kbps for small file size
+// Use centralized constants
+const PREVIEW_MAX_DURATION = PREVIEW_CONSTANTS.MAX_DURATION_SECONDS;
+const PREVIEW_SAMPLE_RATE = PREVIEW_CONSTANTS.SAMPLE_RATE;
+const PREVIEW_BITRATE = PREVIEW_CONSTANTS.CLIENT_TARGET_BITRATE_KBPS;
 
 /**
  * Client-side audio preview generator using Web Audio API + lamejs MP3 encoder

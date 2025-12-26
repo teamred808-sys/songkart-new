@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods, useSongLicenseTiers, useAddLicenseTier, useUpdateLicenseTier, useRemoveLicenseTier, LicenseTier } from '@/hooks/useSellerData';
+import { useAudioPreviewGenerator } from '@/hooks/useAudioPreviewGenerator';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,9 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag, Upload, Music } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { PREVIEW_CONSTANTS, PREVIEW_MAX_SIZE_KB } from '@/lib/previewConstants';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
@@ -71,6 +74,12 @@ export default function EditSong() {
   const [song, setSong] = useState<any>(null);
   const [tierToRemove, setTierToRemove] = useState<LicenseTier | null>(null);
   const [tierPrices, setTierPrices] = useState<Record<string, number>>({});
+  
+  // Audio/Preview regeneration state
+  const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
+  const [isRegeneratingPreview, setIsRegeneratingPreview] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress, error: previewError } = useAudioPreviewGenerator();
 
   const form = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -194,6 +203,77 @@ export default function EditSong() {
         setTierToRemove(null);
       },
     });
+  };
+
+  // Handle audio file selection for preview regeneration
+  const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('audio/')) {
+      toast({ title: 'Invalid file type', description: 'Please select an audio file', variant: 'destructive' });
+      return;
+    }
+
+    setNewAudioFile(file);
+  };
+
+  // Regenerate preview from new audio file
+  const handleRegeneratePreview = async () => {
+    if (!newAudioFile || !id) return;
+
+    setIsRegeneratingPreview(true);
+    try {
+      // Generate preview client-side
+      const previewResult = await generatePreview(newAudioFile);
+      if (!previewResult) {
+        throw new Error(previewError || 'Failed to generate preview');
+      }
+
+      // Validate and upload via edge function
+      const formData = new FormData();
+      formData.append('file', previewResult.blob, 'preview.mp3');
+      formData.append('songId', id); // Actual song ID for ownership verification and metadata update
+
+      const { data, error } = await supabase.functions.invoke('validate-preview', {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      if (!data.valid) {
+        throw new Error(data.error || 'Preview validation failed');
+      }
+
+      // Clear the file input
+      setNewAudioFile(null);
+      if (audioInputRef.current) {
+        audioInputRef.current.value = '';
+      }
+
+      // Refresh song data to get new preview URL
+      const { data: updatedSong } = await supabase
+        .from('songs')
+        .select('preview_audio_url, preview_duration_seconds, preview_file_size_bytes')
+        .eq('id', id)
+        .single();
+
+      if (updatedSong) {
+        setSong((prev: any) => ({ ...prev, ...updatedSong }));
+      }
+
+      toast({ title: 'Preview regenerated', description: 'Your song preview has been updated' });
+    } catch (error: any) {
+      console.error('Preview regeneration failed:', error);
+      toast({ 
+        title: 'Preview regeneration failed', 
+        description: error.message || 'Please try again', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsRegeneratingPreview(false);
+    }
   };
 
   const existingLicenseTypes = licenseTiers?.map(t => t.license_type) || [];
@@ -339,6 +419,103 @@ export default function EditSong() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Audio Preview Card */}
+      {song?.has_audio && (
+        <Card className="bg-card border-border mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Music className="h-5 w-5" />
+              Audio Preview
+            </CardTitle>
+            <CardDescription>
+              Upload a new audio file to regenerate the preview. The preview is a {PREVIEW_CONSTANTS.MAX_DURATION_SECONDS}-second, 
+              low-quality snippet used for browsing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Current preview info */}
+            {song?.preview_audio_url && (
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p className="font-medium mb-1">Current Preview</p>
+                <div className="flex flex-wrap gap-4 text-muted-foreground">
+                  {song.preview_duration_seconds && (
+                    <span>Duration: {Math.round(song.preview_duration_seconds)}s</span>
+                  )}
+                  {song.preview_file_size_bytes && (
+                    <span>Size: {Math.round(song.preview_file_size_bytes / 1024)} KB</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!song?.preview_audio_url && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-600">
+                <AlertTriangle className="h-4 w-4 inline-block mr-2" />
+                No preview available for this song. Upload an audio file to generate one.
+              </div>
+            )}
+
+            {/* Upload new audio */}
+            <div className="space-y-3">
+              <Label htmlFor="audio-file">Upload New Audio File</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  ref={audioInputRef}
+                  id="audio-file"
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioFileChange}
+                  disabled={isRegeneratingPreview || isGeneratingPreview}
+                  className="flex-1"
+                />
+                {newAudioFile && (
+                  <Button
+                    type="button"
+                    onClick={handleRegeneratePreview}
+                    disabled={isRegeneratingPreview || isGeneratingPreview}
+                  >
+                    {isRegeneratingPreview || isGeneratingPreview ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Regenerate Preview
+                  </Button>
+                )}
+              </div>
+              
+              {newAudioFile && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {newAudioFile.name}
+                </p>
+              )}
+
+              {/* Progress indicator */}
+              {isGeneratingPreview && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Generating preview...</span>
+                    <span>{previewProgress}%</span>
+                  </div>
+                  <Progress value={previewProgress} className="h-2" />
+                </div>
+              )}
+
+              {isRegeneratingPreview && !isGeneratingPreview && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading and validating preview...
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Previews are auto-generated as {PREVIEW_CONSTANTS.MAX_DURATION_SECONDS}s, {PREVIEW_CONSTANTS.CLIENT_TARGET_BITRATE_KBPS}kbps MP3 files (max {PREVIEW_MAX_SIZE_KB} KB).
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* License Tiers Card */}
       <Card className="bg-card border-border">
