@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import lamejs from 'lamejs';
+import * as lamejs from 'lamejs';
 import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
 
 interface PreviewGeneratorState {
@@ -89,6 +89,8 @@ export function useAudioPreviewGenerator() {
       };
     } catch (error) {
       console.error('[Preview Generator] Error:', error);
+      console.error('[Preview Generator] lamejs available:', typeof lamejs);
+      console.error('[Preview Generator] Mp3Encoder available:', typeof lamejs?.Mp3Encoder);
       setState(prev => ({ 
         ...prev, 
         error: error instanceof Error ? error.message : 'Failed to generate preview' 
