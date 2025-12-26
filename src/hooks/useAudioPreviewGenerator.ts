@@ -49,8 +49,13 @@ export function useAudioPreviewGenerator() {
       const audioContext = new AudioContext({ sampleRate: PREVIEW_SAMPLE_RATE });
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      // Step 3: Calculate preview duration (max 45 seconds)
+      // Step 3: Validate and calculate preview duration (max 45 seconds)
       const originalDuration = audioBuffer.duration;
+      
+      if (originalDuration <= 0) {
+        throw new Error('Audio file appears to be empty or invalid (duration: 0)');
+      }
+      
       const previewDuration = Math.min(originalDuration, PREVIEW_MAX_DURATION);
       const previewSamples = Math.floor(previewDuration * PREVIEW_SAMPLE_RATE);
 
