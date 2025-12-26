@@ -192,23 +192,30 @@ export default function UploadSong() {
         
         if (previewResult) {
           setUploadProgress(60);
-          const previewPath = `${user.id}/${Date.now()}-preview.mp3`;
-          const { error: previewUploadError } = await supabase.storage
-            .from('song-previews')
-            .upload(previewPath, previewResult.blob, { 
-              contentType: 'audio/mp3',
-              upsert: true 
-            });
           
-          if (!previewUploadError) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('song-previews')
-              .getPublicUrl(previewPath);
-            preview_audio_url = publicUrl;
-            console.log(`Preview generated: ${(previewResult.size / 1024).toFixed(1)} KB, ${previewResult.duration.toFixed(1)}s`);
-          } else {
-            console.error('Preview upload error:', previewUploadError);
+          // Validate preview through edge function before saving
+          const formData = new FormData();
+          formData.append('file', previewResult.blob, 'preview.mp3');
+          formData.append('songId', 'pending'); // Will be updated after song creation
+          
+          const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-preview', {
+            body: formData,
+          });
+          
+          if (validationError || !validationResult?.success) {
+            const errorMessage = validationResult?.message || validationError?.message || 'Preview validation failed';
+            console.error('Preview validation failed:', errorMessage);
+            toast({ 
+              title: 'Preview Validation Failed', 
+              description: `${errorMessage}. Please try again.`,
+              variant: 'destructive' 
+            });
+            setIsSubmitting(false);
+            return;
           }
+          
+          preview_audio_url = validationResult.data.preview_url;
+          console.log(`Preview validated and uploaded: ${(validationResult.data.file_size_bytes / 1024).toFixed(1)} KB, ${validationResult.data.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
         }
       }
 
