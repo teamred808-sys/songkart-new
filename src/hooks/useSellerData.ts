@@ -296,23 +296,56 @@ export function useRequestWithdrawal() {
 
 export function useDeleteSong() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (songId: string) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('songs')
         .delete()
-        .eq('id', songId);
-      
+        .eq('id', songId)
+        // Ensure we actually deleted a row (RLS-denied deletes can return 204 with no error)
+        .select('id');
+
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Unable to delete this song. Please try again.');
+      }
+
+      return songId;
+    },
+    onMutate: async (songId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['seller-songs'], exact: false });
+
+      const previous = queryClient.getQueriesData<SellerSong[]>({
+        queryKey: ['seller-songs'],
+        exact: false,
+      });
+
+      queryClient.setQueriesData<SellerSong[]>(
+        { queryKey: ['seller-songs'], exact: false },
+        (old) => (old ? old.filter((s) => s.id !== songId) : old)
+      );
+
+      return { previous };
+    },
+    onError: (error: any, _songId, context) => {
+      context?.previous?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['seller-songs'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['seller-stats'], exact: false });
+      queryClient.invalidateQueries({
+        queryKey: ['seller-songs'],
+        exact: false,
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['seller-stats'],
+        exact: false,
+        refetchType: 'active',
+      });
       toast({ title: 'Song deleted', description: 'Your song has been removed.' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
