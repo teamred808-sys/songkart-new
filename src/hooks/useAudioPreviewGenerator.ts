@@ -1,6 +1,12 @@
 import { useState, useCallback } from 'react';
-import * as lamejs from 'lamejs';
+import * as lamejsModule from 'lamejs';
 import { PREVIEW_CONSTANTS } from '@/lib/previewConstants';
+
+// Handle CJS/ESM interop - lamejs uses module.exports which Vite wraps differently
+const getLamejs = () => {
+  const mod = lamejsModule as any;
+  return mod.default || mod;
+};
 
 interface PreviewGeneratorState {
   isGenerating: boolean;
@@ -89,6 +95,7 @@ export function useAudioPreviewGenerator() {
       };
     } catch (error) {
       console.error('[Preview Generator] Error:', error);
+      const lamejs = getLamejs();
       console.error('[Preview Generator] lamejs available:', typeof lamejs);
       console.error('[Preview Generator] Mp3Encoder available:', typeof lamejs?.Mp3Encoder);
       setState(prev => ({ 
@@ -124,8 +131,16 @@ function encodeMP3(audioBuffer: AudioBuffer): Blob {
     samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
   
+  // Get Mp3Encoder with CJS/ESM interop fallback
+  const lamejs = getLamejs();
+  const Mp3EncoderClass = lamejs.Mp3Encoder;
+  
+  if (!Mp3EncoderClass) {
+    throw new Error('Mp3Encoder not available. The lamejs library may not have loaded correctly.');
+  }
+  
   // Initialize MP3 encoder (mono, 44100Hz, 64kbps)
-  const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, PREVIEW_BITRATE);
+  const mp3encoder = new Mp3EncoderClass(1, sampleRate, PREVIEW_BITRATE);
   
   // Encode in chunks and collect as BlobParts
   const mp3Data: BlobPart[] = [];
