@@ -160,7 +160,7 @@ function validateAudioFormat(file: File): { valid: boolean; error?: PreviewError
       type: 'unsupported_format',
       message: `Unsupported audio format: ${fileType || 'unknown'}`,
       userMessage: `Unsupported format: ${formatName}`,
-      suggestion: 'Please use MP3 or standard 16-bit PCM WAV format. Other formats like FLAC, AAC, M4A, or 24-bit WAV are not supported for browser-based preview generation.',
+      suggestion: 'Please use MP3 or WAV format (16-bit or 24-bit). Other formats like FLAC, AAC, or M4A are not browser-compatible.',
     },
   };
 }
@@ -294,6 +294,7 @@ export function useAudioPreviewGenerator() {
       // Step 4: Validate decoded audio
       const originalDuration = audioBuffer.duration;
       console.log(`[Preview Generator] Decoded: ${originalDuration.toFixed(2)}s, ${audioBuffer.numberOfChannels} channels, ${audioBuffer.sampleRate}Hz`);
+      console.log(`[Preview Generator] Source audio: ${audioBuffer.numberOfChannels > 1 ? 'stereo' : 'mono'} (will be converted to mono for preview)`);
       
       if (originalDuration <= 0 || !isFinite(originalDuration)) {
         const error = createError(
@@ -417,6 +418,43 @@ export function useAudioPreviewGenerator() {
 }
 
 /**
+ * Normalize Float32 audio data to prevent clipping
+ * Especially important for 24-bit WAV files which may have peaks exceeding ±1.0 after decoding
+ */
+function normalizeAudioData(channelData: Float32Array): Float32Array {
+  // Find peak amplitude
+  let peak = 0;
+  for (let i = 0; i < channelData.length; i++) {
+    const abs = Math.abs(channelData[i]);
+    if (abs > peak) peak = abs;
+  }
+  
+  // If audio is already within safe range, return as-is
+  if (peak <= 1.0 && peak > 0.001) {
+    console.log(`[Normalizer] Peak: ${peak.toFixed(4)} - no normalization needed`);
+    return channelData;
+  }
+  
+  // If audio is very quiet or silent, return as-is
+  if (peak < 0.001) {
+    console.log(`[Normalizer] Peak: ${peak.toFixed(6)} - audio too quiet, skipping normalization`);
+    return channelData;
+  }
+  
+  // Normalize to 0.95 peak (leave headroom)
+  const targetPeak = 0.95;
+  const gain = targetPeak / peak;
+  console.log(`[Normalizer] Peak: ${peak.toFixed(4)} - applying gain: ${gain.toFixed(4)} to normalize`);
+  
+  const normalized = new Float32Array(channelData.length);
+  for (let i = 0; i < channelData.length; i++) {
+    normalized[i] = channelData[i] * gain;
+  }
+  
+  return normalized;
+}
+
+/**
  * Encode an AudioBuffer to MP3 format using lamejs
  * Output: 64 kbps mono MP3
  */
@@ -426,16 +464,20 @@ async function encodeMP3(audioBuffer: AudioBuffer): Promise<Blob> {
     throw new Error('Audio buffer has invalid duration. The audio file may be corrupted or empty.');
   }
   
-  const channelData = audioBuffer.getChannelData(0); // Mono
+  const rawChannelData = audioBuffer.getChannelData(0); // Mono
   const sampleRate = audioBuffer.sampleRate;
   
-  if (channelData.length === 0) {
+  if (rawChannelData.length === 0) {
     throw new Error('Audio buffer contains no samples.');
   }
+  
+  // Normalize audio to prevent clipping (especially important for 24-bit WAV sources)
+  const channelData = normalizeAudioData(rawChannelData);
   
   // Convert Float32Array to Int16Array for lamejs
   const samples = new Int16Array(channelData.length);
   for (let i = 0; i < channelData.length; i++) {
+    // Clamp to [-1, 1] range (should already be in range after normalization, but safety first)
     const s = Math.max(-1, Math.min(1, channelData[i]));
     samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
