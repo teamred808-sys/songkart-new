@@ -346,7 +346,11 @@ export function useApproveSong() {
     mutationFn: async (songId: string) => {
       const { error } = await supabase
         .from('songs')
-        .update({ status: 'approved', rejection_reason: null })
+        .update({ 
+          status: 'approved', 
+          rejection_reason: null,
+          approved_at: new Date().toISOString()
+        })
         .eq('id', songId);
 
       if (error) throw error;
@@ -362,6 +366,7 @@ export function useApproveSong() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-songs'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['new-uploads'] });
       toast({ title: 'Song approved successfully' });
     },
     onError: (error) => {
