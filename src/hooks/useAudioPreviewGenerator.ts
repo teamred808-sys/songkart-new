@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import lamejs from 'lamejs';
 
 interface PreviewGeneratorState {
   isGenerating: boolean;
@@ -14,11 +15,11 @@ interface PreviewResult {
 
 const PREVIEW_MAX_DURATION = 45; // seconds
 const PREVIEW_SAMPLE_RATE = 44100;
-const PREVIEW_BITRATE = 96000; // 96 kbps approximation
+const PREVIEW_BITRATE = 64; // 64 kbps for small file size
 
 /**
- * Client-side audio preview generator using Web Audio API
- * Generates a compressed, duration-limited preview from the original audio file
+ * Client-side audio preview generator using Web Audio API + lamejs MP3 encoder
+ * Generates a compressed 64kbps MP3 preview from the original audio file
  */
 export function useAudioPreviewGenerator() {
   const [state, setState] = useState<PreviewGeneratorState>({
@@ -69,20 +70,20 @@ export function useAudioPreviewGenerator() {
 
       setState(prev => ({ ...prev, progress: 80 }));
 
-      // Step 6: Encode to WAV (most compatible format for web)
-      const wavBlob = encodeWAV(renderedBuffer);
+      // Step 6: Encode to MP3 (64 kbps for small file size)
+      const mp3Blob = encodeMP3(renderedBuffer);
 
       setState(prev => ({ ...prev, progress: 100 }));
 
       // Clean up
       await audioContext.close();
 
-      console.log(`[Preview Generator] Created preview: ${(wavBlob.size / 1024).toFixed(1)} KB, ${previewDuration.toFixed(1)}s`);
+      console.log(`[Preview Generator] Created MP3 preview: ${(mp3Blob.size / 1024).toFixed(1)} KB, ${previewDuration.toFixed(1)}s`);
 
       return {
-        blob: wavBlob,
+        blob: mp3Blob,
         duration: previewDuration,
-        size: wavBlob.size,
+        size: mp3Blob.size,
       };
     } catch (error) {
       console.error('[Preview Generator] Error:', error);
@@ -105,57 +106,45 @@ export function useAudioPreviewGenerator() {
 }
 
 /**
- * Encode an AudioBuffer to WAV format
+ * Encode an AudioBuffer to MP3 format using lamejs
+ * Output: 64 kbps mono MP3
  */
-function encodeWAV(audioBuffer: AudioBuffer): Blob {
-  const numChannels = audioBuffer.numberOfChannels;
-  const sampleRate = audioBuffer.sampleRate;
-  const format = 1; // PCM
-  const bitDepth = 16;
-
-  // Get audio data
+function encodeMP3(audioBuffer: AudioBuffer): Blob {
   const channelData = audioBuffer.getChannelData(0); // Mono
-  const samples = channelData.length;
+  const sampleRate = audioBuffer.sampleRate;
   
-  // Calculate sizes
-  const byteRate = sampleRate * numChannels * (bitDepth / 8);
-  const blockAlign = numChannels * (bitDepth / 8);
-  const dataSize = samples * numChannels * (bitDepth / 8);
-  const bufferSize = 44 + dataSize;
-
-  const buffer = new ArrayBuffer(bufferSize);
-  const view = new DataView(buffer);
-
-  // Write WAV header
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, bufferSize - 8, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // Subchunk1Size
-  view.setUint16(20, format, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitDepth, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  // Write audio data
-  let offset = 44;
-  for (let i = 0; i < samples; i++) {
-    // Convert float to 16-bit PCM
-    const sample = Math.max(-1, Math.min(1, channelData[i]));
-    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-    view.setInt16(offset, intSample, true);
-    offset += 2;
+  // Convert Float32Array to Int16Array for lamejs
+  const samples = new Int16Array(channelData.length);
+  for (let i = 0; i < channelData.length; i++) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
-
-  return new Blob([buffer], { type: 'audio/wav' });
-}
-
-function writeString(view: DataView, offset: number, string: string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
+  
+  // Initialize MP3 encoder (mono, 44100Hz, 64kbps)
+  const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, PREVIEW_BITRATE);
+  
+  // Encode in chunks and collect as BlobParts
+  const mp3Data: BlobPart[] = [];
+  const blockSize = 1152; // Standard MP3 frame size
+  
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const chunk = samples.subarray(i, i + blockSize);
+    const mp3buf = mp3encoder.encodeBuffer(chunk);
+    if (mp3buf.length > 0) {
+      // Copy to a new ArrayBuffer to avoid SharedArrayBuffer issues
+      const copy = new Uint8Array(mp3buf.length);
+      copy.set(mp3buf);
+      mp3Data.push(copy);
+    }
   }
+  
+  // Flush remaining data
+  const end = mp3encoder.flush();
+  if (end.length > 0) {
+    const copy = new Uint8Array(end.length);
+    copy.set(end);
+    mp3Data.push(copy);
+  }
+  
+  return new Blob(mp3Data, { type: 'audio/mp3' });
 }
