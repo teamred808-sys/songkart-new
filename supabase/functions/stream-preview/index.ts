@@ -73,13 +73,29 @@ serve(async (req) => {
     // Get song preview URL
     const { data: song, error: songError } = await supabase
       .from('songs')
-      .select('preview_audio_url, title')
+      .select('preview_audio_url, preview_status, title')
       .eq('id', songId)
       .single();
 
-    if (songError || !song || !song.preview_audio_url) {
+    if (songError || !song) {
+      console.error('Song fetch error:', songError);
       return new Response(
-        JSON.stringify({ error: 'Preview not available' }),
+        JSON.stringify({ error: 'Song not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if preview is available
+    if (!song.preview_audio_url) {
+      const message = song.preview_status === 'generating' 
+        ? 'Preview is still being generated. Please try again in a moment.'
+        : song.preview_status === 'failed'
+        ? 'Preview generation failed. The seller may need to re-upload the song.'
+        : 'Preview not available for this song.';
+      
+      console.log(`Preview unavailable for song ${songId}: status=${song.preview_status}`);
+      return new Response(
+        JSON.stringify({ error: message, preview_status: song.preview_status }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
