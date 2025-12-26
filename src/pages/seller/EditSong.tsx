@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useGenres, useMoods } from '@/hooks/useSellerData';
+import { useGenres, useMoods, useSongLicenseTiers, useAddLicenseTier, useUpdateLicenseTier, useRemoveLicenseTier, LicenseTier } from '@/hooks/useSellerData';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,8 +14,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, ArrowLeft, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+const LICENSE_TYPES = [
+  { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
+  { value: 'youtube', label: 'YouTube License', description: 'For YouTube content creators', defaultPrice: 49.99 },
+  { value: 'commercial', label: 'Commercial', description: 'For commercial projects', defaultPrice: 99.99 },
+  { value: 'film', label: 'Film/TV', description: 'For film and television', defaultPrice: 199.99 },
+  { value: 'exclusive', label: 'Exclusive', description: 'Full rights transfer', defaultPrice: 499.99 },
+] as const;
+
+type LicenseType = typeof LICENSE_TYPES[number]['value'];
 
 const editSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100),
@@ -37,10 +60,17 @@ export default function EditSong() {
   const { user } = useAuth();
   const { data: genres } = useGenres();
   const { data: moods } = useMoods();
+  const { data: licenseTiers, isLoading: tiersLoading, refetch: refetchTiers } = useSongLicenseTiers(id || '');
+  
+  const addLicenseTier = useAddLicenseTier();
+  const updateLicenseTier = useUpdateLicenseTier();
+  const removeLicenseTier = useRemoveLicenseTier();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [song, setSong] = useState<any>(null);
+  const [tierToRemove, setTierToRemove] = useState<LicenseTier | null>(null);
+  const [tierPrices, setTierPrices] = useState<Record<string, number>>({});
 
   const form = useForm<EditForm>({
     resolver: zodResolver(editSchema),
@@ -82,6 +112,17 @@ export default function EditSong() {
     fetchSong();
   }, [id, user?.id]);
 
+  // Initialize tier prices when licenseTiers load
+  useEffect(() => {
+    if (licenseTiers) {
+      const prices: Record<string, number> = {};
+      licenseTiers.forEach(tier => {
+        prices[tier.id] = tier.price;
+      });
+      setTierPrices(prices);
+    }
+  }, [licenseTiers]);
+
   const onSubmit = async (data: EditForm) => {
     if (!id) return;
 
@@ -114,6 +155,50 @@ export default function EditSong() {
     }
   };
 
+  const handleAddLicenseTier = async (type: LicenseType) => {
+    if (!id) return;
+    
+    const licenseInfo = LICENSE_TYPES.find(l => l.value === type);
+    if (!licenseInfo) return;
+
+    addLicenseTier.mutate({
+      song_id: id,
+      license_type: type,
+      price: licenseInfo.defaultPrice,
+    }, {
+      onSuccess: () => refetchTiers(),
+    });
+  };
+
+  const handleUpdateTierPrice = async (tierId: string) => {
+    const newPrice = tierPrices[tierId];
+    if (!newPrice || newPrice <= 0) return;
+
+    updateLicenseTier.mutate({
+      tier_id: tierId,
+      price: newPrice,
+    }, {
+      onSuccess: () => refetchTiers(),
+    });
+  };
+
+  const handleRemoveLicenseTier = async () => {
+    if (!tierToRemove) return;
+
+    removeLicenseTier.mutate(tierToRemove.id, {
+      onSuccess: () => {
+        setTierToRemove(null);
+        refetchTiers();
+      },
+      onError: () => {
+        setTierToRemove(null);
+      },
+    });
+  };
+
+  const existingLicenseTypes = licenseTiers?.map(t => t.license_type) || [];
+  const availableLicenseTypes = LICENSE_TYPES.filter(l => !existingLicenseTypes.includes(l.value));
+
   if (isLoading) {
     return (
       <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
@@ -133,10 +218,11 @@ export default function EditSong() {
           </Link>
         </Button>
         <h1 className="text-2xl lg:text-3xl font-bold font-display">Edit Song</h1>
-        <p className="text-muted-foreground">Update your song details.</p>
+        <p className="text-muted-foreground">Update your song details and license options.</p>
       </div>
 
-      <Card className="bg-card border-border">
+      {/* Song Details Card */}
+      <Card className="bg-card border-border mb-6">
         <CardHeader>
           <CardTitle>Song Details</CardTitle>
           <CardDescription>
@@ -253,6 +339,171 @@ export default function EditSong() {
           </form>
         </CardContent>
       </Card>
+
+      {/* License Tiers Card */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="h-5 w-5" />
+            License Tiers
+          </CardTitle>
+          <CardDescription>
+            Manage the available license options for this song. You can add, remove, or update pricing for each license type.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Add New License Buttons */}
+          {availableLicenseTypes.length > 0 && (
+            <div className="space-y-3">
+              <Label>Add License Type</Label>
+              <div className="flex flex-wrap gap-2">
+                {availableLicenseTypes.map((license) => (
+                  <Button
+                    key={license.value}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddLicenseTier(license.value)}
+                    disabled={addLicenseTier.isPending}
+                    className="gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {license.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Current License Tiers */}
+          <div className="space-y-3">
+            <Label>Current License Tiers</Label>
+            
+            {tiersLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : !licenseTiers?.length ? (
+              <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
+                <Tag className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No license tiers configured</p>
+                <p className="text-sm text-muted-foreground">Add at least one license type above</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {licenseTiers.map((tier) => {
+                  const licenseInfo = LICENSE_TYPES.find(l => l.value === tier.license_type);
+                  const hasSales = (tier.current_sales || 0) > 0;
+                  
+                  return (
+                    <div
+                      key={tier.id}
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border gap-4",
+                        hasSales 
+                          ? "border-amber-500/30 bg-amber-500/5"
+                          : "border-border bg-muted/30"
+                      )}
+                    >
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{licenseInfo?.label || tier.license_type}</span>
+                          {tier.license_type === 'exclusive' && (
+                            <Badge variant="secondary" className="text-xs">One-time sale</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{licenseInfo?.description}</p>
+                        {hasSales && (
+                          <div className="flex items-center gap-1.5 text-xs text-amber-600">
+                            <ShoppingCart className="h-3 w-3" />
+                            <span>{tier.current_sales} sale{tier.current_sales !== 1 ? 's' : ''}</span>
+                            <span className="text-muted-foreground">· Cannot remove</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`price-${tier.id}`} className="text-sm text-muted-foreground whitespace-nowrap">
+                            Price (₹)
+                          </Label>
+                          <Input
+                            id={`price-${tier.id}`}
+                            type="number"
+                            step="0.01"
+                            value={tierPrices[tier.id] || tier.price}
+                            onChange={(e) => setTierPrices(prev => ({ 
+                              ...prev, 
+                              [tier.id]: parseFloat(e.target.value) || 0 
+                            }))}
+                            className="w-24"
+                          />
+                          {tierPrices[tier.id] !== tier.price && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleUpdateTierPrice(tier.id)}
+                              disabled={updateLicenseTier.isPending}
+                            >
+                              {updateLicenseTier.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                'Update'
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setTierToRemove(tier)}
+                          disabled={hasSales || removeLicenseTier.isPending}
+                          className={cn(
+                            "h-8 w-8",
+                            hasSales && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Remove License Confirmation Dialog */}
+      <AlertDialog open={!!tierToRemove} onOpenChange={() => setTierToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Remove License Tier
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the <strong>{LICENSE_TYPES.find(l => l.value === tierToRemove?.license_type)?.label}</strong> license tier? 
+              This will prevent buyers from purchasing this license type.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRemoveLicenseTier} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Remove License
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
