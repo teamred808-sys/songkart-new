@@ -134,6 +134,7 @@ export default function Browse() {
                     title={song.title}
                     sellerName={song.seller?.full_name || "Unknown Artist"}
                     coverUrl={song.cover_image_url}
+                    previewUrl={song.preview_audio_url}
                     genre={song.genres?.name}
                     mood={song.moods?.name}
                     basePrice={song.base_price}

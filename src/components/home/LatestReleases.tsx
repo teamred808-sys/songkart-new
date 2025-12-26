@@ -49,12 +49,15 @@ const LatestReleases = () => {
                 title={song.title}
                 sellerName={song.seller?.full_name || "Unknown Artist"}
                 coverUrl={song.cover_image_url}
+                previewUrl={song.preview_audio_url}
                 basePrice={song.base_price}
-                genre={song.genre?.name}
-                mood={song.mood?.name}
-                hasAudio={song.has_audio}
-                hasLyrics={song.has_lyrics}
-                playCount={song.play_count}
+                genre={song.genres?.name}
+                mood={song.moods?.name}
+                hasAudio={song.has_audio ?? false}
+                hasLyrics={song.has_lyrics ?? false}
+                playCount={song.play_count ?? 0}
+                averageRating={song.average_rating}
+                totalRatings={song.total_ratings}
               />
             ))}
           </div>

@@ -57,17 +57,18 @@ serve(async (req) => {
       );
     }
 
-    // Update last access and play count
-    await supabase
+    // Update last access and play count asynchronously (don't wait)
+    supabase
       .from('audio_sessions')
       .update({ 
         last_access: new Date().toISOString(),
         play_count: session.play_count + 1
       })
-      .eq('id', session.id);
+      .eq('id', session.id)
+      .then(() => {});
 
-    // Increment song play count
-    await supabase.rpc('increment_play_count', { song_uuid: songId });
+    // Increment song play count asynchronously
+    supabase.rpc('increment_play_count', { song_uuid: songId }).then(() => {});
 
     // Get song preview URL
     const { data: song, error: songError } = await supabase
@@ -91,7 +92,7 @@ serve(async (req) => {
     const { data: signedUrlData, error: signedUrlError } = await supabase
       .storage
       .from('song-previews')
-      .createSignedUrl(previewPath, 60); // 60 second signed URL
+      .createSignedUrl(previewPath, 60);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       console.error('Signed URL error:', signedUrlError);
@@ -101,10 +102,19 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the audio file
-    const audioResponse = await fetch(signedUrlData.signedUrl);
+    // Forward range header if present for progressive streaming
+    const rangeHeader = req.headers.get('range');
+    const fetchHeaders: HeadersInit = {};
+    if (rangeHeader) {
+      fetchHeaders['Range'] = rangeHeader;
+    }
+
+    // Fetch the audio file with streaming support
+    const audioResponse = await fetch(signedUrlData.signedUrl, {
+      headers: fetchHeaders
+    });
     
-    if (!audioResponse.ok) {
+    if (!audioResponse.ok && audioResponse.status !== 206) {
       console.error('Audio fetch error:', audioResponse.status);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch audio' }),
@@ -112,31 +122,33 @@ serve(async (req) => {
       );
     }
 
-    const audioBuffer = await audioResponse.arrayBuffer();
+    console.log(`Streaming preview for song ${songId}, session ${session.id}, range: ${rangeHeader || 'full'}`);
 
-    // Get watermark setting
-    const { data: watermarkSetting } = await supabase
-      .from('platform_settings')
-      .select('value')
-      .eq('key', 'preview_watermark_enabled')
-      .single();
+    // Build response headers for streaming
+    const responseHeaders: HeadersInit = {
+      ...corsHeaders,
+      'Content-Type': 'audio/mpeg',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline; filename="preview.mp3"',
+    };
 
-    const watermarkEnabled = watermarkSetting?.value === 'true';
+    // Forward content headers from storage response
+    const contentLength = audioResponse.headers.get('Content-Length');
+    const contentRange = audioResponse.headers.get('Content-Range');
+    
+    if (contentLength) {
+      responseHeaders['Content-Length'] = contentLength;
+    }
+    if (contentRange) {
+      responseHeaders['Content-Range'] = contentRange;
+    }
 
-    // Log streaming activity
-    console.log(`Streaming preview for song ${songId}, session ${session.id}, watermark: ${watermarkEnabled}`);
-
-    // Return audio with security headers
-    return new Response(audioBuffer, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBuffer.byteLength.toString(),
-        'Accept-Ranges': 'bytes',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-        'X-Content-Type-Options': 'nosniff',
-        'Content-Disposition': 'inline; filename="preview.mp3"',
-      }
+    // Stream the response body directly without buffering
+    return new Response(audioResponse.body, {
+      status: audioResponse.status,
+      headers: responseHeaders
     });
 
   } catch (error) {

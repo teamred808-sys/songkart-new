@@ -16,6 +16,7 @@ interface SongCardProps {
   title: string;
   sellerName: string;
   coverUrl?: string | null;
+  previewUrl?: string | null;
   genre?: string;
   mood?: string;
   basePrice: number;
@@ -38,6 +39,7 @@ export const SongCard = memo(function SongCard({
   title,
   sellerName,
   coverUrl,
+  previewUrl,
   genre,
   mood,
   basePrice,
@@ -117,15 +119,16 @@ export const SongCard = memo(function SongCard({
             shouldShowOverlay ? "opacity-100" : "opacity-0 group-hover:opacity-100",
             !shouldShowOverlay && "pointer-events-none group-hover:pointer-events-auto"
           )}>
-            {showPlayer ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                <MiniAudioPlayer 
-                  ref={playerRef}
-                  songId={id} 
-                  onEnded={handlePlayerEnded}
-                  className="px-3"
-                />
-              </div>
+          {showPlayer ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              <MiniAudioPlayer 
+                ref={playerRef}
+                songId={id}
+                previewUrl={previewUrl}
+                onEnded={handlePlayerEnded}
+                className="px-3"
+              />
+            </div>
             ) : hasAudio ? (
               <Button 
                 size="icon" 
