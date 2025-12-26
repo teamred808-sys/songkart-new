@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods } from '@/hooks/useSellerData';
-import { useAudioPreviewGenerator } from '@/hooks/useAudioPreviewGenerator';
+import { useAudioPreviewGenerator, PreviewError } from '@/hooks/useAudioPreviewGenerator';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // File size limits
@@ -77,11 +78,24 @@ export default function UploadSong() {
   const { user } = useAuth();
   const { data: genres } = useGenres();
   const { data: moods } = useMoods();
-  const { generatePreview, isGenerating: isGeneratingPreview, progress: previewProgress, error: previewError } = useAudioPreviewGenerator();
+  const { 
+    generatePreview, 
+    isGenerating: isGeneratingPreview, 
+    progress: previewProgress, 
+    error: previewError,
+    errorDetails: previewErrorDetails,
+    browserWarning 
+  } = useAudioPreviewGenerator();
+  
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewGenerationPhase, setPreviewGenerationPhase] = useState<'idle' | 'generating' | 'validating'>('idle');
+  
+  // Preview generation state tracking - NOT optimistic
+  const [previewStatus, setPreviewStatus] = useState<'pending' | 'generating' | 'generated' | 'failed'>('pending');
+  const [previewErrorMessage, setPreviewErrorMessage] = useState<string | null>(null);
+  const [generatedPreviewBlob, setGeneratedPreviewBlob] = useState<Blob | null>(null);
 
   // Warn user before leaving during upload/preview generation
   useEffect(() => {
@@ -145,6 +159,13 @@ export default function UploadSong() {
     }
     
     setContent(prev => ({ ...prev, [field]: file }));
+    
+    // Reset preview state when audio file changes
+    if (field === 'audio_file') {
+      setPreviewStatus('pending');
+      setPreviewErrorMessage(null);
+      setGeneratedPreviewBlob(null);
+    }
     
     if (field === 'cover_image' && file) {
       const reader = new FileReader();
@@ -226,32 +247,31 @@ export default function UploadSong() {
         validated_at: string;
       } | null = null;
 
-      // Upload cover image
-      if (content.cover_image) {
-        setUploadProgress(20);
-        const coverPath = `${user.id}/${Date.now()}-${content.cover_image.name}`;
-        cover_image_url = await uploadFile(content.cover_image, 'song-covers', coverPath);
-      }
+      // Local variable to hold the preview blob (can't rely on state immediately)
+      let previewBlob: Blob | null = null;
 
-      // Upload audio file
+      // FIRST: Generate preview BEFORE any uploads if audio exists
       if (content.audio_file) {
-        setUploadProgress(30);
-        const audioPath = `${user.id}/${Date.now()}-${content.audio_file.name}`;
-        audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
-
-        // Generate optimized preview client-side (45s max, mono, compressed)
-        setUploadProgress(40);
+        setPreviewStatus('generating');
         setPreviewGenerationPhase('generating');
-        console.log('Generating optimized preview client-side...');
+        setPreviewErrorMessage(null);
+        console.log('[UploadSong] Starting preview generation...');
         
         const previewResult = await generatePreview(content.audio_file);
         
         // MANDATORY: Block upload if preview generation fails
         if (!previewResult) {
-          console.error('Preview generation failed:', previewError);
+          setPreviewStatus('failed');
+          const errorMsg = previewError || 'Could not generate audio preview';
+          setPreviewErrorMessage(errorMsg);
+          
+          // Show detailed error with suggestion if available
+          const suggestion = previewErrorDetails?.suggestion;
           toast({ 
             title: 'Preview Generation Failed', 
-            description: 'Could not generate audio preview. Please try a different audio file format (MP3 recommended) or refresh the page and try again.',
+            description: suggestion 
+              ? `${errorMsg}. ${suggestion}`
+              : `${errorMsg}. Please try a different audio file (MP3 or WAV recommended).`,
             variant: 'destructive' 
           });
           setIsSubmitting(false);
@@ -259,12 +279,32 @@ export default function UploadSong() {
           return;
         }
         
-        setUploadProgress(60);
-        setPreviewGenerationPhase('validating');
-        
+        previewBlob = previewResult.blob;
+        setGeneratedPreviewBlob(previewBlob);
+        setPreviewStatus('generated');
+        console.log(`[UploadSong] Preview generated: ${(previewResult.size / 1024).toFixed(1)} KB`);
+      }
+
+      // Upload cover image
+      if (content.cover_image) {
+        setUploadProgress(20);
+        const coverPath = `${user.id}/${Date.now()}-${content.cover_image.name}`;
+        cover_image_url = await uploadFile(content.cover_image, 'song-covers', coverPath);
+      }
+
+      // Upload audio file and validate preview
+      if (content.audio_file && previewBlob) {
+        setUploadProgress(30);
+        const audioPath = `${user.id}/${Date.now()}-${content.audio_file.name}`;
+        audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
+
         // Validate preview through edge function before saving
+        setUploadProgress(50);
+        setPreviewGenerationPhase('validating');
+        console.log('[UploadSong] Validating preview with server...');
+        
         const formData = new FormData();
-        formData.append('file', previewResult.blob, 'preview.mp3');
+        formData.append('file', previewBlob, 'preview.mp3');
         formData.append('songId', 'pending'); // Will be updated after song creation
         
         const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-preview', {
@@ -273,7 +313,9 @@ export default function UploadSong() {
         
         if (validationError || !validationResult?.success) {
           const errorMessage = validationResult?.message || validationError?.message || 'Preview validation failed';
-          console.error('Preview validation failed:', errorMessage);
+          console.error('[UploadSong] Preview validation failed:', errorMessage);
+          setPreviewStatus('failed');
+          setPreviewErrorMessage(errorMessage);
           toast({ 
             title: 'Preview Validation Failed', 
             description: `${errorMessage}. Please try again with a different audio file.`,
@@ -293,7 +335,18 @@ export default function UploadSong() {
           file_size_bytes: validationResult.data.file_size_bytes,
           validated_at: validationResult.data.validated_at,
         };
-        console.log(`Preview validated and uploaded: ${(validatedPreviewMetadata.file_size_bytes / 1024).toFixed(1)} KB, ${validatedPreviewMetadata.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
+        console.log(`[UploadSong] Preview validated and uploaded: ${(validatedPreviewMetadata.file_size_bytes / 1024).toFixed(1)} KB, ${validatedPreviewMetadata.duration_seconds}s, ${validationResult.data.bitrate_kbps}kbps`);
+      } else if (content.audio_file && !previewBlob) {
+        // This shouldn't happen if flow is correct, but handle it
+        setPreviewStatus('failed');
+        setPreviewErrorMessage('Preview blob not available');
+        toast({ 
+          title: 'Preview Error', 
+          description: 'Preview was not generated correctly. Please try again.',
+          variant: 'destructive' 
+        });
+        setIsSubmitting(false);
+        return;
       }
 
       setUploadProgress(70);
@@ -842,7 +895,17 @@ export default function UploadSong() {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Preview Audio:</dt>
-                    <dd>{content.audio_file ? '✓ Auto-generated' : 'Pending audio upload'}</dd>
+                    <dd className={
+                      previewStatus === 'failed' ? 'text-destructive' :
+                      previewStatus === 'generated' ? 'text-green-600 dark:text-green-500' :
+                      ''
+                    }>
+                      {!content.audio_file && 'Pending audio upload'}
+                      {content.audio_file && previewStatus === 'pending' && '⏳ Will generate on submit'}
+                      {content.audio_file && previewStatus === 'generating' && '⏳ Generating...'}
+                      {content.audio_file && previewStatus === 'generated' && '✓ Generated'}
+                      {content.audio_file && previewStatus === 'failed' && `❌ Failed${previewErrorMessage ? `: ${previewErrorMessage}` : ''}`}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Lyrics:</dt>
@@ -863,6 +926,28 @@ export default function UploadSong() {
                 ))}
               </div>
             </div>
+
+            {/* Browser Warning */}
+            {browserWarning && content.audio_file && (
+              <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-sm text-amber-700 dark:text-amber-400">
+                  {browserWarning}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Preview Error Details */}
+            {previewStatus === 'failed' && previewErrorDetails?.suggestion && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Preview generation failed:</strong> {previewErrorMessage}
+                  <br />
+                  <span className="text-muted-foreground">{previewErrorDetails.suggestion}</span>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Confirmations */}
             <div className="space-y-3 pt-4 border-t border-border">
