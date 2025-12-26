@@ -19,6 +19,10 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Audio file size limits
+const MAX_AUDIO_FILE_SIZE_MB = 200;
+const MAX_AUDIO_FILE_SIZE_BYTES = MAX_AUDIO_FILE_SIZE_MB * 1024 * 1024;
+
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
   { value: 'youtube', label: 'YouTube License', description: 'For YouTube content creators' },
@@ -97,6 +101,19 @@ export default function UploadSong() {
   };
 
   const handleFileChange = (field: keyof ContentForm, file: File | null) => {
+    // Validate audio file size
+    if (field === 'audio_file' && file) {
+      if (file.size > MAX_AUDIO_FILE_SIZE_BYTES) {
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        toast({ 
+          title: 'File too large', 
+          description: `Your audio file is ${fileSizeMB} MB. Maximum allowed size is ${MAX_AUDIO_FILE_SIZE_MB} MB. Try using MP3 format for smaller file sizes.`,
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+    
     setContent(prev => ({ ...prev, [field]: file }));
     
     if (field === 'cover_image' && file) {
@@ -504,6 +521,11 @@ export default function UploadSong() {
                     <span className="text-sm text-muted-foreground">
                       {content.audio_file?.name || 'Upload audio'}
                     </span>
+                    {content.audio_file && (
+                      <span className="text-xs text-muted-foreground block">
+                        ({(content.audio_file.size / (1024 * 1024)).toFixed(1)} MB)
+                      </span>
+                    )}
                   </div>
                   <input
                     type="file"
@@ -512,6 +534,9 @@ export default function UploadSong() {
                     onChange={(e) => handleFileChange('audio_file', e.target.files?.[0] || null)}
                   />
                 </label>
+                <p className="text-xs text-muted-foreground">
+                  Max size: {MAX_AUDIO_FILE_SIZE_MB} MB • WAV, MP3, FLAC supported
+                </p>
               </div>
 
               {/* Auto-generated preview notice */}
