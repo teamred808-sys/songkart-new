@@ -192,11 +192,11 @@ export default function UploadSong() {
         
         if (previewResult) {
           setUploadProgress(60);
-          const previewPath = `${user.id}/${Date.now()}-preview.wav`;
+          const previewPath = `${user.id}/${Date.now()}-preview.mp3`;
           const { error: previewUploadError } = await supabase.storage
             .from('song-previews')
             .upload(previewPath, previewResult.blob, { 
-              contentType: 'audio/wav',
+              contentType: 'audio/mp3',
               upsert: true 
             });
           
