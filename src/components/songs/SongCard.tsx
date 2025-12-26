@@ -1,6 +1,6 @@
-import { memo, useState } from "react";
+import { memo, useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Music, FileText, Play, Pause, Heart, Star, Loader2 } from "lucide-react";
+import { Music, FileText, Play, Heart, Star, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { Price } from "@/components/ui/Price";
 import { RatingBadge } from "@/components/songs/RatingDisplay";
-import { MiniAudioPlayer } from "@/components/audio/MiniAudioPlayer";
+import { MiniAudioPlayer, MiniAudioPlayerHandle } from "@/components/audio/MiniAudioPlayer";
 import { useAudioPlayerOptional } from "@/contexts/AudioPlayerContext";
+
 interface SongCardProps {
   id: string;
   title: string;
@@ -50,20 +51,44 @@ export const SongCard = memo(function SongCard({
   sellerTier,
 }: SongCardProps) {
   const [showPlayer, setShowPlayer] = useState(false);
+  const [isStartingPlayback, setIsStartingPlayback] = useState(false);
+  const playerRef = useRef<MiniAudioPlayerHandle>(null);
   const audioContext = useAudioPlayerOptional();
   const isCurrentlyPlaying = audioContext?.isPlaying(id) ?? false;
 
-  const handlePlayClick = (e: React.MouseEvent) => {
+  // Auto-hide player UI when another song starts playing
+  useEffect(() => {
+    if (!isCurrentlyPlaying && showPlayer && !isStartingPlayback) {
+      setShowPlayer(false);
+    }
+  }, [isCurrentlyPlaying, showPlayer, isStartingPlayback]);
+
+  const handlePlayClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasAudio) {
-      setShowPlayer(true);
-    }
+    
+    if (!hasAudio) return;
+    
+    // Show the player UI immediately
+    setShowPlayer(true);
+    setIsStartingPlayback(true);
+    
+    // Small delay to ensure the ref is available after render
+    setTimeout(async () => {
+      try {
+        await playerRef.current?.play();
+      } finally {
+        setIsStartingPlayback(false);
+      }
+    }, 0);
   };
 
   const handlePlayerEnded = () => {
     setShowPlayer(false);
   };
+
+  // Determine if we should show the overlay
+  const shouldShowOverlay = showPlayer || isCurrentlyPlaying;
 
   return (
     <Link to={`/song/${id}`}>
@@ -89,11 +114,13 @@ export const SongCard = memo(function SongCard({
           {/* Overlay on hover - show play button if has audio */}
           <div className={cn(
             "absolute inset-0 bg-black/60 transition-opacity duration-300 flex items-center justify-center",
-            showPlayer || isCurrentlyPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            shouldShowOverlay ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            !shouldShowOverlay && "pointer-events-none group-hover:pointer-events-auto"
           )}>
             {showPlayer ? (
               <div onClick={(e) => e.stopPropagation()}>
                 <MiniAudioPlayer 
+                  ref={playerRef}
                   songId={id} 
                   onEnded={handlePlayerEnded}
                   className="px-3"
@@ -104,8 +131,13 @@ export const SongCard = memo(function SongCard({
                 size="icon" 
                 className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
                 onClick={handlePlayClick}
+                disabled={isStartingPlayback}
               >
-                <Play className="h-6 w-6 ml-0.5" />
+                {isStartingPlayback ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Play className="h-6 w-6 ml-0.5" />
+                )}
               </Button>
             ) : (
               <Button 
