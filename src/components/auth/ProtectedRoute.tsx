@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
@@ -11,7 +12,8 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export function ProtectedRoute({ 
+// Use React.memo to prevent unnecessary re-renders and avoid ref warnings
+export const ProtectedRoute = React.memo(function ProtectedRoute({ 
   children, 
   role,
   allowedRoles,
@@ -53,4 +55,4 @@ export function ProtectedRoute({
   }
 
   return <>{children}</>;
-}
+});
