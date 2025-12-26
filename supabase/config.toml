@@ -50,6 +50,3 @@ verify_jwt = false
 
 [functions.generate-preview]
 verify_jwt = true
-
-[functions.validate-preview]
-verify_jwt = true

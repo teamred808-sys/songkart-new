@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,15 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, Info, Server } from 'lucide-react';
+import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// File size limits
-const MAX_AUDIO_FILE_SIZE_MB = 200;
-const MAX_AUDIO_FILE_SIZE_BYTES = MAX_AUDIO_FILE_SIZE_MB * 1024 * 1024;
-const MAX_COVER_FILE_SIZE_MB = 20;
-const MAX_COVER_FILE_SIZE_BYTES = MAX_COVER_FILE_SIZE_MB * 1024 * 1024;
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
@@ -80,22 +73,8 @@ export default function UploadSong() {
   
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadPhase, setUploadPhase] = useState<'idle' | 'uploading' | 'generating-preview'>('idle');
-
-  // Warn user before leaving during upload
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isSubmitting) {
-        e.preventDefault();
-        e.returnValue = 'Your upload is in progress. Are you sure you want to leave?';
-        return e.returnValue;
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isSubmitting]);
   
   // Form data state
   const [metadata, setMetadata] = useState<MetadataForm | null>(null);
@@ -118,32 +97,6 @@ export default function UploadSong() {
   };
 
   const handleFileChange = (field: keyof ContentForm, file: File | null) => {
-    // Validate audio file size
-    if (field === 'audio_file' && file) {
-      if (file.size > MAX_AUDIO_FILE_SIZE_BYTES) {
-        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        toast({ 
-          title: 'File too large', 
-          description: `Your audio file is ${fileSizeMB} MB. Maximum allowed size is ${MAX_AUDIO_FILE_SIZE_MB} MB. Try using MP3 format for smaller file sizes.`,
-          variant: 'destructive' 
-        });
-        return;
-      }
-    }
-    
-    // Validate cover image file size
-    if (field === 'cover_image' && file) {
-      if (file.size > MAX_COVER_FILE_SIZE_BYTES) {
-        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        toast({ 
-          title: 'Cover image too large', 
-          description: `Your image is ${fileSizeMB} MB. Maximum allowed size is ${MAX_COVER_FILE_SIZE_MB} MB. Try compressing the image or using JPG format.`,
-          variant: 'destructive' 
-        });
-        return;
-      }
-    }
-    
     setContent(prev => ({ ...prev, [field]: file }));
     
     if (field === 'cover_image' && file) {
@@ -213,7 +166,6 @@ export default function UploadSong() {
 
     setIsSubmitting(true);
     setUploadProgress(10);
-    setUploadPhase('uploading');
 
     try {
       let cover_image_url = null;
@@ -233,10 +185,12 @@ export default function UploadSong() {
         audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
       }
 
+      // Preview will be auto-generated after song creation
       setUploadProgress(60);
 
-      // Create song record with preview_status = 'pending'
-      // Preview will be generated server-side
+      setUploadProgress(70);
+
+      // Create song record
       const { data: song, error: songError } = await supabase
         .from('songs')
         .insert({
@@ -249,24 +203,20 @@ export default function UploadSong() {
           language: metadata.language,
           cover_image_url,
           audio_url,
-          preview_audio_url: null, // Will be set by server
+          preview_audio_url: null, // Will be auto-generated
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.base_price,
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
-          preview_status: 'pending', // Server will generate preview
-          preview_generated_at: null,
-          preview_duration_seconds: null,
-          preview_file_size_bytes: null,
         })
         .select()
         .single();
 
       if (songError) throw songError;
 
-      setUploadProgress(75);
+      setUploadProgress(85);
 
       // Create license tiers
       if (pricing.license_tiers.length > 0) {
@@ -285,31 +235,38 @@ export default function UploadSong() {
         if (tiersError) throw tiersError;
       }
 
-      setUploadProgress(85);
+      setUploadProgress(95);
 
-      // Trigger server-side preview generation if audio was uploaded
+      // Auto-generate optimized preview if audio was uploaded
       if (audio_url) {
-        setUploadPhase('generating-preview');
-        console.log('[UploadSong] Triggering server-side preview generation...');
-        
-        const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
-          body: { 
-            songId: song.id, 
-            audioPath: audio_url 
-          },
-        });
-
-        if (previewError) {
-          console.error('[UploadSong] Preview generation failed:', previewError);
-          // Don't fail the upload - preview can be retried later
-          toast({ 
-            title: 'Song uploaded', 
-            description: 'Your song was uploaded but preview generation failed. It will be retried automatically.',
+        setIsGeneratingPreview(true);
+        try {
+          // Extract the path from the full URL
+          const audioPath = audio_url.includes('song-audio/') 
+            ? audio_url.split('song-audio/')[1].split('?')[0]
+            : `${user.id}/${Date.now()}-audio.mp3`;
+          
+          console.log('Triggering preview generation for song:', song.id);
+          
+          const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
+            body: { songId: song.id, audioPath }
           });
-        } else if (previewResult?.success) {
-          console.log('[UploadSong] Preview generated:', previewResult);
-        } else {
-          console.warn('[UploadSong] Preview generation returned non-success:', previewResult);
+          
+          if (previewError) {
+            console.error('Preview generation error:', previewError);
+            // Don't fail the upload, preview can be regenerated later
+            toast({
+              title: 'Song uploaded',
+              description: 'Preview generation is pending. It will be available shortly.',
+            });
+          } else {
+            console.log('Preview generated:', previewResult);
+          }
+        } catch (previewErr) {
+          console.error('Preview generation failed:', previewErr);
+          // Silent failure - preview can be regenerated
+        } finally {
+          setIsGeneratingPreview(false);
         }
       }
 
@@ -330,61 +287,32 @@ export default function UploadSong() {
       });
     } finally {
       setIsSubmitting(false);
-      setUploadPhase('idle');
+      setIsGeneratingPreview(false);
     }
   };
 
   return (
-    <>
-      {/* Upload Progress Overlay */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Card className="w-[90%] max-w-md mx-4">
-            <CardContent className="pt-6">
-              <div className="space-y-4 text-center">
-                <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
-                <h3 className="text-lg font-semibold">
-                  {uploadPhase === 'generating-preview' 
-                    ? 'Generating Preview' 
-                    : 'Uploading Song'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {uploadPhase === 'generating-preview' 
-                    ? 'Creating a 45-second preview on our servers...'
-                    : 'Please wait while we upload your files...'}
-                </p>
-                <Progress value={uploadProgress} className="w-full" />
-                <p className="text-xs text-muted-foreground">
-                  {uploadProgress}% complete
-                </p>
-                <div className="flex items-center justify-center gap-2 text-muted-foreground mt-4">
-                  <Server className="h-4 w-4" />
-                  <span className="text-xs">Preview generated on our servers for reliability</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold font-display">Upload New Song</h1>
+        <p className="text-muted-foreground">Share your music with the world.</p>
+      </div>
 
-      <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl lg:text-3xl font-bold font-display">Upload New Song</h1>
-          <p className="text-muted-foreground">Share your music with the world</p>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-          {STEPS.map((s, index) => (
-            <div key={s.id} className="flex items-center flex-shrink-0">
-              <div className={cn(
-                "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
-                step >= s.id 
-                  ? "bg-primary border-primary text-primary-foreground" 
-                  : "border-muted-foreground/30 text-muted-foreground"
-              )}>
-                <s.icon className="w-5 h-5" />
+      {/* Progress Steps */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          {STEPS.map((s, i) => (
+            <div key={s.id} className="flex items-center">
+              <div
+                className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors",
+                  step >= s.id
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : "border-border text-muted-foreground"
+                )}
+              >
+                <s.icon className="h-5 w-5" />
               </div>
               <span className={cn(
                 "ml-2 text-sm font-medium hidden sm:inline",
@@ -392,319 +320,285 @@ export default function UploadSong() {
               )}>
                 {s.title}
               </span>
-              {index < STEPS.length - 1 && (
+              {i < STEPS.length - 1 && (
                 <div className={cn(
-                  "w-8 lg:w-16 h-0.5 mx-2 lg:mx-4",
-                  step > s.id ? "bg-primary" : "bg-muted"
+                  "w-8 sm:w-16 lg:w-24 h-0.5 mx-2 sm:mx-4",
+                  step > s.id ? "bg-primary" : "bg-border"
                 )} />
               )}
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Step 1: Metadata */}
-        {step === 1 && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Song Details</CardTitle>
-              <CardDescription>Tell us about your song</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={metadataForm.handleSubmit(handleMetadataSubmit)} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input 
-                    id="title" 
-                    {...metadataForm.register('title')} 
-                    placeholder="Enter song title"
-                  />
-                  {metadataForm.formState.errors.title && (
-                    <p className="text-sm text-destructive">
-                      {metadataForm.formState.errors.title.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    {...metadataForm.register('description')} 
-                    placeholder="Describe your song..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Genre *</Label>
-                    <Select 
-                      value={metadataForm.watch('genre_id')} 
-                      onValueChange={(v) => metadataForm.setValue('genre_id', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select genre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {genres?.map((genre) => (
-                          <SelectItem key={genre.id} value={genre.id}>
-                            {genre.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {metadataForm.formState.errors.genre_id && (
-                      <p className="text-sm text-destructive">
-                        {metadataForm.formState.errors.genre_id.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Mood</Label>
-                    <Select 
-                      value={metadataForm.watch('mood_id')} 
-                      onValueChange={(v) => metadataForm.setValue('mood_id', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select mood" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {moods?.map((mood) => (
-                          <SelectItem key={mood.id} value={mood.id}>
-                            {mood.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bpm">BPM (optional)</Label>
-                    <Input 
-                      id="bpm" 
-                      type="number" 
-                      {...metadataForm.register('bpm', { valueAsNumber: true })}
-                      placeholder="e.g., 120"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <Input 
-                      id="language" 
-                      {...metadataForm.register('language')}
-                      placeholder="e.g., English"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button type="submit">
-                    Next <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 2: Content */}
-        {step === 2 && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Upload Content</CardTitle>
-              <CardDescription>Add your audio file, cover image, and lyrics</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Cover Image Upload */}
+      {/* Step 1: Metadata */}
+      {step === 1 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle>Song Details</CardTitle>
+            <CardDescription>Basic information about your song.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={metadataForm.handleSubmit(handleMetadataSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <Label>Cover Image</Label>
-                <div className="flex items-start gap-4">
-                  {coverPreview ? (
-                    <div className="relative">
-                      <img 
-                        src={coverPreview} 
-                        alt="Cover preview" 
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6"
-                        onClick={() => {
-                          setContent(prev => ({ ...prev, cover_image: null }));
-                          setCoverPreview(null);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground mt-1">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleFileChange('cover_image', e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    Recommended: Square image, at least 500x500px. Max {MAX_COVER_FILE_SIZE_MB}MB.
-                  </p>
-                </div>
-              </div>
-
-              {/* Audio Upload */}
-              <div className="space-y-2">
-                <Label>Audio File *</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  {content.audio_file ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Music className="h-8 w-8 text-primary" />
-                        <div className="text-left">
-                          <p className="font-medium">{content.audio_file.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {(content.audio_file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleFileChange('audio_file', null)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer">
-                      <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="font-medium">Click to upload audio</p>
-                      <p className="text-sm text-muted-foreground">
-                        MP3, WAV, or FLAC • Max {MAX_AUDIO_FILE_SIZE_MB}MB
-                      </p>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={(e) => handleFileChange('audio_file', e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  )}
-                </div>
-                
-                {/* Server-side preview info */}
-                {content.audio_file && (
-                  <Alert>
-                    <Server className="h-4 w-4" />
-                    <AlertDescription>
-                      A 45-second preview will be automatically generated on our servers after upload for maximum reliability.
-                    </AlertDescription>
-                  </Alert>
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  {...metadataForm.register('title')}
+                  placeholder="Enter song title"
+                />
+                {metadataForm.formState.errors.title && (
+                  <p className="text-sm text-destructive">{metadataForm.formState.errors.title.message}</p>
                 )}
               </div>
 
-              {/* Lyrics */}
               <div className="space-y-2">
-                <Label htmlFor="full_lyrics">Full Lyrics (optional)</Label>
+                <Label htmlFor="description">Description</Label>
                 <Textarea
-                  id="full_lyrics"
-                  value={content.full_lyrics || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, full_lyrics: e.target.value }))}
-                  placeholder="Enter the full song lyrics..."
-                  rows={6}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="preview_lyrics">Preview Lyrics (optional)</Label>
-                <Textarea
-                  id="preview_lyrics"
-                  value={content.preview_lyrics || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, preview_lyrics: e.target.value }))}
-                  placeholder="First verse/chorus for preview..."
+                  id="description"
+                  {...metadataForm.register('description')}
+                  placeholder="Describe your song..."
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This will be shown to buyers before purchase
-                </p>
               </div>
 
-              <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => setStep(1)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={() => setStep(3)}
-                  disabled={!content.audio_file && !content.full_lyrics}
-                >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Genre *</Label>
+                  <Select
+                    value={metadataForm.watch('genre_id')}
+                    onValueChange={(v) => metadataForm.setValue('genre_id', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select genre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {genres?.map((genre) => (
+                        <SelectItem key={genre.id} value={genre.id}>
+                          {genre.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {metadataForm.formState.errors.genre_id && (
+                    <p className="text-sm text-destructive">{metadataForm.formState.errors.genre_id.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Mood</Label>
+                  <Select
+                    value={metadataForm.watch('mood_id')}
+                    onValueChange={(v) => metadataForm.setValue('mood_id', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select mood" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {moods?.map((mood) => (
+                        <SelectItem key={mood.id} value={mood.id}>
+                          {mood.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bpm">BPM</Label>
+                  <Input
+                    id="bpm"
+                    type="number"
+                    {...metadataForm.register('bpm', { valueAsNumber: true })}
+                    placeholder="e.g., 120"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Input
+                    id="language"
+                    {...metadataForm.register('language')}
+                    placeholder="e.g., English"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit">
                   Next <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Step 3: Pricing */}
-        {step === 3 && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Pricing & Licenses</CardTitle>
-              <CardDescription>Set your base price and available license tiers</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+      {/* Step 2: Content */}
+      {step === 2 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle>Upload Content</CardTitle>
+            <CardDescription>Upload your audio files and lyrics.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Cover Image */}
+            <div className="space-y-2">
+              <Label>Cover Image</Label>
+              <div className="flex items-start gap-4">
+                {coverPreview ? (
+                  <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border">
+                    <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoverPreview(null);
+                        handleFileChange('cover_image', null);
+                      }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-background/80 hover:bg-background"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                    <span className="text-xs text-muted-foreground">Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileChange('cover_image', e.target.files?.[0] || null)}
+                    />
+                  </label>
+                )}
+                <div className="text-sm text-muted-foreground">
+                  <p>Recommended: 500x500px</p>
+                  <p>Max size: 5MB</p>
+                  <p>Formats: JPG, PNG, WebP</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Audio Files */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="base_price">Base Price (₹)</Label>
-                <Input
-                  id="base_price"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={pricing.base_price}
-                  onChange={(e) => setPricing(prev => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
-                />
-                <p className="text-xs text-muted-foreground">
-                  This is the starting price for the most basic license
-                </p>
+                <Label>Full Audio File</Label>
+                <label className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+                  <div className="text-center">
+                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                    <span className="text-sm text-muted-foreground">
+                      {content.audio_file?.name || 'Upload audio'}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange('audio_file', e.target.files?.[0] || null)}
+                  />
+                </label>
               </div>
 
-              <div className="space-y-4">
-                <Label>License Tiers</Label>
-                
-                {/* Available license types to add */}
-                <div className="flex flex-wrap gap-2">
-                  {LICENSE_TYPES.filter(lt => !pricing.license_tiers.find(t => t.license_type === lt.value)).map((lt) => (
-                    <Button
-                      key={lt.value}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addLicenseTier(lt.value)}
-                    >
-                      + {lt.label}
-                    </Button>
-                  ))}
+              {/* Auto-generated preview notice */}
+              <div className="space-y-2">
+                <Label>Preview Audio</Label>
+                <div className="flex items-center justify-center h-24 border-2 border-dashed border-border/50 rounded-lg bg-muted/30">
+                  <div className="text-center text-muted-foreground">
+                    <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                    <span className="text-sm">Auto-generated from full audio</span>
+                    <p className="text-xs mt-1">(45s, optimized for streaming)</p>
+                  </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Added license tiers */}
-                {pricing.license_tiers.map((tier) => {
-                  const licenseInfo = LICENSE_TYPES.find(lt => lt.value === tier.license_type);
+            {/* Lyrics */}
+            <div className="space-y-2">
+              <Label htmlFor="full_lyrics">Full Lyrics</Label>
+              <Textarea
+                id="full_lyrics"
+                value={content.full_lyrics || ''}
+                onChange={(e) => setContent(prev => ({ ...prev, full_lyrics: e.target.value }))}
+                placeholder="Enter the full song lyrics..."
+                rows={8}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preview_lyrics">Preview Lyrics (shown before purchase)</Label>
+              <Textarea
+                id="preview_lyrics"
+                value={content.preview_lyrics || ''}
+                onChange={(e) => setContent(prev => ({ ...prev, preview_lyrics: e.target.value }))}
+                placeholder="Enter a preview snippet (first few lines)..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button type="button" onClick={() => setStep(3)}>
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 3: Pricing */}
+      {step === 3 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle>Pricing & Licenses</CardTitle>
+            <CardDescription>Set your pricing and license options.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="base_price">Base Price (₹)</Label>
+              <Input
+                id="base_price"
+                type="number"
+                step="0.01"
+                value={pricing.base_price}
+                onChange={(e) => setPricing(prev => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <Label>License Tiers</Label>
+              <div className="flex flex-wrap gap-2">
+                {LICENSE_TYPES.map((type) => {
+                  const isAdded = pricing.license_tiers.some(t => t.license_type === type.value);
                   return (
-                    <div key={tier.license_type} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+                    <Button
+                      key={type.value}
+                      type="button"
+                      variant={isAdded ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => isAdded ? removeLicenseTier(type.value) : addLicenseTier(type.value)}
+                    >
+                      {isAdded && <CheckCircle className="mr-1 h-3 w-3" />}
+                      {type.label}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* License tier details */}
+              <div className="space-y-4">
+                {pricing.license_tiers.map((tier) => {
+                  const typeInfo = LICENSE_TYPES.find(t => t.value === tier.license_type);
+                  return (
+                    <div key={tier.license_type} className="p-4 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-medium">{licenseInfo?.label}</h4>
-                          <p className="text-sm text-muted-foreground">{licenseInfo?.description}</p>
+                          <h4 className="font-medium">{typeInfo?.label}</h4>
+                          <p className="text-sm text-muted-foreground">{typeInfo?.description}</p>
                         </div>
                         <Button
                           type="button"
@@ -715,13 +609,12 @@ export default function UploadSong() {
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <Label className="text-xs">Price (₹)</Label>
                           <Input
                             type="number"
                             step="0.01"
-                            min="0.01"
                             value={tier.price}
                             onChange={(e) => updateLicenseTier(tier.license_type, 'price', parseFloat(e.target.value) || 0)}
                           />
@@ -731,9 +624,8 @@ export default function UploadSong() {
                             <Label className="text-xs">Max Sales (optional)</Label>
                             <Input
                               type="number"
-                              min="1"
                               value={tier.max_sales || ''}
-                              onChange={(e) => updateLicenseTier(tier.license_type, 'max_sales', e.target.value ? parseInt(e.target.value) : undefined)}
+                              onChange={(e) => updateLicenseTier(tier.license_type, 'max_sales', parseInt(e.target.value) || null)}
                               placeholder="Unlimited"
                             />
                           </div>
@@ -742,132 +634,158 @@ export default function UploadSong() {
                     </div>
                   );
                 })}
-
-                {pricing.license_tiers.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Add at least one license tier to continue
-                  </p>
-                )}
               </div>
 
-              <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => setStep(2)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
-                <Button 
-                  type="button" 
-                  onClick={() => setStep(4)}
-                  disabled={pricing.license_tiers.length === 0}
-                >
-                  Next <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              {pricing.license_tiers.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Select at least one license type above.
+                </p>
+              )}
+            </div>
 
-        {/* Step 4: Review */}
-        {step === 4 && (
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Review & Submit</CardTitle>
-              <CardDescription>Review your song details before submitting</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Summary */}
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  {coverPreview && (
-                    <img src={coverPreview} alt="Cover" className="w-24 h-24 rounded-lg object-cover" />
-                  )}
-                  <div>
-                    <h3 className="text-xl font-semibold">{metadata?.title}</h3>
-                    <p className="text-muted-foreground">{metadata?.description || 'No description'}</p>
-                    <div className="flex gap-4 mt-2 text-sm">
-                      <span>Genre: {genres?.find(g => g.id === metadata?.genre_id)?.name}</span>
-                      {metadata?.bpm && <span>BPM: {metadata.bpm}</span>}
-                    </div>
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button 
+                type="button" 
+                onClick={() => setStep(4)}
+                disabled={pricing.license_tiers.length === 0}
+              >
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Review */}
+      {step === 4 && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle>Review & Submit</CardTitle>
+            <CardDescription>Review your song details before submitting.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-2">Song Details</h4>
+                <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Title:</dt>
+                    <dd className="font-medium">{metadata?.title}</dd>
                   </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-2">Content</h4>
-                  <ul className="text-sm space-y-1 text-muted-foreground">
-                    <li>• Audio: {content.audio_file?.name || 'Not uploaded'}</li>
-                    <li>• Lyrics: {content.full_lyrics ? 'Included' : 'Not included'}</li>
-                    <li>• Preview: Will be generated on server (45 seconds, compressed)</li>
-                  </ul>
-                </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-2">Pricing</h4>
-                  <p className="text-sm text-muted-foreground mb-2">Base Price: ₹{pricing.base_price.toFixed(2)}</p>
-                  <div className="space-y-2">
-                    {pricing.license_tiers.map((tier) => {
-                      const licenseInfo = LICENSE_TYPES.find(lt => lt.value === tier.license_type);
-                      return (
-                        <div key={tier.license_type} className="flex justify-between text-sm">
-                          <span>{licenseInfo?.label}</span>
-                          <span>₹{tier.price.toFixed(2)}</span>
-                        </div>
-                      );
-                    })}
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Genre:</dt>
+                    <dd>{genres?.find(g => g.id === metadata?.genre_id)?.name || '-'}</dd>
                   </div>
-                </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">BPM:</dt>
+                    <dd>{metadata?.bpm || '-'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Language:</dt>
+                    <dd>{metadata?.language}</dd>
+                  </div>
+                </dl>
               </div>
 
-              {/* Confirmations */}
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="ownership"
-                    checked={ownershipConfirmed}
-                    onCheckedChange={(checked) => setOwnershipConfirmed(checked === true)}
-                  />
-                  <label htmlFor="ownership" className="text-sm cursor-pointer">
-                    I confirm that I own all rights to this content and have the authority to sell it on this platform.
-                  </label>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms"
-                    checked={termsAccepted}
-                    onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-                  />
-                  <label htmlFor="terms" className="text-sm cursor-pointer">
-                    I agree to the seller terms of service and understand that my content will be reviewed before being published.
-                  </label>
-                </div>
+              <div>
+                <h4 className="font-medium mb-2">Content</h4>
+                <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Cover Image:</dt>
+                    <dd>{content.cover_image ? '✓ Uploaded' : 'Not uploaded'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Full Audio:</dt>
+                    <dd>{content.audio_file ? '✓ Uploaded' : 'Not uploaded'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Preview Audio:</dt>
+                    <dd>{content.audio_file ? '✓ Auto-generated' : 'Pending audio upload'}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Lyrics:</dt>
+                    <dd>{content.full_lyrics ? '✓ Added' : 'Not added'}</dd>
+                  </div>
+                </dl>
               </div>
+            </div>
 
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  After submission, your song will be reviewed by our team. A preview will be automatically generated on our servers. You'll be notified once it's approved.
-                </AlertDescription>
-              </Alert>
+            {/* License tiers summary */}
+            <div>
+              <h4 className="font-medium mb-2">License Tiers</h4>
+              <div className="flex flex-wrap gap-2">
+                {pricing.license_tiers.map((tier) => (
+                  <div key={tier.license_type} className="px-3 py-1.5 rounded-md bg-muted text-sm">
+                    {LICENSE_TYPES.find(t => t.value === tier.license_type)?.label}: ₹{tier.price}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => setStep(3)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={!ownershipConfirmed || !termsAccepted || isSubmitting}
-                >
-                  {isSubmitting ? (
+            {/* Confirmations */}
+            <div className="space-y-3 pt-4 border-t border-border">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="ownership"
+                  checked={ownershipConfirmed}
+                  onCheckedChange={(checked) => setOwnershipConfirmed(checked === true)}
+                />
+                <Label htmlFor="ownership" className="text-sm font-normal leading-relaxed">
+                  I confirm that I am the original creator or have full rights to sell this content. I understand that violating copyright may result in account termination.
+                </Label>
+              </div>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                />
+                <Label htmlFor="terms" className="text-sm font-normal leading-relaxed">
+                  I agree to the platform's Terms of Service and understand that my content will be reviewed before publication.
+                </Label>
+              </div>
+            </div>
+
+            {/* Upload Progress */}
+            {(isSubmitting || isGeneratingPreview) && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>{isGeneratingPreview ? 'Generating preview...' : 'Uploading...'}</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <Progress value={uploadProgress} />
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={() => setStep(3)} disabled={isSubmitting}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={isSubmitting || !ownershipConfirmed || !termsAccepted}
+                className="btn-glow"
+              >
+                {isSubmitting || isGeneratingPreview ? (
+                  <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-2 h-4 w-4" />
-                  )}
-                  Submit Song
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </>
+                    {isGeneratingPreview ? 'Generating Preview...' : 'Uploading...'}
+                  </>
+                ) : (
+                  <>
+                    Submit for Review
+                    <CheckCircle className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

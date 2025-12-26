@@ -121,14 +121,6 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     const handlePlay = useCallback(async () => {
       if (isLoading) return;
 
-      // Explicit playback guard: never attempt to play without a validated preview URL
-      if (!previewUrl) {
-        toast.error('Preview not available', {
-          description: 'This song does not have a playable preview'
-        });
-        return;
-      }
-
       try {
         setIsLoading(true);
         setHasError(false);
@@ -137,7 +129,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
         const audio = setupAudioElement();
 
         // Try direct public URL first for instant playback
-        const directUrl = getDirectPreviewUrl(previewUrl);
+        const directUrl = getDirectPreviewUrl(previewUrl || null);
         
         if (directUrl) {
           // Use direct CDN URL for fastest loading

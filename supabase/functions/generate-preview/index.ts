@@ -1,34 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { FFmpeg } from "https://esm.sh/@ffmpeg/ffmpeg@0.12.10";
+import { toBlobURL, fetchFile } from "https://esm.sh/@ffmpeg/util@0.12.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Preview generation settings
-const PREVIEW_MAX_DURATION_SECONDS = 45;
-
 interface GeneratePreviewRequest {
   songId: string;
   audioPath: string;
 }
 
-interface GeneratePreviewResponse {
-  success: boolean;
-  previewUrl?: string;
-  duration?: number;
-  fileSize?: number;
-  error?: string;
-  details?: string;
-}
+// Preview settings
+const PREVIEW_MAX_DURATION = 45; // seconds
+const PREVIEW_BITRATE = '96k';
+const PREVIEW_SAMPLE_RATE = 44100;
+const PREVIEW_CHANNELS = 1; // mono
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
-  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -39,122 +33,169 @@ serve(async (req) => {
 
     if (!songId || !audioPath) {
       return new Response(
-        JSON.stringify({ success: false, error: 'songId and audioPath are required' }),
+        JSON.stringify({ error: 'songId and audioPath are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[generate-preview] Processing preview for song ${songId}`);
+    console.log(`[generate-preview] Starting preview generation for song ${songId}`);
+    console.log(`[generate-preview] Audio path: ${audioPath}`);
 
-    // Update song status to 'generating'
-    await supabase
-      .from('songs')
-      .update({ preview_status: 'generating', preview_error: null })
-      .eq('id', songId);
-
-    // Extract path from URL
+    // Extract just the path from the full URL if needed
     const cleanPath = audioPath.includes('song-audio/') 
-      ? decodeURIComponent(audioPath.split('song-audio/')[1])
-      : decodeURIComponent(audioPath);
+      ? audioPath.split('song-audio/')[1]
+      : audioPath;
 
-    // Get signed URL
+    console.log(`[generate-preview] Clean path: ${cleanPath}`);
+
+    // Create a signed URL to download the original audio
     const { data: signedUrlData, error: signedUrlError } = await supabase
-      .storage.from('song-audio').createSignedUrl(cleanPath, 600);
+      .storage
+      .from('song-audio')
+      .createSignedUrl(cleanPath, 600); // 10 minutes to process
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      await supabase.from('songs').update({ 
-        preview_status: 'failed', 
-        preview_error: 'Failed to access audio file' 
-      }).eq('id', songId);
-      
+      console.error('[generate-preview] Failed to create signed URL:', signedUrlError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to access audio file' }),
+        JSON.stringify({ error: 'Failed to access audio file' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Download audio
+    console.log('[generate-preview] Downloading original audio file...');
+    
+    // Download the original audio file
     const audioResponse = await fetch(signedUrlData.signedUrl);
     if (!audioResponse.ok) {
-      await supabase.from('songs').update({ 
-        preview_status: 'failed', 
-        preview_error: 'Failed to download audio' 
-      }).eq('id', songId);
-      
+      console.error('[generate-preview] Failed to fetch audio:', audioResponse.status);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to download audio' }),
+        JSON.stringify({ error: 'Failed to download audio file' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const audioBytes = new Uint8Array(await audioResponse.arrayBuffer());
-    console.log(`[generate-preview] Downloaded ${audioBytes.length} bytes`);
+    const originalAudioData = new Uint8Array(await audioResponse.arrayBuffer());
+    console.log(`[generate-preview] Downloaded ${originalAudioData.length} bytes`);
 
-    // For now, store the audio as-is (server-side FFmpeg requires external service)
-    // The preview is the original file - a proper FFmpeg integration would transcode it
-    // This establishes the server-side flow; FFmpeg can be added via external API later
+    // Initialize FFmpeg
+    console.log('[generate-preview] Initializing FFmpeg...');
+    const ffmpeg = new FFmpeg();
     
+    // Load FFmpeg with WASM binaries from CDN
+    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+
+    console.log('[generate-preview] FFmpeg loaded successfully');
+
+    // Determine input file extension
+    const inputExt = cleanPath.split('.').pop()?.toLowerCase() || 'mp3';
+    const inputFileName = `input.${inputExt}`;
+    const outputFileName = 'preview.mp3';
+
+    // Write input file to FFmpeg virtual filesystem
+    await ffmpeg.writeFile(inputFileName, originalAudioData);
+    console.log('[generate-preview] Input file written to virtual filesystem');
+
+    // Execute FFmpeg transcoding with strict preview settings
+    // -t 45: limit to 45 seconds
+    // -b:a 96k: 96 kbps bitrate
+    // -ar 44100: 44.1kHz sample rate
+    // -ac 1: mono audio
+    // -f mp3: force MP3 output format
+    console.log('[generate-preview] Starting audio transcoding...');
+    await ffmpeg.exec([
+      '-i', inputFileName,
+      '-t', String(PREVIEW_MAX_DURATION),
+      '-b:a', PREVIEW_BITRATE,
+      '-ar', String(PREVIEW_SAMPLE_RATE),
+      '-ac', String(PREVIEW_CHANNELS),
+      '-f', 'mp3',
+      '-y', // overwrite output
+      outputFileName
+    ]);
+
+    console.log('[generate-preview] Transcoding complete');
+
+    // Read the output file
+    const outputData = await ffmpeg.readFile(outputFileName);
+    const previewBytes = outputData instanceof Uint8Array ? outputData : new Uint8Array(outputData as unknown as ArrayBuffer);
+    
+    console.log(`[generate-preview] Generated preview: ${previewBytes.length} bytes`);
+
+    // Generate preview file path
     const timestamp = Date.now();
-    const previewPath = `${songId}/${songId}-preview-${timestamp}.mp3`;
+    const previewFileName = `${songId}-preview-${timestamp}.mp3`;
+    const previewPath = `${songId}/${previewFileName}`;
 
-    // Delete old preview if exists
-    const { data: currentSong } = await supabase
-      .from('songs').select('preview_audio_url').eq('id', songId).single();
+    console.log(`[generate-preview] Uploading preview to: ${previewPath}`);
 
-    if (currentSong?.preview_audio_url) {
-      try {
-        const bucketUrl = '/song-previews/';
-        const idx = currentSong.preview_audio_url.indexOf(bucketUrl);
-        if (idx !== -1) {
-          const oldPath = currentSong.preview_audio_url.substring(idx + bucketUrl.length);
-          await supabase.storage.from('song-previews').remove([oldPath]);
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Upload preview
-    const { error: uploadError } = await supabase.storage
+    // Upload to song-previews bucket (public)
+    const { data: uploadData, error: uploadError } = await supabase
+      .storage
       .from('song-previews')
-      .upload(previewPath, audioBytes, { contentType: 'audio/mpeg', upsert: true });
+      .upload(previewPath, previewBytes, {
+        contentType: 'audio/mpeg',
+        upsert: true
+      });
 
     if (uploadError) {
-      await supabase.from('songs').update({ 
-        preview_status: 'failed', 
-        preview_error: 'Failed to upload preview' 
-      }).eq('id', songId);
-      
+      console.error('[generate-preview] Failed to upload preview:', uploadError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to upload preview' }),
+        JSON.stringify({ error: 'Failed to upload preview' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: { publicUrl } } = supabase.storage.from('song-previews').getPublicUrl(previewPath);
+    // Get public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('song-previews')
+      .getPublicUrl(previewPath);
 
-    // Estimate duration (assumes ~128kbps for estimation)
-    const estimatedDuration = Math.min((audioBytes.length * 8) / (128 * 1000), PREVIEW_MAX_DURATION_SECONDS);
+    console.log(`[generate-preview] Preview public URL: ${publicUrl}`);
 
-    // Update song record
-    await supabase.from('songs').update({
-      preview_audio_url: publicUrl,
-      preview_generated_at: new Date().toISOString(),
-      preview_duration_seconds: Math.round(estimatedDuration),
-      preview_file_size_bytes: audioBytes.length,
-      preview_status: 'ready',
-      preview_error: null
-    }).eq('id', songId);
+    // Update song record with preview info
+    const { error: updateError } = await supabase
+      .from('songs')
+      .update({
+        preview_audio_url: publicUrl,
+        preview_generated_at: new Date().toISOString(),
+        preview_duration_seconds: PREVIEW_MAX_DURATION,
+        preview_file_size_bytes: previewBytes.length
+      })
+      .eq('id', songId);
 
-    console.log(`[generate-preview] Complete in ${Date.now() - startTime}ms`);
+    if (updateError) {
+      console.error('[generate-preview] Failed to update song:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update song record' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[generate-preview] Preview generated successfully for song ${songId}`);
+    console.log(`[generate-preview] Stats: ${previewBytes.length} bytes, ${PREVIEW_MAX_DURATION}s max, ${PREVIEW_BITRATE} bitrate, mono`);
 
     return new Response(
-      JSON.stringify({ success: true, previewUrl: publicUrl, duration: estimatedDuration, fileSize: audioBytes.length }),
+      JSON.stringify({
+        success: true,
+        previewUrl: publicUrl,
+        duration: PREVIEW_MAX_DURATION,
+        fileSize: previewBytes.length,
+        bitrate: PREVIEW_BITRATE,
+        sampleRate: PREVIEW_SAMPLE_RATE,
+        channels: PREVIEW_CHANNELS
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('[generate-preview] Error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Internal server error', details: String(error) }),
+      JSON.stringify({ error: 'Internal server error', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
