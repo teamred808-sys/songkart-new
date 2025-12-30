@@ -6,42 +6,34 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-const features = [
-  { 
-    name: "Personal Use", 
-    tooltip: "Use in personal videos, demos, and non-commercial content",
-    personal: true, commercial: true, exclusive: true 
-  },
-  { 
-    name: "YouTube", 
-    tooltip: "Earn ad revenue on YouTube without copyright claims",
-    personal: false, commercial: true, exclusive: true 
-  },
-  { 
-    name: "Streaming", 
-    tooltip: "Use on Twitch, podcasts, and other streaming platforms",
-    personal: false, commercial: true, exclusive: true 
-  },
-  { 
-    name: "Ads & Marketing", 
-    tooltip: "Use in ads, commercials, and promotional content",
-    personal: false, commercial: true, exclusive: true 
-  },
-  { 
-    name: "Full Ownership", 
-    tooltip: "Complete ownership - song is removed from marketplace",
-    personal: false, commercial: false, exclusive: true 
-  },
-];
-
-const licenseColumns = [
-  { key: "personal", label: "Personal", shortLabel: "Personal" },
-  { key: "commercial", label: "Commercial", shortLabel: "Comm." },
-  { key: "exclusive", label: "Exclusive", shortLabel: "Excl." },
-];
+import { useLicenseSystem, LicenseRights } from "@/hooks/useLicenseTierDefinitions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function LicenseComparisonTable() {
+  const { tiers, labels, isLoading } = useLicenseSystem();
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">License Comparison</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-3 w-full">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1">
+                <Skeleton className="h-5 w-20 mb-3" />
+                {[1, 2, 3, 4, 5].map((j) => (
+                  <Skeleton key={j} className="h-4 w-full mb-2" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
       <CardHeader className="pb-3">
@@ -62,22 +54,36 @@ export function LicenseComparisonTable() {
       <CardContent>
         {/* Responsive: vertical on mobile, horizontal on desktop */}
         <div className="flex flex-col lg:flex-row gap-3 w-full">
-          {licenseColumns.map((col) => (
-            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1 min-w-0">
-              <h4 className="font-medium text-primary mb-3 text-sm">{col.label}</h4>
+          {tiers.map((tier) => (
+            <div key={tier.id} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1 min-w-0">
+              <h4 className="font-medium text-primary mb-3 text-sm">{tier.name}</h4>
               <ul className="space-y-2">
-                {features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-xs">
-                    {feature[col.key as keyof typeof feature] ? (
-                      <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <X className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-                    )}
-                    <span className={`break-words ${feature[col.key as keyof typeof feature] ? "text-foreground" : "text-muted-foreground/60"}`}>
-                      {feature.name}
-                    </span>
-                  </li>
-                ))}
+                {labels.map((label) => {
+                  const hasRight = (tier.rights as LicenseRights)[label.right_key as keyof LicenseRights];
+                  return (
+                    <li key={label.id} className="flex items-start gap-2 text-xs">
+                      {hasRight ? (
+                        <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <X className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`break-words cursor-help ${hasRight ? "text-foreground" : "text-muted-foreground/60"}`}>
+                              {label.display_name}
+                            </span>
+                          </TooltipTrigger>
+                          {label.tooltip && (
+                            <TooltipContent>
+                              <p>{label.tooltip}</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
