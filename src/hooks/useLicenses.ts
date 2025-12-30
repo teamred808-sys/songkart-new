@@ -78,10 +78,32 @@ export function useDownloadLicense() {
 
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data?.download_url) {
-        window.open(data.download_url, '_blank');
-        toast.success('License download started');
+        try {
+          // Fetch the file as a blob to force download (bypasses cross-origin restriction)
+          const response = await fetch(data.download_url);
+          if (!response.ok) throw new Error('Failed to fetch license file');
+          
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          
+          // Create download link with blob URL (same-origin, so download attribute works)
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = data.filename || `license_${data.license_number || 'agreement'}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Clean up blob URL after a short delay
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          
+          toast.success('License download started');
+        } catch (error) {
+          console.error('License download error:', error);
+          toast.error('Failed to download license file');
+        }
       }
     },
     onError: (error: Error) => {
