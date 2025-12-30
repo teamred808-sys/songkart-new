@@ -170,7 +170,15 @@ export default function EditSong() {
 
   const handleUpdateTierPrice = async (tierId: string) => {
     const newPrice = tierPrices[tierId];
-    if (!newPrice || newPrice <= 0) return;
+    // Allow 0 for free tiers, but prevent negative or undefined prices
+    if (newPrice === undefined || newPrice === null || newPrice < 0 || isNaN(newPrice)) {
+      toast({ 
+        title: 'Invalid price', 
+        description: 'Price cannot be negative', 
+        variant: 'destructive' 
+      });
+      return;
+    }
 
     updateLicenseTier.mutate({
       tier_id: tierId,
@@ -428,18 +436,27 @@ export default function EditSong() {
                           <Label htmlFor={`price-${tier.id}`} className="text-sm text-muted-foreground whitespace-nowrap">
                             Price (₹)
                           </Label>
-                          <Input
-                            id={`price-${tier.id}`}
-                            type="number"
-                            step="0.01"
-                            value={tierPrices[tier.id] || tier.price}
-                            onChange={(e) => setTierPrices(prev => ({ 
-                              ...prev, 
-                              [tier.id]: parseFloat(e.target.value) || 0 
-                            }))}
-                            className="w-24"
-                          />
-                          {tierPrices[tier.id] !== tier.price && (
+                          <div className="flex flex-col gap-1">
+                            <Input
+                              id={`price-${tier.id}`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={tierPrices[tier.id] ?? tier.price}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setTierPrices(prev => ({ 
+                                  ...prev, 
+                                  [tier.id]: value === '' ? 0 : parseFloat(value) 
+                                }));
+                              }}
+                              className="w-24"
+                            />
+                            {tierPrices[tier.id] === 0 && (
+                              <span className="text-xs text-green-600">Free license</span>
+                            )}
+                          </div>
+                          {tierPrices[tier.id] !== undefined && Number(tierPrices[tier.id]) !== Number(tier.price) && (
                             <Button
                               type="button"
                               size="sm"
