@@ -37,7 +37,7 @@ export interface SellerSong {
 export interface LicenseTier {
   id: string;
   song_id: string;
-  license_type: 'personal' | 'youtube' | 'commercial' | 'film' | 'exclusive';
+  license_type: 'personal' | 'commercial' | 'exclusive';
   price: number;
   description: string | null;
   terms: string | null;
@@ -419,7 +419,7 @@ export function useAddLicenseTier() {
   return useMutation({
     mutationFn: async (data: { 
       song_id: string; 
-      license_type: 'personal' | 'youtube' | 'commercial' | 'film' | 'exclusive'; 
+      license_type: 'personal' | 'commercial' | 'exclusive'; 
       price: number; 
       terms?: string;
       max_sales?: number;

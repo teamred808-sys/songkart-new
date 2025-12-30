@@ -20,9 +20,7 @@ import { cn } from '@/lib/utils';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
-  { value: 'youtube', label: 'YouTube License', description: 'For YouTube content creators' },
   { value: 'commercial', label: 'Commercial', description: 'For commercial projects' },
-  { value: 'film', label: 'Film/TV', description: 'For film and television' },
   { value: 'exclusive', label: 'Exclusive', description: 'Full rights transfer' },
 ] as const;
 
@@ -44,7 +42,7 @@ const contentSchema = z.object({
 });
 
 const licenseTierSchema = z.object({
-  license_type: z.enum(['personal', 'youtube', 'commercial', 'film', 'exclusive']),
+  license_type: z.enum(['personal', 'commercial', 'exclusive']),
   price: z.number().min(0.01, 'Price must be at least ₹0.01'),
   max_sales: z.number().optional(),
   terms: z.string().optional(),
@@ -191,9 +189,7 @@ export default function UploadSong() {
     
     const defaultPrices: Record<string, number> = {
       personal: 29.99,
-      youtube: 49.99,
       commercial: 99.99,
-      film: 199.99,
       exclusive: 499.99,
     };
     

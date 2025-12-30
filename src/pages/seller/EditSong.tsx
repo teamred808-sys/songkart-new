@@ -32,9 +32,7 @@ import { cn } from '@/lib/utils';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
-  { value: 'youtube', label: 'YouTube License', description: 'For YouTube content creators', defaultPrice: 49.99 },
   { value: 'commercial', label: 'Commercial', description: 'For commercial projects', defaultPrice: 99.99 },
-  { value: 'film', label: 'Film/TV', description: 'For film and television', defaultPrice: 199.99 },
   { value: 'exclusive', label: 'Exclusive', description: 'Full rights transfer', defaultPrice: 499.99 },
 ] as const;
 
