@@ -14,6 +14,22 @@ interface FreeCheckoutRequest {
   acknowledgment_accepted: boolean;
 }
 
+// Generate a unique license number
+function generateLicenseNumber(): string {
+  const year = new Date().getFullYear();
+  const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+  return `LIC-${year}-${random}`;
+}
+
+// Compute SHA-256 hash
+async function computeHash(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -187,11 +203,17 @@ serve(async (req) => {
     // 11. Generate order number
     const { data: orderNumber } = await supabase.rpc('generate_order_number');
 
-    // Get buyer profile
+    // Get buyer and seller profiles
     const { data: buyerProfile } = await supabase
       .from("profiles")
-      .select("email")
+      .select("full_name, email")
       .eq("id", user.id)
+      .single();
+
+    const { data: sellerProfile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", song.seller_id)
       .single();
 
     // 12. Create checkout session
@@ -328,13 +350,118 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .eq("song_id", song_id);
 
-    // 19. Generate license PDF (async call)
+    // 19. Generate license document INLINE (not async call)
     try {
-      await supabase.functions.invoke("generate-license-pdf", {
-        body: { order_item_id: orderItem.id },
-      });
+      console.log("Generating license document for order item:", orderItem.id);
+      
+      // Fetch license template
+      const { data: template, error: templateError } = await supabase
+        .from("license_templates")
+        .select("*")
+        .eq("license_type", licenseTier.license_type)
+        .eq("is_active", true)
+        .order("version", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (templateError || !template) {
+        console.error("License template not found:", templateError);
+        // Don't fail the checkout, just log the error
+      } else {
+        const licenseNumber = generateLicenseNumber();
+        const buyerName = buyerProfile?.full_name || buyerProfile?.email || "Unknown Buyer";
+        const sellerName = sellerProfile?.full_name || sellerProfile?.email || "Unknown Seller";
+        const purchaseDate = new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+
+        // Create content hash
+        const hashContent = JSON.stringify({
+          licenseNumber,
+          orderItemId: orderItem.id,
+          buyerId: user.id,
+          sellerId: song.seller_id,
+          songId: song_id,
+          licenseType: licenseTier.license_type,
+          price: 0,
+          timestamp: new Date().toISOString(),
+        });
+        const documentHash = await computeHash(hashContent);
+
+        const pdfStoragePath = `licenses/${user.id}/${licenseNumber}.html`;
+
+        // Create minimal HTML license document
+        const htmlContent = `<!DOCTYPE html>
+<html><head><title>License - ${licenseNumber}</title>
+<style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.6}
+.header{text-align:center;border-bottom:3px double #333;padding-bottom:20px;margin-bottom:30px}
+.logo{font-size:24px;font-weight:bold}h1{font-size:18px;text-align:center}
+.info{background:#f5f5f5;padding:15px;margin:20px 0;border-left:4px solid #333}
+.section{margin:20px 0}h2{font-size:14px;border-bottom:1px solid #ddd;padding-bottom:5px}
+.footer{margin-top:40px;padding-top:20px;border-top:2px solid #333;font-size:10px;text-align:center;color:#666}
+.hash{font-family:monospace;font-size:9px;word-break:break-all;background:#f9f9f9;padding:10px}</style></head>
+<body>
+<div class="header"><div class="logo">SONGMARKET</div><p>${template.template_name}</p><small>License No: ${licenseNumber}</small></div>
+<h1>Music License Agreement</h1>
+<div class="info">
+<strong>Song:</strong> "${song.title}"<br>
+<strong>License Type:</strong> ${licenseTier.license_type}<br>
+<strong>Licensor:</strong> ${sellerName}<br>
+<strong>Licensee:</strong> ${buyerName}<br>
+<strong>Order:</strong> ${orderNumber}<br>
+<strong>Date:</strong> ${purchaseDate}<br>
+<strong>Fee:</strong> FREE (₹0)
+</div>
+<div class="section"><h2>Permitted Uses</h2><ul>${template.permitted_uses.map((u: string) => `<li>${u}</li>`).join('')}</ul></div>
+<div class="section"><h2>Prohibited Uses</h2><ul>${template.prohibited_uses.map((u: string) => `<li>${u}</li>`).join('')}</ul></div>
+<div class="section"><h2>Terms</h2><p>${template.ownership_clause}</p><p>${template.warranty_disclaimer}</p></div>
+<div class="hash"><strong>Document Hash:</strong> ${documentHash}</div>
+<div class="footer"><p>Generated by SongMarket on ${purchaseDate}</p></div>
+</body></html>`;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from("license-documents")
+          .upload(pdfStoragePath, htmlContent, {
+            contentType: "text/html",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("Storage upload error:", uploadError);
+        } else {
+          // Create license_documents record
+          const { error: licenseError } = await supabase
+            .from("license_documents")
+            .insert({
+              license_number: licenseNumber,
+              order_item_id: orderItem.id,
+              template_id: template.id,
+              template_version: template.version,
+              buyer_id: user.id,
+              seller_id: song.seller_id,
+              song_id: song_id,
+              buyer_name: buyerName,
+              seller_name: sellerName,
+              song_title: song.title,
+              license_type: licenseTier.license_type,
+              price: 0,
+              pdf_storage_path: pdfStoragePath,
+              document_hash: documentHash,
+              status: "active",
+            });
+
+          if (licenseError) {
+            console.error("License document insert error:", licenseError);
+          } else {
+            console.log("License document created:", licenseNumber);
+          }
+        }
+      }
     } catch (pdfError) {
-      console.error("PDF generation error (non-blocking):", pdfError);
+      console.error("License document generation error (non-blocking):", pdfError);
     }
 
     console.log(`Free checkout completed: order=${order.id}, orderItem=${orderItem.id}`);
