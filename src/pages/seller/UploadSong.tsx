@@ -289,7 +289,7 @@ export default function UploadSong() {
           audio_url,
           preview_audio_url,
           preview_status: preview_audio_url ? 'ready' : null,
-          preview_duration_seconds: previewDuration,
+          preview_duration_seconds: previewDuration ? Math.round(previewDuration) : null,
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.base_price,
