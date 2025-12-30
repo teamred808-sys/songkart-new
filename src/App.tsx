@@ -36,6 +36,7 @@ const SalesOrders = lazy(() => import("./pages/seller/SalesOrders"));
 const Wallet = lazy(() => import("./pages/seller/Wallet"));
 const Analytics = lazy(() => import("./pages/seller/Analytics"));
 const SellerSettings = lazy(() => import("./pages/seller/SellerSettings"));
+const PayoutSettings = lazy(() => import("./pages/seller/PayoutSettings"));
 
 // Lazy loaded buyer pages
 const BuyerDashboard = lazy(() => import("./pages/buyer/BuyerDashboard"));
@@ -67,6 +68,7 @@ const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
 const ContentEditor = lazy(() => import("./pages/admin/ContentEditor"));
 const NewUploadsManagement = lazy(() => import("./pages/admin/NewUploadsManagement"));
 const RatingModeration = lazy(() => import("./pages/admin/RatingModeration"));
+const PayoutVerification = lazy(() => import("./pages/admin/PayoutVerification"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -125,6 +127,7 @@ const App = () => (
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesOrders /></Suspense>} />
               <Route path="wallet" element={<Suspense fallback={<PageLoader />}><Wallet /></Suspense>} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
+              <Route path="payout" element={<Suspense fallback={<PageLoader />}><PayoutSettings /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><SellerSettings /></Suspense>} />
             </Route>
             
@@ -142,6 +145,7 @@ const App = () => (
               <Route path="orders" element={<Suspense fallback={<PageLoader />}><OrderManagement /></Suspense>} />
               <Route path="licenses" element={<Suspense fallback={<PageLoader />}><LicenseManagement /></Suspense>} />
               <Route path="withdrawals" element={<Suspense fallback={<PageLoader />}><WithdrawalManagement /></Suspense>} />
+              <Route path="payout-verification" element={<Suspense fallback={<PageLoader />}><PayoutVerification /></Suspense>} />
               <Route path="disputes" element={<Suspense fallback={<PageLoader />}><DisputeManagement /></Suspense>} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AdminAnalytics /></Suspense>} />
               <Route path="featured" element={<Suspense fallback={<PageLoader />}><FeaturedContent /></Suspense>} />

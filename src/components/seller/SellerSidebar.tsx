@@ -11,7 +11,8 @@ import {
   ChevronRight,
   LogOut,
   Home,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Banknote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ const navSections = [
   {
     title: 'Account',
     items: [
+      { icon: Banknote, label: 'Payout Settings', path: '/seller/payout' },
       { icon: Settings, label: 'Settings', path: '/seller/settings' },
     ],
   },
