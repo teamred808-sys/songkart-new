@@ -11,40 +11,38 @@ const features = [
   { 
     name: "Personal Projects", 
     tooltip: "Use in personal videos, demos, and non-commercial content",
-    personal: true, youtube: true, commercial: true, film: true, exclusive: true 
+    personal: true, commercial: true, exclusive: true 
   },
   { 
     name: "YouTube Monetization", 
     tooltip: "Earn ad revenue on YouTube without copyright claims",
-    personal: false, youtube: true, commercial: true, film: true, exclusive: true 
+    personal: false, commercial: true, exclusive: true 
   },
   { 
     name: "Streaming Platforms", 
     tooltip: "Use on Twitch, podcasts, and other streaming platforms",
-    personal: false, youtube: true, commercial: true, film: true, exclusive: true 
+    personal: false, commercial: true, exclusive: true 
   },
   { 
     name: "Advertising & Marketing", 
     tooltip: "Use in ads, commercials, and promotional content",
-    personal: false, youtube: false, commercial: true, film: true, exclusive: true 
+    personal: false, commercial: true, exclusive: true 
   },
   { 
     name: "Film, TV & Documentaries", 
     tooltip: "Use in films, TV shows, documentaries, and broadcast media",
-    personal: false, youtube: false, commercial: false, film: true, exclusive: true 
+    personal: false, commercial: false, exclusive: true 
   },
   { 
     name: "Full Ownership Rights", 
     tooltip: "Complete ownership - song is removed from marketplace",
-    personal: false, youtube: false, commercial: false, film: false, exclusive: true 
+    personal: false, commercial: false, exclusive: true 
   },
 ];
 
 const licenseColumns = [
   { key: "personal", label: "Personal", shortLabel: "Personal" },
-  { key: "youtube", label: "YouTube", shortLabel: "YouTube" },
   { key: "commercial", label: "Commercial", shortLabel: "Comm." },
-  { key: "film", label: "Film/TV", shortLabel: "Film" },
   { key: "exclusive", label: "Exclusive", shortLabel: "Excl." },
 ];
 
