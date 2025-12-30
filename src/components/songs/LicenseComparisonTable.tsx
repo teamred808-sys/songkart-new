@@ -48,7 +48,7 @@ const licenseColumns = [
 
 export function LicenseComparisonTable() {
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
+    <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           License Comparison
@@ -66,9 +66,9 @@ export function LicenseComparisonTable() {
       </CardHeader>
       <CardContent>
         {/* Responsive: vertical on mobile, horizontal on desktop */}
-        <div className="flex flex-col lg:flex-row gap-3">
+        <div className="flex flex-col lg:flex-row gap-3 w-full">
           {licenseColumns.map((col) => (
-            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1">
+            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1 min-w-0">
               <h4 className="font-medium text-primary mb-3 text-sm">{col.label}</h4>
               <ul className="space-y-2">
                 {features.map((feature, idx) => (
