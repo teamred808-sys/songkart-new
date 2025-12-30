@@ -41,6 +41,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const progressIntervalRef = useRef<number | null>(null);
     const hasStartedRef = useRef(false);
+    const hasEndedSuccessfullyRef = useRef(false);
     
     const { getDirectPreviewUrl, getToken, getStreamUrl, checkAbuse } = useSecurePlayback();
     const audioContext = useAudioPlayerOptional();
@@ -85,6 +86,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
       audio.addEventListener('contextmenu', (e) => e.preventDefault());
       
       audio.addEventListener('ended', () => {
+        hasEndedSuccessfullyRef.current = true;
         setIsPlaying(false);
         setProgress(0);
         setCurrentTime(0);
@@ -95,6 +97,13 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
       });
 
       audio.addEventListener('error', (e) => {
+        // Ignore errors that occur after successful playback completion
+        // (Some browsers fire error events after the audio stream ends normally)
+        if (hasEndedSuccessfullyRef.current) {
+          console.log('Ignoring error event after successful playback');
+          return;
+        }
+        
         console.error('Audio element error:', e);
         setIsPlaying(false);
         setIsLoading(false);
@@ -120,6 +129,9 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
 
     const handlePlay = useCallback(async () => {
       if (isLoading) return;
+
+      // Reset the successful playback flag for new playback attempt
+      hasEndedSuccessfullyRef.current = false;
 
       // Guard: Don't attempt playback if no preview URL is available
       if (!previewUrl) {
@@ -207,6 +219,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
       setProgress(0);
       setCurrentTime(0);
       hasStartedRef.current = false;
+      hasEndedSuccessfullyRef.current = false;
       stopProgressTracking();
     }, [stopProgressTracking]);
 
