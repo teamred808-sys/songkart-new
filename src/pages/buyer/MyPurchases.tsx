@@ -77,13 +77,24 @@ export default function MyPurchases() {
       if (data?.error) throw new Error(data.error);
 
       if (data?.download_url) {
-        // Trigger browser download
+        // Fetch the file as a blob to force download (bypasses cross-origin restriction)
+        const response = await fetch(data.download_url);
+        if (!response.ok) throw new Error('Failed to fetch audio file');
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Create download link with blob URL (same-origin, so download attribute works)
         const link = document.createElement('a');
-        link.href = data.download_url;
+        link.href = blobUrl;
         link.download = data.filename || `${item.songs.title}_licensed.mp3`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        // Clean up blob URL after a short delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        
         toast.success('Audio download started');
       }
     } catch (error: any) {
