@@ -65,20 +65,20 @@ export function LicenseComparisonTable() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Responsive Card Grid - Visible on all screens */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+        {/* Vertical stacked layout for sidebar */}
+        <div className="flex flex-col gap-3">
           {licenseColumns.map((col) => (
-            <div key={col.key} className="border border-border/50 rounded-lg p-3 bg-background/30">
-              <h4 className="font-medium text-primary mb-2 text-sm">{col.label}</h4>
-              <ul className="space-y-1.5">
+            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30">
+              <h4 className="font-medium text-primary mb-3 text-sm">{col.label}</h4>
+              <ul className="space-y-2">
                 {features.map((feature, idx) => (
-                  <li key={idx} className="flex items-center gap-2 text-xs">
+                  <li key={idx} className="flex items-start gap-2 text-xs">
                     {feature[col.key as keyof typeof feature] ? (
-                      <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                      <Check className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
                     ) : (
-                      <X className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+                      <X className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
                     )}
-                    <span className={feature[col.key as keyof typeof feature] ? "text-foreground" : "text-muted-foreground/60"}>
+                    <span className={`break-words ${feature[col.key as keyof typeof feature] ? "text-foreground" : "text-muted-foreground/60"}`}>
                       {feature.name}
                     </span>
                   </li>
