@@ -83,7 +83,7 @@ export default function MyPurchases() {
                 <div className="space-y-4">
                   {filteredOrders.map((order) => (
                     <div key={order.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold">{order.order_number}</p>
                           <p className="text-sm text-muted-foreground">
@@ -91,7 +91,15 @@ export default function MyPurchases() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold"><Price amount={Number(order.total_amount)} /></p>
+                          <div className="flex items-center gap-2 justify-end">
+                            {Number(order.total_amount) === 0 ? (
+                              <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                                FREE
+                              </Badge>
+                            ) : (
+                              <p className="font-bold"><Price amount={Number(order.total_amount)} /></p>
+                            )}
+                          </div>
                           <Badge 
                             variant={order.payment_status === 'paid' ? 'default' : 'secondary'}
                             className={order.payment_status === 'paid' ? 'bg-green-500' : ''}
@@ -124,9 +132,18 @@ export default function MyPurchases() {
                                 {item.is_exclusive && (
                                   <Badge className="bg-amber-500 text-xs">Exclusive</Badge>
                                 )}
+                                {Number(item.price) === 0 && (
+                                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                                    FREE
+                                  </Badge>
+                                )}
                               </div>
                             </div>
-                            <p className="font-medium"><Price amount={Number(item.price)} /></p>
+                            {Number(item.price) === 0 ? (
+                              <p className="font-medium text-green-600">FREE</p>
+                            ) : (
+                              <p className="font-medium"><Price amount={Number(item.price)} /></p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -204,7 +221,13 @@ export default function MyPurchases() {
                             {format(new Date(purchase.created_at), 'MMM d, yyyy')}
                           </TableCell>
                           <TableCell className="font-medium">
-                            <Price amount={Number(purchase.amount)} />
+                            {Number(purchase.amount) === 0 ? (
+                              <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                                FREE
+                              </Badge>
+                            ) : (
+                              <Price amount={Number(purchase.amount)} />
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">

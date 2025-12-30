@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, CreditCard, AlertTriangle, ShoppingCart, CheckCircle, Lock } from 'lucide-react';
+import { ShoppingBag, CreditCard, AlertTriangle, ShoppingCart, CheckCircle, Lock, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartWithTotals, useRemoveFromCartWithReservation, useCreateCheckoutSession } from '@/hooks/useCheckout';
+import { useFreeCheckoutFromCart } from '@/hooks/useFreeCheckout';
 import { CartItemCard } from '@/components/cart/CartItemCard';
 import { AcknowledgmentCheckbox } from '@/components/cart/AcknowledgmentCheckbox';
 import { PriceBreakdown } from '@/components/cart/PriceBreakdown';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 const steps = [
   { id: 1, label: "Cart", icon: ShoppingCart },
@@ -21,15 +23,25 @@ export default function Cart() {
   const { data: cart, isLoading } = useCartWithTotals();
   const removeFromCart = useRemoveFromCartWithReservation();
   const createCheckout = useCreateCheckoutSession();
+  const freeCheckout = useFreeCheckoutFromCart();
   const [acknowledged, setAcknowledged] = useState(false);
 
   const handleRemove = (cartItemId: string, songId: string, isExclusive: boolean) => {
     removeFromCart.mutate({ cartItemId, songId, isExclusive });
   };
 
+  // Determine if this is a free checkout (total = 0)
+  const isFreeCheckout = cart?.total === 0 && (cart?.itemCount || 0) > 0;
+
   const handleCheckout = () => {
-    createCheckout.mutate({ acknowledgmentAccepted: acknowledged });
+    if (isFreeCheckout) {
+      freeCheckout.mutate({ acknowledgmentAccepted: acknowledged });
+    } else {
+      createCheckout.mutate({ acknowledgmentAccepted: acknowledged });
+    }
   };
+
+  const isProcessing = createCheckout.isPending || freeCheckout.isPending;
 
   const currentStep = 1;
 
@@ -120,7 +132,14 @@ export default function Cart() {
         <div>
           <Card className="sticky top-6">
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                Order Summary
+                {isFreeCheckout && (
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/30">
+                    FREE
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <PriceBreakdown
@@ -134,14 +153,26 @@ export default function Cart() {
               <Button
                 className="w-full"
                 size="lg"
-                disabled={!cart?.itemCount || !acknowledged || createCheckout.isPending}
+                disabled={!cart?.itemCount || !acknowledged || isProcessing}
                 onClick={handleCheckout}
               >
-                <CreditCard className="mr-2 h-4 w-4" />
-                {createCheckout.isPending ? 'Processing...' : 'Proceed to Checkout'}
+                {isFreeCheckout ? (
+                  <>
+                    <Gift className="mr-2 h-4 w-4" />
+                    {isProcessing ? 'Processing...' : 'Claim Free License'}
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
+                  </>
+                )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                🔒 Secure checkout powered by Cashfree
+                {isFreeCheckout 
+                  ? '🎁 This license is free! No payment required.'
+                  : '🔒 Secure checkout powered by Cashfree'
+                }
               </p>
             </CardFooter>
           </Card>
