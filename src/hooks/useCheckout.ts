@@ -325,7 +325,11 @@ export function useOrders() {
             songs:song_id (
               id,
               title,
-              cover_image_url
+              cover_image_url,
+              audio_url,
+              full_lyrics,
+              has_audio,
+              has_lyrics
             )
           )
         `)

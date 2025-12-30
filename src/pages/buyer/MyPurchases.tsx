@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useCheckout';
 import { useBuyerPurchases } from '@/hooks/useBuyerData';
+import { useDownloadLicense } from '@/hooks/useLicenses';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,14 +18,34 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Music, Search, Download, FileText, ExternalLink, Package, CreditCard } from 'lucide-react';
+import { Music, Search, Download, FileText, ExternalLink, Package, CreditCard, FileAudio, ScrollText, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+
+interface OrderItem {
+  id: string;
+  license_type: string;
+  price: number;
+  is_exclusive: boolean;
+  songs?: {
+    id: string;
+    title: string;
+    cover_image_url?: string;
+    audio_url?: string;
+    full_lyrics?: string;
+    has_audio?: boolean;
+    has_lyrics?: boolean;
+  };
+}
 
 export default function MyPurchases() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   const { data: purchases, isLoading: purchasesLoading } = useBuyerPurchases();
+  const { mutate: downloadLicense, isPending: isDownloadingLicense } = useDownloadLicense();
   const [searchTerm, setSearchTerm] = useState('');
+  const [downloadingAudio, setDownloadingAudio] = useState<string | null>(null);
+  const [downloadingLyrics, setDownloadingLyrics] = useState<string | null>(null);
 
   const filteredOrders = orders?.filter((order) =>
     order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,6 +59,72 @@ export default function MyPurchases() {
   );
 
   const isLoading = ordersLoading || purchasesLoading;
+
+  // Handle audio download
+  const handleAudioDownload = async (item: OrderItem) => {
+    if (!item.songs?.has_audio || !item.songs?.audio_url) {
+      toast.error('Audio file not available for this song');
+      return;
+    }
+
+    setDownloadingAudio(item.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('download-order-audio', {
+        body: { order_item_id: item.id },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.download_url) {
+        // Trigger browser download
+        const link = document.createElement('a');
+        link.href = data.download_url;
+        link.download = data.filename || `${item.songs.title}_licensed.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Audio download started');
+      }
+    } catch (error: any) {
+      console.error('Audio download error:', error);
+      toast.error(error.message || 'Failed to download audio');
+    } finally {
+      setDownloadingAudio(null);
+    }
+  };
+
+  // Handle lyrics download
+  const handleLyricsDownload = (item: OrderItem) => {
+    if (!item.songs?.full_lyrics) {
+      toast.error('Lyrics not available for this song');
+      return;
+    }
+
+    setDownloadingLyrics(item.id);
+    try {
+      const blob = new Blob([item.songs.full_lyrics], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${item.songs.title?.replace(/[^a-zA-Z0-9]/g, '_') || 'lyrics'}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Lyrics downloaded');
+    } catch (error: any) {
+      console.error('Lyrics download error:', error);
+      toast.error('Failed to download lyrics');
+    } finally {
+      setDownloadingLyrics(null);
+    }
+  };
+
+  // Handle license PDF download
+  const handleLicenseDownload = (orderItemId: string) => {
+    downloadLicense({ orderItemId });
+  };
 
   return (
     <div className="space-y-6">
@@ -110,39 +198,94 @@ export default function MyPurchases() {
                       </div>
                       
                       <div className="grid gap-2">
-                        {order.order_items?.map((item: any) => (
-                          <div key={item.id} className="flex items-center gap-3 p-2 bg-muted/50 rounded">
-                            <div className="h-10 w-10 rounded bg-muted flex items-center justify-center overflow-hidden">
-                              {item.songs?.cover_image_url ? (
-                                <img
-                                  src={item.songs.cover_image_url}
-                                  alt={item.songs.title}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <Music className="h-5 w-5 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{item.songs?.title}</p>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {item.license_type}
-                                </Badge>
-                                {item.is_exclusive && (
-                                  <Badge className="bg-amber-500 text-xs">Exclusive</Badge>
-                                )}
-                                {Number(item.price) === 0 && (
-                                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
-                                    FREE
-                                  </Badge>
+                        {order.order_items?.map((item: OrderItem) => (
+                          <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-muted/50 rounded">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                                {item.songs?.cover_image_url ? (
+                                  <img
+                                    src={item.songs.cover_image_url}
+                                    alt={item.songs.title}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <Music className="h-5 w-5 text-muted-foreground" />
                                 )}
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{item.songs?.title}</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.license_type}
+                                  </Badge>
+                                  {item.is_exclusive && (
+                                    <Badge className="bg-amber-500 text-xs">Exclusive</Badge>
+                                  )}
+                                  {Number(item.price) === 0 && (
+                                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                                      FREE
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              {Number(item.price) === 0 ? (
+                                <p className="font-medium text-green-600 shrink-0">FREE</p>
+                              ) : (
+                                <p className="font-medium shrink-0"><Price amount={Number(item.price)} /></p>
+                              )}
                             </div>
-                            {Number(item.price) === 0 ? (
-                              <p className="font-medium text-green-600">FREE</p>
-                            ) : (
-                              <p className="font-medium"><Price amount={Number(item.price)} /></p>
+                            
+                            {/* Download buttons - only show for paid orders */}
+                            {order.payment_status === 'paid' && (
+                              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                                {/* Audio download */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAudioDownload(item)}
+                                  disabled={!item.songs?.has_audio || downloadingAudio === item.id}
+                                  title={item.songs?.has_audio ? 'Download Audio' : 'Audio not available'}
+                                >
+                                  {downloadingAudio === item.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <FileAudio className="h-4 w-4" />
+                                  )}
+                                  <span className="ml-1 hidden sm:inline">Audio</span>
+                                </Button>
+                                
+                                {/* Lyrics download */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleLyricsDownload(item)}
+                                  disabled={!item.songs?.has_lyrics || downloadingLyrics === item.id}
+                                  title={item.songs?.has_lyrics ? 'Download Lyrics' : 'Lyrics not available'}
+                                >
+                                  {downloadingLyrics === item.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-4 w-4" />
+                                  )}
+                                  <span className="ml-1 hidden sm:inline">Lyrics</span>
+                                </Button>
+                                
+                                {/* License PDF download */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleLicenseDownload(item.id)}
+                                  disabled={isDownloadingLicense}
+                                  title="Download License Agreement"
+                                >
+                                  {isDownloadingLicense ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <ScrollText className="h-4 w-4" />
+                                  )}
+                                  <span className="ml-1 hidden sm:inline">License</span>
+                                </Button>
+                              </div>
                             )}
                           </div>
                         ))}
