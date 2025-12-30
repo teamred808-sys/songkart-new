@@ -21,7 +21,8 @@ import {
   Home,
   Bug,
   Activity,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const navItems = [
   { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },
   { icon: Wallet, label: 'Withdrawals', path: '/admin/withdrawals' },
+  { icon: ShieldCheck, label: 'Payout Verification', path: '/admin/payout-verification' },
   { icon: AlertTriangle, label: 'Disputes', path: '/admin/disputes' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: Star, label: 'Featured Content', path: '/admin/featured' },

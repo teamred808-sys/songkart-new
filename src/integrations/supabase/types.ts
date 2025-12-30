@@ -1367,6 +1367,39 @@ export type Database = {
           },
         ]
       }
+      payout_profile_change_logs: {
+        Row: {
+          change_type: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          previous_values: Json | null
+          seller_id: string
+        }
+        Insert: {
+          change_type: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          previous_values?: Json | null
+          seller_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          previous_values?: Json | null
+          seller_id?: string
+        }
+        Relationships: []
+      }
       piracy_reports: {
         Row: {
           created_at: string | null
@@ -1635,6 +1668,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seller_payout_profiles: {
+        Row: {
+          account_holder_name: string
+          account_number_encrypted: string
+          account_number_last4: string
+          account_type: string
+          bank_name: string
+          country: string
+          created_at: string
+          currency: string
+          id: string
+          ifsc_code: string
+          is_active: boolean
+          is_locked: boolean
+          locked_reason: string | null
+          rejection_reason: string | null
+          seller_id: string
+          updated_at: string
+          upi_id: string | null
+          verification_status: Database["public"]["Enums"]["payout_verification_status"]
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number_encrypted: string
+          account_number_last4: string
+          account_type?: string
+          bank_name: string
+          country?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          ifsc_code: string
+          is_active?: boolean
+          is_locked?: boolean
+          locked_reason?: string | null
+          rejection_reason?: string | null
+          seller_id: string
+          updated_at?: string
+          upi_id?: string | null
+          verification_status?: Database["public"]["Enums"]["payout_verification_status"]
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number_encrypted?: string
+          account_number_last4?: string
+          account_type?: string
+          bank_name?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          ifsc_code?: string
+          is_active?: boolean
+          is_locked?: boolean
+          locked_reason?: string | null
+          rejection_reason?: string | null
+          seller_id?: string
+          updated_at?: string
+          upi_id?: string | null
+          verification_status?: Database["public"]["Enums"]["payout_verification_status"]
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
       }
       seller_tier_history: {
         Row: {
@@ -2428,6 +2530,7 @@ export type Database = {
           total_count: number
         }[]
       }
+      can_seller_withdraw: { Args: { p_seller_id: string }; Returns: Json }
       check_existing_purchase: {
         Args: { p_buyer_id: string; p_license_type: string; p_song_id: string }
         Returns: boolean
@@ -2542,6 +2645,11 @@ export type Database = {
       content_type: "page" | "post"
       dispute_status: "open" | "in_review" | "resolved" | "closed"
       license_type: "personal" | "youtube" | "commercial" | "film" | "exclusive"
+      payout_verification_status:
+        | "not_added"
+        | "pending"
+        | "verified"
+        | "rejected"
       song_status: "pending" | "approved" | "rejected"
       withdrawal_status: "pending" | "approved" | "processed" | "rejected"
     }
@@ -2676,6 +2784,12 @@ export const Constants = {
       content_type: ["page", "post"],
       dispute_status: ["open", "in_review", "resolved", "closed"],
       license_type: ["personal", "youtube", "commercial", "film", "exclusive"],
+      payout_verification_status: [
+        "not_added",
+        "pending",
+        "verified",
+        "rejected",
+      ],
       song_status: ["pending", "approved", "rejected"],
       withdrawal_status: ["pending", "approved", "processed", "rejected"],
     },
