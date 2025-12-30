@@ -65,10 +65,10 @@ export function LicenseComparisonTable() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Vertical stacked layout for sidebar */}
-        <div className="flex flex-col gap-3">
+        {/* Responsive: vertical on mobile, horizontal on desktop */}
+        <div className="flex flex-col lg:flex-row gap-3">
           {licenseColumns.map((col) => (
-            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30">
+            <div key={col.key} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1">
               <h4 className="font-medium text-primary mb-3 text-sm">{col.label}</h4>
               <ul className="space-y-2">
                 {features.map((feature, idx) => (
