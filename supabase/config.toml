@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.download-purchased]
 verify_jwt = true
 
+[functions.download-order-audio]
+verify_jwt = true
+
 [functions.check-abuse]
 verify_jwt = false
 
