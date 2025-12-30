@@ -871,6 +871,7 @@ export type Database = {
           revocation_reason: string | null
           revoked_at: string | null
           revoked_by: string | null
+          rights_snapshot: Json | null
           seller_id: string
           seller_name: string
           song_id: string
@@ -894,6 +895,7 @@ export type Database = {
           revocation_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
+          rights_snapshot?: Json | null
           seller_id: string
           seller_name: string
           song_id: string
@@ -917,6 +919,7 @@ export type Database = {
           revocation_reason?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
+          rights_snapshot?: Json | null
           seller_id?: string
           seller_name?: string
           song_id?: string
@@ -948,6 +951,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      license_rights_labels: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          display_order: number
+          id: string
+          is_active: boolean | null
+          right_key: string
+          tooltip: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          display_order: number
+          id?: string
+          is_active?: boolean | null
+          right_key: string
+          tooltip?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean | null
+          right_key?: string
+          tooltip?: string | null
+        }
+        Relationships: []
       }
       license_templates: {
         Row: {
@@ -1016,6 +1049,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      license_tier_definitions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean | null
+          name: string
+          rights: Json
+          tier_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          rights?: Json
+          tier_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          rights?: Json
+          tier_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       license_tiers: {
         Row: {
