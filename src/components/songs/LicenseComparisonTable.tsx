@@ -14,7 +14,7 @@ const features = [
     personal: true, commercial: true, exclusive: true 
   },
   { 
-    name: "YouTube/Monetization", 
+    name: "YouTube", 
     tooltip: "Earn ad revenue on YouTube without copyright claims",
     personal: false, commercial: true, exclusive: true 
   },
