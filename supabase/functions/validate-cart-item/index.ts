@@ -133,7 +133,21 @@ serve(async (req) => {
 
     const isExclusive = licenseTier.license_type === "exclusive";
 
-    // 9. For exclusive licenses, check reservations
+    // 9. Check if buyer already owns this license tier
+    const { data: existingPurchase } = await supabase.rpc('check_existing_purchase', {
+      p_buyer_id: user.id,
+      p_song_id: song_id,
+      p_license_type: licenseTier.license_type
+    });
+
+    if (existingPurchase) {
+      return new Response(JSON.stringify({ error: "You already own this license for this song" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 10. For exclusive licenses, check reservations
     if (isExclusive) {
       const { data: existingReservation } = await supabase
         .from("exclusive_reservations")

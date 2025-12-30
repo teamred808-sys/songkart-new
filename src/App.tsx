@@ -43,6 +43,7 @@ const MyPurchases = lazy(() => import("./pages/buyer/MyPurchases"));
 const MyDownloads = lazy(() => import("./pages/buyer/MyDownloads"));
 const Cart = lazy(() => import("./pages/buyer/Cart"));
 const OrderConfirmation = lazy(() => import("./pages/buyer/OrderConfirmation"));
+const FreeCheckoutSuccess = lazy(() => import("./pages/buyer/FreeCheckoutSuccess"));
 const Favorites = lazy(() => import("./pages/buyer/Favorites"));
 const BuyerSettings = lazy(() => import("./pages/buyer/BuyerSettings"));
 
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="downloads" element={<Suspense fallback={<PageLoader />}><MyDownloads /></Suspense>} />
               <Route path="cart" element={<Suspense fallback={<PageLoader />}><Cart /></Suspense>} />
               <Route path="order-confirmation" element={<Suspense fallback={<PageLoader />}><OrderConfirmation /></Suspense>} />
+              <Route path="free-checkout-success" element={<Suspense fallback={<PageLoader />}><FreeCheckoutSuccess /></Suspense>} />
               <Route path="favorites" element={<Suspense fallback={<PageLoader />}><Favorites /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><BuyerSettings /></Suspense>} />
             </Route>

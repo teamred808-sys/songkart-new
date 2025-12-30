@@ -2428,6 +2428,10 @@ export type Database = {
           total_count: number
         }[]
       }
+      check_existing_purchase: {
+        Args: { p_buyer_id: string; p_license_type: string; p_song_id: string }
+        Returns: boolean
+      }
       check_self_purchase: {
         Args: { p_buyer_id: string; p_song_id: string }
         Returns: Json
