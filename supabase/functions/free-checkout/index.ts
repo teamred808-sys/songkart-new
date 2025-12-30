@@ -457,6 +457,18 @@ serve(async (req) => {
             console.error("License document insert error:", licenseError);
           } else {
             console.log("License document created:", licenseNumber);
+            
+            // Update order_items with the license PDF URL for consistency
+            const { error: updateOrderItemError } = await supabase
+              .from("order_items")
+              .update({ license_pdf_url: pdfStoragePath })
+              .eq("id", orderItem.id);
+            
+            if (updateOrderItemError) {
+              console.error("Failed to update order_items.license_pdf_url:", updateOrderItemError);
+            } else {
+              console.log("Updated order_items.license_pdf_url for:", orderItem.id);
+            }
           }
         }
       }
