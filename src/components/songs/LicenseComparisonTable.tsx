@@ -67,8 +67,8 @@ export function LicenseComparisonTable() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Mobile Layout - Vertical Cards */}
-        <div className="md:hidden space-y-3">
+        {/* Responsive Card Grid - Visible on all screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
           {licenseColumns.map((col) => (
             <div key={col.key} className="border border-border/50 rounded-lg p-3 bg-background/30">
               <h4 className="font-medium text-primary mb-2 text-sm">{col.label}</h4>
@@ -88,50 +88,6 @@ export function LicenseComparisonTable() {
               </ul>
             </div>
           ))}
-        </div>
-
-        {/* Desktop/Tablet Layout - Horizontal Table */}
-        <div className="hidden md:block overflow-x-auto -mx-4 px-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="text-left py-2 pr-2 font-medium text-muted-foreground">Feature</th>
-                {licenseColumns.map((col) => (
-                  <th key={col.key} className="text-center py-2 px-1 font-medium text-foreground">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {features.map((feature, idx) => (
-                <tr key={idx} className="border-b border-border/30 last:border-0">
-                  <td className="py-2.5 pr-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger className="text-left flex items-center gap-1 text-foreground hover:text-primary transition-colors">
-                          <span className="text-sm">{feature.name}</span>
-                          <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{feature.tooltip}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </td>
-                  {licenseColumns.map((col) => (
-                    <td key={col.key} className="text-center py-2.5 px-1">
-                      {feature[col.key as keyof typeof feature] ? (
-                        <Check className="h-4 w-4 text-primary mx-auto" />
-                      ) : (
-                        <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
         <p className="text-xs text-muted-foreground mt-4 text-center">
           Not sure which license? <a href="/help/licensing" className="text-primary hover:underline">Read our licensing guide</a>
