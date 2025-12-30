@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const LICENSE_TYPES = [
@@ -38,6 +38,7 @@ const metadataSchema = z.object({
 const contentSchema = z.object({
   cover_image: z.any().optional(),
   audio_file: z.any().optional(),
+  preview_audio: z.any().optional(),
   full_lyrics: z.string().optional(),
   preview_lyrics: z.string().optional(),
 });
@@ -65,6 +66,50 @@ const STEPS = [
   { id: 4, title: 'Review', icon: CheckCircle },
 ];
 
+const MAX_PREVIEW_DURATION = 45;
+
+// Validate preview audio: MP3 only, max 45 seconds
+const validatePreviewAudio = async (file: File): Promise<{ valid: boolean; error?: string; duration?: number }> => {
+  // Check file extension
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (extension !== 'mp3') {
+    return { valid: false, error: 'Preview must be an MP3 file. Other formats are not supported.' };
+  }
+  
+  // Check MIME type
+  if (file.type !== 'audio/mpeg' && file.type !== 'audio/mp3') {
+    return { valid: false, error: 'Invalid file type. Please upload an MP3 file.' };
+  }
+  
+  // Check duration using Audio API
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    const objectUrl = URL.createObjectURL(file);
+    
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl);
+      const duration = audio.duration;
+      
+      if (duration > MAX_PREVIEW_DURATION) {
+        resolve({ 
+          valid: false, 
+          error: `Preview duration is ${Math.round(duration)} seconds. Maximum allowed is ${MAX_PREVIEW_DURATION} seconds.`,
+          duration 
+        });
+      } else {
+        resolve({ valid: true, duration });
+      }
+    };
+    
+    audio.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ valid: false, error: 'Unable to read audio file. Please ensure it is a valid MP3.' });
+    };
+    
+    audio.src = objectUrl;
+  });
+};
+
 export default function UploadSong() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -73,7 +118,6 @@ export default function UploadSong() {
   
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   // Form data state
@@ -85,6 +129,11 @@ export default function UploadSong() {
 
   // File previews
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  
+  // Preview audio validation state
+  const [previewValidationError, setPreviewValidationError] = useState<string | null>(null);
+  const [previewDuration, setPreviewDuration] = useState<number | null>(null);
+  const [isValidatingPreview, setIsValidatingPreview] = useState(false);
 
   const metadataForm = useForm<MetadataForm>({
     resolver: zodResolver(metadataSchema),
@@ -104,6 +153,36 @@ export default function UploadSong() {
       reader.onload = (e) => setCoverPreview(e.target?.result as string);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handlePreviewFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsValidatingPreview(true);
+    setPreviewValidationError(null);
+    setPreviewDuration(null);
+    
+    const result = await validatePreviewAudio(file);
+    
+    if (result.valid) {
+      setContent(prev => ({ ...prev, preview_audio: file }));
+      setPreviewDuration(result.duration!);
+      toast({ title: 'Preview audio accepted', description: `Duration: ${result.duration!.toFixed(1)} seconds` });
+    } else {
+      setPreviewValidationError(result.error!);
+      setContent(prev => ({ ...prev, preview_audio: null }));
+      e.target.value = '';
+      toast({ title: 'Preview rejected', description: result.error, variant: 'destructive' });
+    }
+    
+    setIsValidatingPreview(false);
+  };
+
+  const clearPreviewAudio = () => {
+    setContent(prev => ({ ...prev, preview_audio: null }));
+    setPreviewDuration(null);
+    setPreviewValidationError(null);
   };
 
   const addLicenseTier = (type: typeof LICENSE_TYPES[number]['value']) => {
@@ -170,6 +249,7 @@ export default function UploadSong() {
     try {
       let cover_image_url = null;
       let audio_url = null;
+      let preview_audio_url = null;
 
       // Upload cover image
       if (content.cover_image) {
@@ -185,8 +265,12 @@ export default function UploadSong() {
         audio_url = await uploadFile(content.audio_file, 'song-audio', audioPath);
       }
 
-      // Preview will be auto-generated after song creation
-      setUploadProgress(60);
+      // Upload preview audio (manual upload)
+      if (content.preview_audio) {
+        setUploadProgress(55);
+        const previewPath = `${user.id}/${Date.now()}-preview-${content.preview_audio.name}`;
+        preview_audio_url = await uploadFile(content.preview_audio, 'song-previews', previewPath);
+      }
 
       setUploadProgress(70);
 
@@ -203,7 +287,9 @@ export default function UploadSong() {
           language: metadata.language,
           cover_image_url,
           audio_url,
-          preview_audio_url: null, // Will be auto-generated
+          preview_audio_url,
+          preview_status: preview_audio_url ? 'ready' : null,
+          preview_duration_seconds: previewDuration,
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.base_price,
@@ -235,41 +321,6 @@ export default function UploadSong() {
         if (tiersError) throw tiersError;
       }
 
-      setUploadProgress(95);
-
-      // Auto-generate optimized preview if audio was uploaded
-      if (audio_url) {
-        setIsGeneratingPreview(true);
-        try {
-          // Extract the path from the full URL
-          const audioPath = audio_url.includes('song-audio/') 
-            ? audio_url.split('song-audio/')[1].split('?')[0]
-            : `${user.id}/${Date.now()}-audio.mp3`;
-          
-          console.log('Triggering preview generation for song:', song.id);
-          
-          const { data: previewResult, error: previewError } = await supabase.functions.invoke('generate-preview', {
-            body: { songId: song.id, audioPath }
-          });
-          
-          if (previewError) {
-            console.error('Preview generation error:', previewError);
-            // Don't fail the upload, preview can be regenerated later
-            toast({
-              title: 'Song uploaded',
-              description: 'Preview generation is pending. It will be available shortly.',
-            });
-          } else {
-            console.log('Preview generated:', previewResult);
-          }
-        } catch (previewErr) {
-          console.error('Preview generation failed:', previewErr);
-          // Silent failure - preview can be regenerated
-        } finally {
-          setIsGeneratingPreview(false);
-        }
-      }
-
       setUploadProgress(100);
       
       toast({ 
@@ -287,8 +338,20 @@ export default function UploadSong() {
       });
     } finally {
       setIsSubmitting(false);
-      setIsGeneratingPreview(false);
     }
+  };
+
+  const handleNextFromStep2 = () => {
+    // Require preview audio if full audio is provided
+    if (content.audio_file && !content.preview_audio) {
+      toast({ 
+        title: 'Preview audio required', 
+        description: 'Please upload a preview audio file (MP3, max 45 seconds)',
+        variant: 'destructive' 
+      });
+      return;
+    }
+    setStep(3);
   };
 
   return (
@@ -502,16 +565,71 @@ export default function UploadSong() {
                 </label>
               </div>
 
-              {/* Auto-generated preview notice */}
+              {/* Preview Audio - Manual Upload */}
               <div className="space-y-2">
-                <Label>Preview Audio</Label>
-                <div className="flex items-center justify-center h-24 border-2 border-dashed border-border/50 rounded-lg bg-muted/30">
-                  <div className="text-center text-muted-foreground">
-                    <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                    <span className="text-sm">Auto-generated from full audio</span>
-                    <p className="text-xs mt-1">(45s, optimized for streaming)</p>
+                <Label>Preview Audio *</Label>
+                {content.preview_audio ? (
+                  <div className="flex items-center justify-between h-24 border-2 border-primary/50 rounded-lg bg-primary/5 px-4">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-6 w-6 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[150px]">
+                          {content.preview_audio.name}
+                        </p>
+                        {previewDuration && (
+                          <p className="text-xs text-muted-foreground">
+                            Duration: {previewDuration.toFixed(1)}s
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearPreviewAudio}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
+                ) : (
+                  <label className={cn(
+                    "flex items-center justify-center h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
+                    previewValidationError 
+                      ? "border-destructive/50 bg-destructive/5" 
+                      : "border-border hover:border-primary/50",
+                    isValidatingPreview && "opacity-50 pointer-events-none"
+                  )}>
+                    <div className="text-center">
+                      {isValidatingPreview ? (
+                        <Loader2 className="h-6 w-6 mx-auto text-muted-foreground mb-1 animate-spin" />
+                      ) : previewValidationError ? (
+                        <AlertCircle className="h-6 w-6 mx-auto text-destructive mb-1" />
+                      ) : (
+                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {isValidatingPreview ? 'Validating...' : 'Upload preview'}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept=".mp3,audio/mpeg"
+                      className="hidden"
+                      onChange={handlePreviewFileChange}
+                      disabled={isValidatingPreview}
+                    />
+                  </label>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  MP3 only, max {MAX_PREVIEW_DURATION} seconds
+                </p>
+                {previewValidationError && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {previewValidationError}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -542,7 +660,7 @@ export default function UploadSong() {
               <Button type="button" variant="outline" onClick={() => setStep(1)}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
               </Button>
-              <Button type="button" onClick={() => setStep(3)}>
+              <Button type="button" onClick={handleNextFromStep2}>
                 Next <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -704,7 +822,11 @@ export default function UploadSong() {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Preview Audio:</dt>
-                    <dd>{content.audio_file ? '✓ Auto-generated' : 'Pending audio upload'}</dd>
+                    <dd>
+                      {content.preview_audio 
+                        ? `✓ Uploaded (${previewDuration?.toFixed(1)}s)` 
+                        : 'Not uploaded'}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Lyrics:</dt>
@@ -751,10 +873,10 @@ export default function UploadSong() {
             </div>
 
             {/* Upload Progress */}
-            {(isSubmitting || isGeneratingPreview) && (
+            {isSubmitting && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>{isGeneratingPreview ? 'Generating preview...' : 'Uploading...'}</span>
+                  <span>Uploading...</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <Progress value={uploadProgress} />
@@ -770,10 +892,10 @@ export default function UploadSong() {
                 disabled={isSubmitting || !ownershipConfirmed || !termsAccepted}
                 className="btn-glow"
               >
-                {isSubmitting || isGeneratingPreview ? (
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isGeneratingPreview ? 'Generating Preview...' : 'Uploading...'}
+                    Uploading...
                   </>
                 ) : (
                   <>
