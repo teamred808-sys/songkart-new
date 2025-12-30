@@ -342,15 +342,33 @@ export default function UploadSong() {
   };
 
   const handleNextFromStep2 = () => {
-    // Require preview audio if full audio is provided
-    if (content.audio_file && !content.preview_audio) {
+    const missingFields: string[] = [];
+    
+    if (!content.cover_image) {
+      missingFields.push('Cover Image');
+    }
+    if (!content.audio_file) {
+      missingFields.push('Full Audio File');
+    }
+    if (!content.preview_audio) {
+      missingFields.push('Preview Audio');
+    }
+    if (!content.full_lyrics || content.full_lyrics.trim() === '') {
+      missingFields.push('Full Lyrics');
+    }
+    if (!content.preview_lyrics || content.preview_lyrics.trim() === '') {
+      missingFields.push('Preview Lyrics');
+    }
+    
+    if (missingFields.length > 0) {
       toast({ 
-        title: 'Preview audio required', 
-        description: 'Please upload a preview audio file (MP3, max 45 seconds)',
+        title: 'Required fields missing', 
+        description: `Please complete: ${missingFields.join(', ')}`,
         variant: 'destructive' 
       });
       return;
     }
+    
     setStep(3);
   };
 
@@ -507,9 +525,9 @@ export default function UploadSong() {
             <CardDescription>Upload your audio files and lyrics.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Cover Image */}
-            <div className="space-y-2">
-              <Label>Cover Image</Label>
+                  {/* Cover Image */}
+                  <div className="space-y-2">
+                    <Label>Cover Image *</Label>
               <div className="flex items-start gap-4">
                 {coverPreview ? (
                   <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border">
@@ -548,7 +566,7 @@ export default function UploadSong() {
             {/* Audio Files */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Full Audio File</Label>
+                <Label>Full Audio File *</Label>
                 <label className="flex items-center justify-center h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
                   <div className="text-center">
                     <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
@@ -635,7 +653,7 @@ export default function UploadSong() {
 
             {/* Lyrics */}
             <div className="space-y-2">
-              <Label htmlFor="full_lyrics">Full Lyrics</Label>
+              <Label htmlFor="full_lyrics">Full Lyrics *</Label>
               <Textarea
                 id="full_lyrics"
                 value={content.full_lyrics || ''}
@@ -646,7 +664,7 @@ export default function UploadSong() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="preview_lyrics">Preview Lyrics (shown before purchase)</Label>
+              <Label htmlFor="preview_lyrics">Preview Lyrics * (shown before purchase)</Label>
               <Textarea
                 id="preview_lyrics"
                 value={content.preview_lyrics || ''}
