@@ -67,15 +67,38 @@ export function LicenseComparisonTable() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto -mx-4 px-4">
+        {/* Mobile Layout - Vertical Cards */}
+        <div className="md:hidden space-y-3">
+          {licenseColumns.map((col) => (
+            <div key={col.key} className="border border-border/50 rounded-lg p-3 bg-background/30">
+              <h4 className="font-medium text-primary mb-2 text-sm">{col.label}</h4>
+              <ul className="space-y-1.5">
+                {features.map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-xs">
+                    {feature[col.key as keyof typeof feature] ? (
+                      <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    ) : (
+                      <X className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+                    )}
+                    <span className={feature[col.key as keyof typeof feature] ? "text-foreground" : "text-muted-foreground/60"}>
+                      {feature.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop/Tablet Layout - Horizontal Table */}
+        <div className="hidden md:block overflow-x-auto -mx-4 px-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/50">
                 <th className="text-left py-2 pr-2 font-medium text-muted-foreground">Feature</th>
                 {licenseColumns.map((col) => (
                   <th key={col.key} className="text-center py-2 px-1 font-medium text-foreground">
-                    <span className="hidden sm:inline">{col.label}</span>
-                    <span className="sm:hidden text-xs">{col.shortLabel}</span>
+                    {col.label}
                   </th>
                 ))}
               </tr>
@@ -87,8 +110,8 @@ export function LicenseComparisonTable() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger className="text-left flex items-center gap-1 text-foreground hover:text-primary transition-colors">
-                          <span className="text-xs sm:text-sm">{feature.name}</span>
-                          <HelpCircle className="h-3 w-3 text-muted-foreground hidden sm:inline" />
+                          <span className="text-sm">{feature.name}</span>
+                          <HelpCircle className="h-3 w-3 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>{feature.tooltip}</p>
