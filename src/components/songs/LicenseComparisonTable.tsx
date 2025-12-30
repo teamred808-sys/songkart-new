@@ -9,32 +9,27 @@ import {
 
 const features = [
   { 
-    name: "Personal Projects", 
+    name: "Personal Use", 
     tooltip: "Use in personal videos, demos, and non-commercial content",
     personal: true, commercial: true, exclusive: true 
   },
   { 
-    name: "YouTube Monetization", 
+    name: "YouTube/Monetization", 
     tooltip: "Earn ad revenue on YouTube without copyright claims",
     personal: false, commercial: true, exclusive: true 
   },
   { 
-    name: "Streaming Platforms", 
+    name: "Streaming", 
     tooltip: "Use on Twitch, podcasts, and other streaming platforms",
     personal: false, commercial: true, exclusive: true 
   },
   { 
-    name: "Advertising & Marketing", 
+    name: "Ads & Marketing", 
     tooltip: "Use in ads, commercials, and promotional content",
     personal: false, commercial: true, exclusive: true 
   },
   { 
-    name: "Film, TV & Documentaries", 
-    tooltip: "Use in films, TV shows, documentaries, and broadcast media",
-    personal: false, commercial: false, exclusive: true 
-  },
-  { 
-    name: "Full Ownership Rights", 
+    name: "Full Ownership", 
     tooltip: "Complete ownership - song is removed from marketplace",
     personal: false, commercial: false, exclusive: true 
   },
