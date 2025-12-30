@@ -5,20 +5,10 @@ export const LICENSE_INFO = {
     description: 'For personal projects, demos, and non-commercial use',
     icon: 'User',
   },
-  youtube: {
-    name: 'YouTube/Streaming',
-    description: 'For YouTube, Twitch, podcasts, and online content',
-    icon: 'Youtube',
-  },
   commercial: {
     name: 'Commercial',
     description: 'For advertising, marketing, and commercial projects',
     icon: 'Building2',
-  },
-  film: {
-    name: 'Film/TV',
-    description: 'For films, TV shows, documentaries, and broadcasts',
-    icon: 'Film',
   },
   exclusive: {
     name: 'Exclusive Rights',
@@ -30,9 +20,7 @@ export const LICENSE_INFO = {
 // License types for components
 export const LICENSE_TYPES = {
   personal: { label: 'Personal Use', description: 'For personal projects, demos, and non-commercial use' },
-  youtube: { label: 'YouTube/Streaming', description: 'For YouTube, Twitch, podcasts, and online content' },
   commercial: { label: 'Commercial', description: 'For advertising, marketing, and commercial projects' },
-  film: { label: 'Film/TV', description: 'For films, TV shows, documentaries, and broadcasts' },
   exclusive: { label: 'Exclusive Rights', description: 'Full ownership - song removed from marketplace after purchase' },
 } as const;
 
