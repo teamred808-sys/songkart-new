@@ -6,8 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const COMMISSION_RATE = 0.15; // 15% platform commission
 const EXCLUSIVE_RESERVATION_MINUTES = 30;
+
+// Fetch commission rate from platform settings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCommissionRate(supabaseClient: any): Promise<number> {
+  const { data } = await supabaseClient
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "commission_rate")
+    .single();
+  
+  // Default to 15% if not set, convert percentage to decimal
+  const value = data?.value as { rate?: number } | null;
+  return (value?.rate || 15) / 100;
+}
 
 interface ValidateCartItemRequest {
   song_id: string;
@@ -193,9 +206,10 @@ serve(async (req) => {
       }
     }
 
-    // 10. Calculate prices
+    // 10. Fetch commission rate and calculate prices
+    const commissionRate = await getCommissionRate(supabase);
     const basePrice = Number(licenseTier.price);
-    const platformCommission = basePrice * COMMISSION_RATE;
+    const platformCommission = basePrice * commissionRate;
     const finalPrice = basePrice;
 
     // 11. Check if item already in cart
