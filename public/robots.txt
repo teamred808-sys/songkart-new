@@ -1,8 +1,23 @@
+# SongKart Robots.txt
+# Licensed Music Marketplace
+
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /seller
+Disallow: /buyer
+Disallow: /cart
+Disallow: /auth
+Disallow: /verify-email
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /seller
+Disallow: /buyer
+Disallow: /cart
+Disallow: /auth
+Disallow: /verify-email
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +27,14 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /seller
+Disallow: /buyer
+Disallow: /cart
+Disallow: /auth
+Disallow: /verify-email
+Disallow: /*?*checkout
+Disallow: /*?*session
+
+# Sitemap location
+Sitemap: https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap
