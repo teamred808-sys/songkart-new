@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal } from '@/hooks/useSellerData';
 import { usePlatformSettings } from '@/hooks/useAdminData';
 import { usePayoutProfile, useWithdrawEligibility } from '@/hooks/usePayoutProfile';
+import { usePendingClearance } from '@/hooks/usePendingClearance';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,9 +47,10 @@ import {
   Banknote,
   Info,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Timer
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
@@ -72,6 +74,7 @@ export default function Wallet() {
   const { data: platformSettings } = usePlatformSettings();
   const { data: payoutProfile, isLoading: payoutLoading } = usePayoutProfile();
   const { data: withdrawEligibility } = useWithdrawEligibility();
+  const { data: pendingClearance, isLoading: clearanceLoading } = usePendingClearance();
   const requestWithdrawal = useRequestWithdrawal();
   const { formatPrice, currencySymbol } = useCurrency();
 
@@ -243,6 +246,67 @@ export default function Wallet() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pending Clearance Timeline */}
+        {pendingClearance && pendingClearance.length > 0 && (
+          <Card className="border-amber-500/20 bg-amber-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Timer className="h-5 w-5 text-amber-500" />
+                Funds Clearing Soon
+              </CardTitle>
+              <CardDescription>
+                These funds will become available after the 7-day hold period
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {pendingClearance.slice(0, 5).map((item) => (
+                  <div 
+                    key={item.transaction_id} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{formatPrice(item.amount)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Sale on {format(new Date(item.created_at), 'MMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "border-amber-500/30",
+                          item.days_remaining <= 1 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "text-amber-500"
+                        )}
+                      >
+                        {item.days_remaining <= 0 
+                          ? 'Clearing soon' 
+                          : item.days_remaining === 1 
+                            ? '1 day left' 
+                            : `${item.days_remaining} days left`
+                        }
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Clears {formatDistanceToNow(new Date(item.clears_at), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {pendingClearance.length > 5 && (
+                  <p className="text-sm text-muted-foreground text-center pt-2">
+                    +{pendingClearance.length - 5} more transactions clearing
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Withdrawal Progress */}
         <Card className={cn(
