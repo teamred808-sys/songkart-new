@@ -285,7 +285,7 @@ export default function SongDetail() {
             </div>
 
             {/* Tabs: Description, Lyrics Preview & Reviews */}
-            <Tabs defaultValue="description" className="w-full">
+            <Tabs defaultValue={song.has_lyrics ? "lyrics" : "description"} className="w-full">
               <TabsList>
                 <TabsTrigger value="description">Description</TabsTrigger>
                 {song.has_lyrics && <TabsTrigger value="lyrics">Lyrics Preview</TabsTrigger>}
