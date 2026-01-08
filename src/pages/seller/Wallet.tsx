@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal } from '@/hooks/useSellerData';
 import { usePlatformSettings } from '@/hooks/useAdminData';
+import { usePayoutProfile, useWithdrawEligibility } from '@/hooks/usePayoutProfile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import {
   Dialog,
@@ -18,13 +20,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -50,10 +45,12 @@ import {
   CheckCircle2,
   Banknote,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
@@ -73,28 +70,30 @@ export default function Wallet() {
   const { data: wallet, isLoading: walletLoading } = useSellerWallet();
   const { data: withdrawals, isLoading: withdrawalsLoading } = useWithdrawalRequests();
   const { data: platformSettings } = usePlatformSettings();
+  const { data: payoutProfile, isLoading: payoutLoading } = usePayoutProfile();
+  const { data: withdrawEligibility } = useWithdrawEligibility();
   const requestWithdrawal = useRequestWithdrawal();
   const { formatPrice, currencySymbol } = useCurrency();
 
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [payoutMethod, setPayoutMethod] = useState('');
-  const [accountDetails, setAccountDetails] = useState('');
 
   const handleWithdrawalRequest = () => {
     const amount = parseFloat(withdrawAmount);
-    if (!amount || amount <= 0 || !payoutMethod) return;
+    if (!amount || amount <= 0 || !payoutProfile) return;
 
     requestWithdrawal.mutate({
       amount,
-      payout_method: payoutMethod,
-      payout_details: { account: accountDetails },
+      payout_method: 'bank_transfer',
+      payout_details: { 
+        bank_name: payoutProfile.bank_name,
+        account_last4: payoutProfile.account_number_last4,
+        ifsc_code: payoutProfile.ifsc_code,
+      },
     }, {
       onSuccess: () => {
         setShowWithdrawDialog(false);
         setWithdrawAmount('');
-        setPayoutMethod('');
-        setAccountDetails('');
       },
     });
   };
@@ -107,7 +106,9 @@ export default function Wallet() {
   const threshold = platformSettings?.min_withdrawal?.amount || 500;
   const progressToWithdrawal = Math.min((availableBalance / threshold) * 100, 100);
 
-  const canWithdraw = availableBalance >= threshold;
+  const hasBalanceForWithdrawal = availableBalance >= threshold;
+  const hasVerifiedPayout = withdrawEligibility?.can_withdraw === true;
+  const canWithdraw = hasBalanceForWithdrawal && hasVerifiedPayout;
 
   return (
     <TooltipProvider>
@@ -127,6 +128,46 @@ export default function Wallet() {
             Withdraw Funds
           </Button>
         </div>
+
+        {/* Payout Profile Status Banners */}
+        {!payoutLoading && !payoutProfile && (
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-500">Bank Details Required</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span>Set up your bank account to enable withdrawals and receive your earnings.</span>
+              <Button size="sm" asChild>
+                <Link to="/seller/payout">
+                  Add Bank Details
+                  <ExternalLink className="ml-2 h-3 w-3" />
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!payoutLoading && payoutProfile && payoutProfile.verification_status === 'pending' && (
+          <Alert className="border-blue-500/30 bg-blue-500/5">
+            <Clock className="h-4 w-4 text-blue-500" />
+            <AlertTitle className="text-blue-500">Verification Pending</AlertTitle>
+            <AlertDescription>
+              Your bank details are being verified. Withdrawals will be enabled once verification is complete.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!payoutLoading && payoutProfile && payoutProfile.verification_status === 'rejected' && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Bank Details Rejected</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <span>{payoutProfile.rejection_reason || 'Please update your bank details and resubmit.'}</span>
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/seller/payout">Update Details</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Funds Flow Visualization */}
         <Card className="overflow-hidden">
@@ -360,29 +401,27 @@ export default function Wallet() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label>Payout Method</Label>
-                <Select value={payoutMethod} onValueChange={setPayoutMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="paypal">PayPal</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="account">Account Details</Label>
-                <Input
-                  id="account"
-                  value={accountDetails}
-                  onChange={(e) => setAccountDetails(e.target.value)}
-                  placeholder="Account number, email, or UPI ID"
-                />
-              </div>
+              {/* Saved Bank Details */}
+              {payoutProfile && (
+                <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                  <div className="flex items-start gap-2">
+                    <Banknote className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-foreground mb-1">Bank Account</p>
+                      <p className="text-muted-foreground">{payoutProfile.bank_name}</p>
+                      <p className="text-muted-foreground">
+                        A/C: ••••{payoutProfile.account_number_last4}
+                      </p>
+                      <p className="text-muted-foreground text-xs mt-1">
+                        IFSC: {payoutProfile.ifsc_code}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="link" size="sm" asChild className="mt-2 h-auto p-0">
+                    <Link to="/seller/payout">Change bank account</Link>
+                  </Button>
+                </div>
+              )}
 
               <Separator />
 
@@ -404,7 +443,7 @@ export default function Wallet() {
               </Button>
               <Button 
                 onClick={handleWithdrawalRequest}
-                disabled={requestWithdrawal.isPending || !withdrawAmount || !payoutMethod}
+                disabled={requestWithdrawal.isPending || !withdrawAmount || !payoutProfile}
                 className="btn-glow"
               >
                 {requestWithdrawal.isPending ? (
