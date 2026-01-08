@@ -564,6 +564,161 @@ export type Database = {
           },
         ]
       }
+      content_fingerprints: {
+        Row: {
+          audio_duration_ms: number | null
+          audio_file_hash: string | null
+          audio_match_confidence: number | null
+          audio_match_source: string | null
+          checked_at: string | null
+          copyright_check_status: string | null
+          created_at: string | null
+          id: string
+          lyrics_hash: string | null
+          lyrics_similarity_score: number | null
+          lyrics_word_count: number | null
+          plagiarism_check_status: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          similar_song_id: string | null
+          song_id: string | null
+        }
+        Insert: {
+          audio_duration_ms?: number | null
+          audio_file_hash?: string | null
+          audio_match_confidence?: number | null
+          audio_match_source?: string | null
+          checked_at?: string | null
+          copyright_check_status?: string | null
+          created_at?: string | null
+          id?: string
+          lyrics_hash?: string | null
+          lyrics_similarity_score?: number | null
+          lyrics_word_count?: number | null
+          plagiarism_check_status?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similar_song_id?: string | null
+          song_id?: string | null
+        }
+        Update: {
+          audio_duration_ms?: number | null
+          audio_file_hash?: string | null
+          audio_match_confidence?: number | null
+          audio_match_source?: string | null
+          checked_at?: string | null
+          copyright_check_status?: string | null
+          created_at?: string | null
+          id?: string
+          lyrics_hash?: string | null
+          lyrics_similarity_score?: number | null
+          lyrics_word_count?: number | null
+          plagiarism_check_status?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similar_song_id?: string | null
+          song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_fingerprints_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_fingerprints_similar_song_id_fkey"
+            columns: ["similar_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_fingerprints_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_review_queue: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          detection_type: string | null
+          id: string
+          matched_content: string | null
+          matched_song_id: string | null
+          priority: number | null
+          queue_type: string
+          resolution: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          song_id: string | null
+          status: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          detection_type?: string | null
+          id?: string
+          matched_content?: string | null
+          matched_song_id?: string | null
+          priority?: number | null
+          queue_type: string
+          resolution?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          detection_type?: string | null
+          id?: string
+          matched_content?: string | null
+          matched_song_id?: string | null
+          priority?: number | null
+          queue_type?: string
+          resolution?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_review_queue_matched_song_id_fkey"
+            columns: ["matched_song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_queue_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_queue_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       currency_exchange_rates: {
         Row: {
           currency_code: string
@@ -2065,6 +2220,7 @@ export type Database = {
           base_price: number
           bpm: number | null
           canonical_url: string | null
+          content_check_status: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
@@ -2085,6 +2241,7 @@ export type Database = {
           new_uploads_pinned: boolean | null
           new_uploads_pinned_until: string | null
           no_index: boolean | null
+          ownership_proof_url: string | null
           play_count: number | null
           preview_audio_url: string | null
           preview_duration_seconds: number | null
@@ -2094,6 +2251,7 @@ export type Database = {
           preview_lyrics: string | null
           preview_status: string | null
           rejection_reason: string | null
+          requires_ownership_proof: boolean | null
           seller_id: string | null
           seo_content: string | null
           seo_description: string | null
@@ -2112,6 +2270,7 @@ export type Database = {
           base_price?: number
           bpm?: number | null
           canonical_url?: string | null
+          content_check_status?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -2132,6 +2291,7 @@ export type Database = {
           new_uploads_pinned?: boolean | null
           new_uploads_pinned_until?: string | null
           no_index?: boolean | null
+          ownership_proof_url?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
@@ -2141,6 +2301,7 @@ export type Database = {
           preview_lyrics?: string | null
           preview_status?: string | null
           rejection_reason?: string | null
+          requires_ownership_proof?: boolean | null
           seller_id?: string | null
           seo_content?: string | null
           seo_description?: string | null
@@ -2159,6 +2320,7 @@ export type Database = {
           base_price?: number
           bpm?: number | null
           canonical_url?: string | null
+          content_check_status?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -2179,6 +2341,7 @@ export type Database = {
           new_uploads_pinned?: boolean | null
           new_uploads_pinned_until?: string | null
           no_index?: boolean | null
+          ownership_proof_url?: string | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
@@ -2188,6 +2351,7 @@ export type Database = {
           preview_lyrics?: string | null
           preview_status?: string | null
           rejection_reason?: string | null
+          requires_ownership_proof?: boolean | null
           seller_id?: string | null
           seo_content?: string | null
           seo_description?: string | null

@@ -69,6 +69,7 @@ const ContentEditor = lazy(() => import("./pages/admin/ContentEditor"));
 const NewUploadsManagement = lazy(() => import("./pages/admin/NewUploadsManagement"));
 const RatingModeration = lazy(() => import("./pages/admin/RatingModeration"));
 const PayoutVerification = lazy(() => import("./pages/admin/PayoutVerification"));
+const ContentReviewQueue = lazy(() => import("./pages/admin/ContentReviewQueue"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -151,6 +152,7 @@ const App = () => (
               <Route path="featured" element={<Suspense fallback={<PageLoader />}><FeaturedContent /></Suspense>} />
               <Route path="new-uploads" element={<Suspense fallback={<PageLoader />}><NewUploadsManagement /></Suspense>} />
               <Route path="ratings" element={<Suspense fallback={<PageLoader />}><RatingModeration /></Suspense>} />
+              <Route path="content-review" element={<Suspense fallback={<PageLoader />}><ContentReviewQueue /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><PlatformSettings /></Suspense>} />
               <Route path="logs" element={<Suspense fallback={<PageLoader />}><ActivityLogs /></Suspense>} />
               <Route path="bugs" element={<Suspense fallback={<PageLoader />}><BugReports /></Suspense>} />

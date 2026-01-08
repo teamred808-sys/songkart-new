@@ -22,7 +22,8 @@ import {
   Bug,
   Activity,
   MessageSquare,
-  ShieldCheck
+  ShieldCheck,
+  Copyright
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/admin' },
   { icon: FileText, label: 'Content', path: '/admin/content' },
   { icon: Music, label: 'Song Moderation', path: '/admin/songs' },
+  { icon: Copyright, label: 'Content Review', path: '/admin/content-review' },
   { icon: Users, label: 'User Management', path: '/admin/users' },
   { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },
