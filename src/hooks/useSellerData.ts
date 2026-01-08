@@ -269,8 +269,27 @@ export function useRequestWithdrawal() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { amount: number; payout_method: string; payout_details: Record<string, any> }) => {
+    mutationFn: async (data: { 
+      amount: number; 
+      payout_method: string; 
+      payout_details: Record<string, any>;
+      minThreshold?: number;
+      maxBalance?: number;
+    }) => {
       if (!user?.id) throw new Error('Not authenticated');
+      
+      // Client-side pre-validation
+      if (data.amount <= 0) {
+        throw new Error('Invalid withdrawal amount');
+      }
+      
+      if (data.minThreshold !== undefined && data.amount < data.minThreshold) {
+        throw new Error(`Minimum withdrawal is ₹${data.minThreshold}`);
+      }
+      
+      if (data.maxBalance !== undefined && data.amount > data.maxBalance) {
+        throw new Error('Amount exceeds available balance');
+      }
       
       const { error } = await supabase
         .from('withdrawal_requests')
