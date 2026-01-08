@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -83,7 +84,29 @@ export default function Wallet() {
 
   const handleWithdrawalRequest = () => {
     const amount = parseFloat(withdrawAmount);
+    
+    // Validate amount is a positive number
     if (!amount || amount <= 0 || !payoutProfile) return;
+    
+    // Validate minimum threshold
+    if (amount < threshold) {
+      toast({
+        title: 'Invalid amount',
+        description: `Minimum withdrawal amount is ₹${threshold}`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Validate maximum (available balance)
+    if (amount > availableBalance) {
+      toast({
+        title: 'Insufficient balance',
+        description: `Maximum withdrawal is ${formatPrice(availableBalance)}`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     requestWithdrawal.mutate({
       amount,
@@ -455,6 +478,7 @@ export default function Wallet() {
                   id="amount"
                   type="number"
                   step="0.01"
+                  min={threshold}
                   max={availableBalance}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -463,6 +487,16 @@ export default function Wallet() {
                 <p className="text-xs text-muted-foreground">
                   Minimum: {currencySymbol}{threshold} • Maximum: {formatPrice(availableBalance)}
                 </p>
+                {withdrawAmount && parseFloat(withdrawAmount) < threshold && (
+                  <p className="text-sm text-destructive">
+                    Amount must be at least {currencySymbol}{threshold}
+                  </p>
+                )}
+                {withdrawAmount && parseFloat(withdrawAmount) > availableBalance && (
+                  <p className="text-sm text-destructive">
+                    Amount exceeds available balance
+                  </p>
+                )}
               </div>
 
               {/* Saved Bank Details */}
@@ -507,7 +541,13 @@ export default function Wallet() {
               </Button>
               <Button 
                 onClick={handleWithdrawalRequest}
-                disabled={requestWithdrawal.isPending || !withdrawAmount || !payoutProfile}
+                disabled={
+                  requestWithdrawal.isPending || 
+                  !withdrawAmount || 
+                  !payoutProfile ||
+                  parseFloat(withdrawAmount) < threshold ||
+                  parseFloat(withdrawAmount) > availableBalance
+                }
                 className="btn-glow"
               >
                 {requestWithdrawal.isPending ? (
