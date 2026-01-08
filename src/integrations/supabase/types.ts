@@ -2056,6 +2056,7 @@ export type Database = {
           average_rating: number | null
           base_price: number
           bpm: number | null
+          canonical_url: string | null
           cover_image_url: string | null
           created_at: string
           description: string | null
@@ -2070,10 +2071,12 @@ export type Database = {
           id: string
           is_featured: boolean | null
           language: string | null
+          lyrics_intro: string | null
           mood_id: string | null
           new_uploads_excluded: boolean | null
           new_uploads_pinned: boolean | null
           new_uploads_pinned_until: string | null
+          no_index: boolean | null
           play_count: number | null
           preview_audio_url: string | null
           preview_duration_seconds: number | null
@@ -2084,10 +2087,14 @@ export type Database = {
           preview_status: string | null
           rejection_reason: string | null
           seller_id: string | null
+          seo_content: string | null
+          seo_description: string | null
+          seo_title: string | null
           status: Database["public"]["Enums"]["song_status"]
           title: string
           total_ratings: number | null
           updated_at: string
+          use_cases: string[] | null
           view_count: number | null
         }
         Insert: {
@@ -2096,6 +2103,7 @@ export type Database = {
           average_rating?: number | null
           base_price?: number
           bpm?: number | null
+          canonical_url?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -2110,10 +2118,12 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           language?: string | null
+          lyrics_intro?: string | null
           mood_id?: string | null
           new_uploads_excluded?: boolean | null
           new_uploads_pinned?: boolean | null
           new_uploads_pinned_until?: string | null
+          no_index?: boolean | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
@@ -2124,10 +2134,14 @@ export type Database = {
           preview_status?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
+          seo_content?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title: string
           total_ratings?: number | null
           updated_at?: string
+          use_cases?: string[] | null
           view_count?: number | null
         }
         Update: {
@@ -2136,6 +2150,7 @@ export type Database = {
           average_rating?: number | null
           base_price?: number
           bpm?: number | null
+          canonical_url?: string | null
           cover_image_url?: string | null
           created_at?: string
           description?: string | null
@@ -2150,10 +2165,12 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           language?: string | null
+          lyrics_intro?: string | null
           mood_id?: string | null
           new_uploads_excluded?: boolean | null
           new_uploads_pinned?: boolean | null
           new_uploads_pinned_until?: string | null
+          no_index?: boolean | null
           play_count?: number | null
           preview_audio_url?: string | null
           preview_duration_seconds?: number | null
@@ -2164,10 +2181,14 @@ export type Database = {
           preview_status?: string | null
           rejection_reason?: string | null
           seller_id?: string | null
+          seo_content?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title?: string
           total_ratings?: number | null
           updated_at?: string
+          use_cases?: string[] | null
           view_count?: number | null
         }
         Relationships: [

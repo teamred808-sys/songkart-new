@@ -25,6 +25,10 @@ import { useSellerTier } from "@/hooks/useSellerTier";
 import { LICENSE_TYPES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SongSEOHead } from "@/components/seo/SongSEOHead";
+import { MusicRecordingSchema, BreadcrumbSchema, ProductSchema, FAQSchema } from "@/components/seo/SchemaOrg";
+import { SEOContentSection } from "@/components/seo/SEOContentSection";
+import { RelatedSongs } from "@/components/songs/RelatedSongs";
 
 export default function SongDetail() {
   const { id } = useParams<{ id: string }>();
@@ -98,15 +102,83 @@ export default function SongDetail() {
     );
   }
 
+  // Prepare SEO data
+  const primaryUseCase = (song as any).use_cases?.[0] || 'YouTube & Commercial Use';
+  const genreName = song.genres?.name || 'Music';
+
   return (
     <MainLayout>
+      {/* SEO Head */}
+      <SongSEOHead song={{
+        id: song.id,
+        title: song.title,
+        description: song.description,
+        seo_title: (song as any).seo_title,
+        seo_description: (song as any).seo_description,
+        cover_art_url: song.cover_image_url,
+        genre: song.genres ? { name: song.genres.name } : undefined,
+        mood: song.moods ? { name: song.moods.name } : undefined,
+        language: song.language,
+        use_cases: (song as any).use_cases,
+        base_price: song.base_price,
+        seller: song.seller ? { full_name: song.seller.full_name } : undefined
+      }} />
+
+      {/* Structured Data */}
+      <BreadcrumbSchema items={[
+        { name: 'Home', url: window.location.origin },
+        { name: 'Browse', url: `${window.location.origin}/browse` },
+        { name: song.title, url: window.location.href }
+      ]} />
+      
+      <MusicRecordingSchema
+        name={song.title}
+        artist={song.seller?.full_name || 'Unknown Artist'}
+        genre={song.genres?.name}
+        duration={song.duration || undefined}
+        description={song.description}
+        image={song.cover_image_url}
+        datePublished={song.created_at}
+        offers={licenseTiers?.map(tier => ({
+          price: tier.price,
+          currency: 'INR'
+        }))}
+      />
+
+      {licenseTiers && licenseTiers.length > 0 && (
+        <ProductSchema
+          name={`${song.title} - Music License`}
+          description={`License "${song.title}" for commercial use. Available in Personal, Commercial, and Exclusive license options.`}
+          image={song.cover_image_url}
+          offers={licenseTiers.map(tier => ({
+            name: `${LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES]?.label || tier.license_type} License`,
+            price: tier.price,
+            currency: 'INR'
+          }))}
+        />
+      )}
+
+      <FAQSchema items={[
+        { question: `Can I use "${song.title}" in YouTube videos?`, answer: 'Yes! With any license tier, you can use this track in YouTube videos. Commercial licenses allow full monetization.' },
+        { question: 'Is this music copyright-safe?', answer: 'Absolutely. Your purchase includes a legally binding license certificate that protects you from copyright claims.' },
+        { question: 'What files do I receive after purchase?', answer: `You receive high-quality audio files${song.has_lyrics ? ', full lyrics document,' : ''} and a PDF license certificate.` }
+      ]} />
+
       <div className="container py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-foreground">Home</Link>
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
           <Link to="/browse" className="hover:text-foreground">Browse</Link>
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          {song.genres && (
+            <>
+              <Link to={`/browse?genre=${song.genre_id}`} className="hover:text-foreground">
+                {song.genres.name}
+              </Link>
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </>
+          )}
           <span className="text-foreground">{song.title}</span>
         </nav>
 
@@ -118,7 +190,7 @@ export default function SongDetail() {
               {song.cover_image_url ? (
                 <img
                   src={song.cover_image_url}
-                  alt={song.title}
+                  alt={`${song.title} - Licensed ${genreName} track cover art`}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -137,11 +209,13 @@ export default function SongDetail() {
               />
             )}
 
-            {/* Title & Meta */}
+            {/* Title & Meta - Single H1 with licensing intent */}
             <div>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">{song.title}</h1>
+                  <h1 className="text-3xl font-bold mb-2">
+                    {song.title} - Licensed {genreName} for {primaryUseCase}
+                  </h1>
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <div className="flex items-center gap-2">
                       {song.has_audio && (
@@ -246,6 +320,27 @@ export default function SongDetail() {
                 <RatingsList songId={id!} />
               </TabsContent>
             </Tabs>
+
+            {/* SEO Content Section - Crawlable content for Google */}
+            <SEOContentSection song={{
+              id: song.id,
+              title: song.title,
+              description: song.description,
+              seo_content: (song as any).seo_content,
+              genre: song.genres ? { id: song.genre_id || '', name: song.genres.name } : undefined,
+              mood: song.moods ? { id: song.mood_id || '', name: song.moods.name } : undefined,
+              language: song.language,
+              use_cases: (song as any).use_cases,
+              has_audio: song.has_audio,
+              has_lyrics: song.has_lyrics
+            }} />
+
+            {/* Related Songs - Internal linking */}
+            <RelatedSongs 
+              currentSongId={song.id} 
+              genreId={song.genre_id} 
+              moodId={song.mood_id}
+            />
           </div>
 
           {/* Sidebar */}
