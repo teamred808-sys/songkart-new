@@ -6,6 +6,8 @@ import { usePublishedPosts } from "@/hooks/useCmsContent";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BlogSEOHead } from "@/components/seo/PageSEOHead";
+import { BreadcrumbSchema } from "@/components/seo/SchemaOrg";
 
 const Blog = () => {
   const { data: posts, isLoading } = usePublishedPosts();
@@ -35,6 +37,11 @@ const Blog = () => {
 
   return (
     <MainLayout>
+      <BlogSEOHead />
+      <BreadcrumbSchema items={[
+        { name: 'Home', url: typeof window !== 'undefined' ? window.location.origin : 'https://songkart.com' },
+        { name: 'Blog', url: typeof window !== 'undefined' ? `${window.location.origin}/blog` : 'https://songkart.com/blog' }
+      ]} />
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">Blog</h1>

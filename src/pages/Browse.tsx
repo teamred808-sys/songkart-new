@@ -8,6 +8,8 @@ import { useSongs, useGenres, useMoods } from "@/hooks/useSongs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/Price";
+import { BrowseSEOHead } from "@/components/seo/PageSEOHead";
+import { BreadcrumbSchema } from "@/components/seo/SchemaOrg";
 
 const quickFilters = [
   { label: "Audio Only", key: "hasAudio" },
@@ -17,6 +19,8 @@ const quickFilters = [
 export default function Browse() {
   const [searchParams] = useSearchParams();
   const typeParam = searchParams.get("type");
+  const genreParam = searchParams.get("genre");
+  const moodParam = searchParams.get("mood");
 
   // Initialize filters based on URL params
   const initialFilters: SongFiltersState = useMemo(() => ({
@@ -59,8 +63,18 @@ export default function Browse() {
     setFilters(prev => ({ ...prev, [key]: !prev[key as keyof SongFiltersState] }));
   };
 
+  // Get genre/mood names for SEO
+  const currentGenreName = genreParam ? genres.find(g => g.id === genreParam)?.name : undefined;
+  const currentMoodName = moodParam ? moods.find(m => m.id === moodParam)?.name : undefined;
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://songkart.com';
+
   return (
     <MainLayout>
+      <BrowseSEOHead genre={currentGenreName} mood={currentMoodName} />
+      <BreadcrumbSchema items={[
+        { name: 'Home', url: baseUrl },
+        { name: typeParam === 'audio' ? 'Audio Tracks' : typeParam === 'lyrics' ? 'Lyrics Only' : 'Browse Songs', url: `${baseUrl}/browse${typeParam ? `?type=${typeParam}` : ''}` }
+      ]} />
       <div className="container py-8">
         {/* Header */}
         <div className="mb-8">

@@ -11,9 +11,9 @@ export function Footer() {
   return (
     <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-8">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <img src={songkartLogo} alt="SongKart" className="h-12 w-12 object-contain" />
               <span className="font-display text-xl text-foreground tracking-tight">
@@ -88,11 +88,10 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Pages - Dynamic from CMS */}
+          {/* Resources */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Pages</h4>
+            <h4 className="font-display font-semibold mb-4">Resources</h4>
             <ul className="space-y-2">
-              {/* Static Blog link */}
               <li>
                 <Link 
                   to="/blog" 
@@ -108,7 +107,7 @@ export function Footer() {
                   <li><Skeleton className="h-4 w-20" /></li>
                 </>
               ) : cmsPages && cmsPages.length > 0 ? (
-                cmsPages.map((page) => (
+                cmsPages.slice(0, 4).map((page) => (
                   <li key={page.id}>
                     <Link 
                       to={`/${page.slug}`} 
@@ -119,6 +118,43 @@ export function Footer() {
                   </li>
                 ))
               ) : null}
+            </ul>
+          </div>
+
+          {/* Legal & Trust */}
+          <div>
+            <h4 className="font-display font-semibold mb-4">Legal & Trust</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  Contact
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund-policy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/license-guide" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  License Guide
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
