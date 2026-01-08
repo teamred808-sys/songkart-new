@@ -2361,10 +2361,12 @@ export type Database = {
         Row: {
           amount: number
           buyer_id: string
+          cleared_at: string | null
           commission_amount: number
           commission_rate: number
           created_at: string
           id: string
+          is_cleared: boolean | null
           license_pdf_url: string | null
           license_tier_id: string
           payment_id: string | null
@@ -2377,10 +2379,12 @@ export type Database = {
         Insert: {
           amount: number
           buyer_id: string
+          cleared_at?: string | null
           commission_amount: number
           commission_rate: number
           created_at?: string
           id?: string
+          is_cleared?: boolean | null
           license_pdf_url?: string | null
           license_tier_id: string
           payment_id?: string | null
@@ -2393,10 +2397,12 @@ export type Database = {
         Update: {
           amount?: number
           buyer_id?: string
+          cleared_at?: string | null
           commission_amount?: number
           commission_rate?: number
           created_at?: string
           id?: string
+          is_cleared?: boolean | null
           license_pdf_url?: string | null
           license_tier_id?: string
           payment_id?: string | null
@@ -2461,37 +2467,55 @@ export type Database = {
       withdrawal_requests: {
         Row: {
           amount: number
+          cashfree_status: string | null
+          cashfree_status_code: string | null
+          cashfree_transfer_id: string | null
           created_at: string
+          failure_reason: string | null
           id: string
           notes: string | null
+          payment_reference: string | null
           payout_details: Json | null
           payout_method: string | null
           processed_at: string | null
           processed_by: string | null
+          retries: number | null
           status: Database["public"]["Enums"]["withdrawal_status"] | null
           user_id: string
         }
         Insert: {
           amount: number
+          cashfree_status?: string | null
+          cashfree_status_code?: string | null
+          cashfree_transfer_id?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
           notes?: string | null
+          payment_reference?: string | null
           payout_details?: Json | null
           payout_method?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          retries?: number | null
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
           user_id: string
         }
         Update: {
           amount?: number
+          cashfree_status?: string | null
+          cashfree_status_code?: string | null
+          cashfree_transfer_id?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
           notes?: string | null
+          payment_reference?: string | null
           payout_details?: Json | null
           payout_method?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          retries?: number | null
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
           user_id?: string
         }
@@ -2612,6 +2636,16 @@ export type Database = {
           title: string
         }[]
       }
+      get_pending_clearance_info: {
+        Args: { p_seller_id: string }
+        Returns: {
+          amount: number
+          clears_at: string
+          created_at: string
+          days_remaining: number
+          transaction_id: string
+        }[]
+      }
       get_seller_tier: {
         Args: { p_seller_id: string }
         Returns: {
@@ -2654,6 +2688,14 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      release_cleared_funds: {
+        Args: never
+        Returns: {
+          released_amount: number
+          seller_id: string
+          transaction_count: number
+        }[]
+      }
       submit_rating: {
         Args: {
           p_device_fingerprint?: string

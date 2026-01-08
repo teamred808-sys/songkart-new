@@ -677,3 +677,72 @@ export function useDeleteFeaturedContent() {
     }
   });
 }
+
+// Release Cleared Funds (7+ days old)
+export function useReleaseFunds() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('release-funds');
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      
+      const summary = data?.summary;
+      if (summary?.total_released > 0) {
+        toast({ 
+          title: 'Funds Released', 
+          description: `₹${summary.total_released} released for ${summary.sellers_affected} sellers (${summary.transactions_cleared} transactions)` 
+        });
+      } else {
+        toast({ title: 'No Funds to Release', description: 'No transactions older than 7 days pending clearance.' });
+      }
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to release funds', description: error.message, variant: 'destructive' });
+    }
+  });
+}
+
+// Process Payout via Cashfree
+export function useProcessPayout() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (withdrawalId: string) => {
+      const { data, error } = await supabase.functions.invoke('process-payout', {
+        body: { withdrawal_id: withdrawalId }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+      toast({ 
+        title: 'Payout Initiated', 
+        description: data?.message || 'Bank transfer has been submitted.' 
+      });
+    },
+    onError: (error: any) => {
+      const message = error?.message || 'Failed to initiate payout';
+      if (message.includes('not configured')) {
+        toast({ 
+          title: 'Payout Not Available', 
+          description: 'Cashfree Payout credentials are not configured. Please add CASHFREE_PAYOUT_CLIENT_ID and CASHFREE_PAYOUT_CLIENT_SECRET secrets.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({ title: 'Payout Failed', description: message, variant: 'destructive' });
+      }
+    }
+  });
+}
