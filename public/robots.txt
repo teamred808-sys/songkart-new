@@ -36,5 +36,10 @@ Disallow: /verify-email
 Disallow: /*?*checkout
 Disallow: /*?*session
 
-# Sitemap location
-Sitemap: https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap
+# Sitemap location (main sitemap - auto-splits if content exceeds limits)
+Sitemap: https://songkart.com/sitemap.xml
+
+# Sub-sitemaps (generated automatically when needed)
+# Sitemap: https://songkart.com/sitemap-songs.xml
+# Sitemap: https://songkart.com/sitemap-blog.xml
+# Sitemap: https://songkart.com/sitemap-pages.xml

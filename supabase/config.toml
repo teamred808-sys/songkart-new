@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.free-checkout]
 verify_jwt = true
+
+[functions.sitemap]
+verify_jwt = false
