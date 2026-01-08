@@ -4,7 +4,17 @@ import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { isValidUUID, filterValidUUIDs } from '@/lib/validation';
 
-const COMMISSION_RATE = 0.15;
+// Fetch commission rate from platform settings
+async function getCommissionRate(): Promise<number> {
+  const { data } = await supabase
+    .from('platform_settings')
+    .select('value')
+    .eq('key', 'commission_rate')
+    .single();
+  
+  // Default to 15% if not set, convert percentage to decimal
+  return ((data?.value as { rate?: number })?.rate || 15) / 100;
+}
 
 // Declare Cashfree global type
 declare global {
@@ -62,9 +72,10 @@ export function useValidatedAddToCart() {
 
       if (songError || !song) throw new Error('Song not found');
 
-      // Calculate prices
+      // Fetch commission rate and calculate prices
+      const commissionRate = await getCommissionRate();
       const basePrice = Number(licenseTier.price);
-      const platformCommission = basePrice * COMMISSION_RATE;
+      const platformCommission = basePrice * commissionRate;
 
       // Upsert cart item (insert or update if exists)
       const { error: upsertError } = await supabase
@@ -165,11 +176,14 @@ export function useCartWithTotals() {
         reservationMap = new Map(reservations?.map(r => [r.song_id, r]));
       }
 
+      // Fetch commission rate for calculations
+      const commissionRate = await getCommissionRate();
+      
       // Calculate totals
       let subtotal = 0;
       const items = cartItems?.map(item => {
         const price = Number(item.license_tiers?.price || 0);
-        const commission = price * COMMISSION_RATE;
+        const commission = price * commissionRate;
         subtotal += price;
 
         return {
@@ -181,7 +195,7 @@ export function useCartWithTotals() {
         };
       }) || [];
 
-      const platformFee = subtotal * COMMISSION_RATE;
+      const platformFee = subtotal * commissionRate;
       const total = subtotal;
 
       return {

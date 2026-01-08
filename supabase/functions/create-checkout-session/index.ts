@@ -8,7 +8,20 @@ const corsHeaders = {
 
 // PRODUCTION mode for live payments
 const CASHFREE_API_URL = "https://api.cashfree.com/pg/orders";
-const COMMISSION_RATE = 0.15;
+
+// Fetch commission rate from platform settings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCommissionRate(supabaseClient: any): Promise<number> {
+  const { data } = await supabaseClient
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "commission_rate")
+    .single();
+  
+  // Default to 15% if not set, convert percentage to decimal
+  const value = data?.value as { rate?: number } | null;
+  return (value?.rate || 15) / 100;
+}
 
 interface CheckoutRequest {
   acknowledgment_accepted: boolean;
@@ -116,11 +129,15 @@ serve(async (req) => {
       }
     }
 
+    // Fetch commission rate from platform settings
+    const commissionRate = await getCommissionRate(supabase);
+    console.log(`Using commission rate: ${commissionRate * 100}%`);
+
     // Calculate totals with fresh prices
     let subtotal = 0;
     const cartSnapshot = cartItems.map(item => {
       const price = Number(item.license_tier.price);
-      const commission = price * COMMISSION_RATE;
+      const commission = price * commissionRate;
       subtotal += price;
       
       return {
@@ -131,14 +148,14 @@ serve(async (req) => {
         license_type: item.license_tier.license_type,
         is_exclusive: item.is_exclusive,
         price,
-        commission_rate: COMMISSION_RATE,
+        commission_rate: commissionRate,
         commission_amount: commission,
         seller_amount: price - commission,
         cover_image_url: item.song.cover_image_url,
       };
     });
 
-    const platformFee = subtotal * COMMISSION_RATE;
+    const platformFee = subtotal * commissionRate;
     const totalAmount = subtotal;
 
     // Generate order ID

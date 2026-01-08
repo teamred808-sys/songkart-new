@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useEffect } from 'react';
-import { Wallet } from 'lucide-react';
+import { Wallet, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function PlatformSettings() {
   const { data: settings, isLoading } = usePlatformSettings();
@@ -24,16 +25,27 @@ export default function PlatformSettings() {
   }, [settings]);
 
   const handleSaveCommission = () => {
-    if (commissionRate) {
-      updateSetting.mutate({ key: 'commission_rate', value: { rate: Number(commissionRate) } });
+    const rate = Number(commissionRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      return;
     }
+    updateSetting.mutate({ key: 'commission_rate', value: { rate } });
   };
 
   const handleSaveWithdrawal = () => {
-    if (minWithdrawal) {
-      updateSetting.mutate({ key: 'min_withdrawal', value: { amount: Number(minWithdrawal) } });
+    const amount = Number(minWithdrawal);
+    if (isNaN(amount) || amount < 0) {
+      return;
     }
+    updateSetting.mutate({ key: 'min_withdrawal', value: { amount } });
   };
+
+  const commissionRateNum = Number(commissionRate);
+  const isCommissionValid = !isNaN(commissionRateNum) && commissionRateNum >= 0 && commissionRateNum <= 100;
+  const isHighCommission = isCommissionValid && commissionRateNum > 50;
+  
+  const minWithdrawalNum = Number(minWithdrawal);
+  const isWithdrawalValid = !isNaN(minWithdrawalNum) && minWithdrawalNum >= 0;
 
   const currentRate = settings?.commission_rate?.rate;
   const currentMinWithdrawal = settings?.min_withdrawal?.amount;
@@ -65,6 +77,8 @@ export default function PlatformSettings() {
                   <Input 
                     type="number" 
                     placeholder="10" 
+                    min="0"
+                    max="100"
                     value={commissionRate} 
                     onChange={(e) => setCommissionRate(e.target.value)} 
                   />
@@ -73,10 +87,26 @@ export default function PlatformSettings() {
                       Current rate: <span className="font-medium">{currentRate}%</span>
                     </p>
                   )}
+                  {!isCommissionValid && commissionRate !== '' && (
+                    <p className="text-sm text-destructive">
+                      Rate must be between 0 and 100
+                    </p>
+                  )}
+                  {isHighCommission && (
+                    <Alert variant="default" className="mt-2 border-amber-500 bg-amber-500/10">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <AlertDescription className="text-amber-600 dark:text-amber-400">
+                        High commission rate may affect seller participation
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    This rate is applied to all new transactions platform-wide
+                  </p>
                 </div>
                 <Button 
                   onClick={handleSaveCommission} 
-                  disabled={updateSetting.isPending || !commissionRate}
+                  disabled={updateSetting.isPending || !isCommissionValid || commissionRate === ''}
                 >
                   {updateSetting.isPending ? 'Saving...' : 'Save Settings'}
                 </Button>
@@ -122,7 +152,7 @@ export default function PlatformSettings() {
                 </div>
                 <Button 
                   onClick={handleSaveWithdrawal} 
-                  disabled={updateSetting.isPending || !minWithdrawal}
+                  disabled={updateSetting.isPending || !isWithdrawalValid || minWithdrawal === ''}
                 >
                   {updateSetting.isPending ? 'Saving...' : 'Save Settings'}
                 </Button>

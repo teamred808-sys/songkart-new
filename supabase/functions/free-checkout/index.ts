@@ -6,7 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const COMMISSION_RATE = 0.15;
+// Fetch commission rate from platform settings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCommissionRate(supabaseClient: any): Promise<number> {
+  const { data } = await supabaseClient
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "commission_rate")
+    .single();
+  
+  // Default to 15% if not set, convert percentage to decimal
+  const value = data?.value as { rate?: number } | null;
+  return (value?.rate || 15) / 100;
+}
 
 interface FreeCheckoutRequest {
   song_id: string;
@@ -268,7 +280,9 @@ serve(async (req) => {
       throw new Error("Failed to create order");
     }
 
-    // 14. Create order item
+    // 14. Fetch commission rate and create order item
+    const commissionRate = await getCommissionRate(supabase);
+    
     const { data: orderItem, error: orderItemError } = await supabase
       .from("order_items")
       .insert({
@@ -279,7 +293,7 @@ serve(async (req) => {
         license_type: licenseTier.license_type,
         is_exclusive: isExclusive,
         price: 0,
-        commission_rate: COMMISSION_RATE,
+        commission_rate: commissionRate,
         commission_amount: 0,
         seller_amount: 0,
       })
