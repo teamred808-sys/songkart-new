@@ -6,11 +6,12 @@ import { TopSongs } from '@/components/seller/TopSongs';
 import { SellerTierCard } from '@/components/seller/SellerTierCard';
 import { VerificationWarningBanner } from '@/components/seller/VerificationWarningBanner';
 import { SellerRatingsOverview } from '@/components/seller/SellerRatingsOverview';
-import { useSellerStats, useSellerTransactions, useSellerSongs } from '@/hooks/useSellerData';
+import { useSellerStats, useSellerTransactions, useSellerSongs, useSellerWallet } from '@/hooks/useSellerData';
+import { usePayoutProfile } from '@/hooks/usePayoutProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Clock, ArrowRight } from 'lucide-react';
+import { Plus, Clock, ArrowRight, Banknote, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -19,10 +20,15 @@ export default function SellerDashboard() {
   const { data: stats, isLoading: statsLoading } = useSellerStats();
   const { data: transactions, isLoading: txLoading } = useSellerTransactions();
   const { data: songs, isLoading: songsLoading } = useSellerSongs();
+  const { data: wallet } = useSellerWallet();
+  const { data: payoutProfile, isLoading: payoutLoading } = usePayoutProfile();
   const { profile, user } = useAuth();
   
   const [verificationPending, setVerificationPending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  const hasEarnings = Number(wallet?.total_earnings || 0) > 0;
+  const needsPayoutSetup = !payoutLoading && !payoutProfile && hasEarnings;
 
   const handleVerifyClick = async () => {
     setIsVerifying(true);
@@ -120,6 +126,31 @@ export default function SellerDashboard() {
                 </Link>
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payout Setup Reminder */}
+      {needsPayoutSetup && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Banknote className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-foreground">
+                Set up your bank details
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You have earnings! Add your bank account to enable withdrawals.
+              </p>
+            </div>
+            <Button size="sm" asChild>
+              <Link to="/seller/payout">
+                Add Bank Details
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       )}

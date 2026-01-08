@@ -127,17 +127,21 @@ export default function MyDownloads() {
     }
   };
 
-  const handleSecureDownload = async (songId: string, songTitle: string) => {
+  const handleSecureDownload = async (itemId: string, songTitle: string, source: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('download-purchased', {
-        body: { song_id: songId },
-      });
+      // Use the correct endpoint based on purchase source
+      const endpoint = source === 'order' ? 'download-order-audio' : 'download-purchased';
+      const body = source === 'order' 
+        ? { order_item_id: itemId }
+        : { transactionId: itemId };
+
+      const { data, error } = await supabase.functions.invoke(endpoint, { body });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       if (data?.download_url) {
-        handleDownload(data.download_url, `${songTitle}.mp3`);
+        handleDownload(data.download_url, data.filename || `${songTitle}.mp3`);
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to download');
@@ -334,7 +338,7 @@ export default function MyDownloads() {
                               <Button
                                 variant="outline"
                                 className="w-full justify-start gap-2 h-10"
-                                onClick={() => handleSecureDownload(item.song!.id, item.song!.title)}
+                                onClick={() => handleSecureDownload(item.id, item.song!.title, item.source)}
                               >
                                 <FileAudio className="h-4 w-4 text-emerald-500" />
                                 <span className="flex-1 text-left">Audio File</span>
