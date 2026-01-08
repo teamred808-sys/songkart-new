@@ -2593,6 +2593,7 @@ export type Database = {
         Returns: Json
       }
       check_upload_rate_limit: { Args: { p_seller_id: string }; Returns: Json }
+      delete_my_rating: { Args: { p_song_id: string }; Returns: Json }
       flag_rating: {
         Args: { p_rating_id: string; p_reason: string }
         Returns: Json
