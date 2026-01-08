@@ -273,6 +273,7 @@ export function useAdminRemoveRating() {
 
 // Admin: Update flag status
 export function useUpdateFlagStatus() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -291,6 +292,7 @@ export function useUpdateFlagStatus() {
           status,
           action_taken: actionTaken,
           reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id,
         })
         .eq("id", flagId);
 
@@ -299,6 +301,34 @@ export function useUpdateFlagStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rating-abuse-flags"] });
       toast.success("Flag status updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+// Delete user's own rating
+export function useDeleteMyRating() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ songId }: { songId: string }) => {
+      const { data, error } = await supabase.rpc("delete_my_rating", {
+        p_song_id: songId,
+      });
+
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string; deleted?: boolean };
+      if (!result.success) throw new Error(result.error || "Failed to delete rating");
+      return result;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["user-rating", variables.songId] });
+      queryClient.invalidateQueries({ queryKey: ["song-ratings", variables.songId] });
+      queryClient.invalidateQueries({ queryKey: ["song", variables.songId] });
+      queryClient.invalidateQueries({ queryKey: ["songs"] });
+      toast.success("Rating removed");
     },
     onError: (error: Error) => {
       toast.error(error.message);

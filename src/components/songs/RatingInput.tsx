@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { BadgeCheck, Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "./StarRating";
-import { useUserRating, useSubmitRating, useHasPurchased } from "@/hooks/useRatings";
+import { useUserRating, useSubmitRating, useHasPurchased, useDeleteMyRating } from "@/hooks/useRatings";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ export function RatingInput({ songId, sellerId, className }: RatingInputProps) {
   const { data: existingRating, isLoading: ratingLoading } = useUserRating(songId);
   const { data: hasPurchased } = useHasPurchased(songId);
   const submitRating = useSubmitRating();
+  const deleteRating = useDeleteMyRating();
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
 
@@ -122,9 +123,27 @@ export function RatingInput({ songId, sellerId, className }: RatingInputProps) {
       )}
 
       {hasRated && !selectedRating && (
-        <p className="text-xs text-muted-foreground">
-          Click the stars to update your rating
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            Click the stars to update your rating
+          </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-destructive hover:text-destructive"
+            onClick={() => deleteRating.mutate({ songId })}
+            disabled={deleteRating.isPending}
+          >
+            {deleteRating.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="h-3 w-3 mr-1" />
+                Remove
+              </>
+            )}
+          </Button>
+        </div>
       )}
     </div>
   );

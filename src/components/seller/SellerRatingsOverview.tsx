@@ -1,4 +1,4 @@
-import { Star, TrendingUp, BarChart3 } from "lucide-react";
+import { Star, TrendingUp, BarChart3, BadgeCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,7 +128,8 @@ export function SellerRatingsOverview() {
                         {rating.songs?.title}
                       </span>
                       {rating.is_verified_purchase && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="gap-1 text-xs bg-blue-500/10 border-blue-500/30 text-blue-500">
+                          <BadgeCheck className="h-3 w-3 animate-pulse" />
                           Verified
                         </Badge>
                       )}
