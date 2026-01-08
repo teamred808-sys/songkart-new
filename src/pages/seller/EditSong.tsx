@@ -29,6 +29,7 @@ import {
 import { Loader2, ArrowLeft, Save, Plus, X, AlertTriangle, ShoppingCart, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { SongSEOFields } from '@/components/seller/SongSEOFields';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
@@ -70,6 +71,13 @@ export default function EditSong() {
   const [tierToRemove, setTierToRemove] = useState<LicenseTier | null>(null);
   const [tierPrices, setTierPrices] = useState<Record<string, number>>({});
 
+  // SEO fields state
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoContent, setSeoContent] = useState('');
+  const [useCases, setUseCases] = useState<string[]>([]);
+  const [lyricsIntro, setLyricsIntro] = useState('');
+
   const form = useForm<EditForm>({
     resolver: zodResolver(editSchema),
     defaultValues: { language: 'English' },
@@ -104,6 +112,14 @@ export default function EditSong() {
         full_lyrics: data.full_lyrics || '',
         preview_lyrics: data.preview_lyrics || '',
       });
+      
+      // Set SEO fields
+      setSeoTitle(data.seo_title || '');
+      setSeoDescription(data.seo_description || '');
+      setSeoContent(data.seo_content || '');
+      setUseCases(data.use_cases || []);
+      setLyricsIntro(data.lyrics_intro || '');
+      
       setIsLoading(false);
     };
 
@@ -139,6 +155,12 @@ export default function EditSong() {
           full_lyrics: data.full_lyrics || null,
           preview_lyrics: data.preview_lyrics || null,
           has_lyrics: !!data.full_lyrics,
+          // SEO fields
+          seo_title: seoTitle || null,
+          seo_description: seoDescription || null,
+          seo_content: seoContent || null,
+          use_cases: useCases.length > 0 ? useCases : null,
+          lyrics_intro: lyricsIntro || null,
         })
         .eq('id', id);
 
@@ -328,6 +350,21 @@ export default function EditSong() {
               <Label htmlFor="preview_lyrics">Preview Lyrics</Label>
               <Textarea id="preview_lyrics" {...form.register('preview_lyrics')} rows={3} />
             </div>
+
+            {/* SEO Fields Section */}
+            <SongSEOFields
+              seoTitle={seoTitle}
+              seoDescription={seoDescription}
+              seoContent={seoContent}
+              useCases={useCases}
+              lyricsIntro={lyricsIntro}
+              onSeoTitleChange={setSeoTitle}
+              onSeoDescriptionChange={setSeoDescription}
+              onSeoContentChange={setSeoContent}
+              onUseCasesChange={setUseCases}
+              onLyricsIntroChange={setLyricsIntro}
+              defaultExpanded={!!(seoTitle || seoDescription || seoContent || useCases.length || lyricsIntro)}
+            />
 
             <div className="flex justify-end gap-4">
               <Button type="button" variant="outline" onClick={() => navigate('/seller/songs')}>

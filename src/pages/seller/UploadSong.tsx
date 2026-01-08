@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SongSEOFields } from '@/components/seller/SongSEOFields';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
@@ -124,6 +125,13 @@ export default function UploadSong() {
   const [pricing, setPricing] = useState<PricingForm>({ base_price: 29.99, license_tiers: [] });
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // SEO fields state
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoContent, setSeoContent] = useState('');
+  const [useCases, setUseCases] = useState<string[]>([]);
+  const [lyricsIntro, setLyricsIntro] = useState('');
 
   // File previews
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -292,6 +300,12 @@ export default function UploadSong() {
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
+          // SEO fields
+          seo_title: seoTitle || null,
+          seo_description: seoDescription || null,
+          seo_content: seoContent || null,
+          use_cases: useCases.length > 0 ? useCases : null,
+          lyrics_intro: lyricsIntro || null,
         })
         .select()
         .single();
@@ -502,6 +516,20 @@ export default function UploadSong() {
                   />
                 </div>
               </div>
+
+              {/* SEO Fields Section */}
+              <SongSEOFields
+                seoTitle={seoTitle}
+                seoDescription={seoDescription}
+                seoContent={seoContent}
+                useCases={useCases}
+                lyricsIntro={lyricsIntro}
+                onSeoTitleChange={setSeoTitle}
+                onSeoDescriptionChange={setSeoDescription}
+                onSeoContentChange={setSeoContent}
+                onUseCasesChange={setUseCases}
+                onLyricsIntroChange={setLyricsIntro}
+              />
 
               <div className="flex justify-end">
                 <Button type="submit">

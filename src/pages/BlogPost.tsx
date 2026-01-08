@@ -8,6 +8,7 @@ import { ContentRenderer } from "@/components/cms/ContentRenderer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BlogPostingSchema, BreadcrumbSchema } from "@/components/seo/SchemaOrg";
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -48,9 +49,25 @@ const BlogPost = () => {
     );
   }
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://songkart.com';
+
   return (
     <MainLayout>
       <SEOHead content={post} />
+      <BlogPostingSchema
+        headline={post.title}
+        description={post.excerpt || undefined}
+        image={post.featured_image || undefined}
+        author={post.author?.full_name || 'SongKart Team'}
+        datePublished={post.published_at || post.created_at || undefined}
+        dateModified={post.updated_at || undefined}
+        url={`${baseUrl}/blog/${post.slug}`}
+      />
+      <BreadcrumbSchema items={[
+        { name: 'Home', url: baseUrl },
+        { name: 'Blog', url: `${baseUrl}/blog` },
+        { name: post.title, url: `${baseUrl}/blog/${post.slug}` }
+      ]} />
       
       <article className="container mx-auto px-4 py-12 max-w-4xl">
         <Link 
