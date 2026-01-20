@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const sitemapType = url.searchParams.get('type') || 'index';
 
     // Fetch counts to determine if we need sitemap index
-    const [songsResult, postsResult, pagesResult] = await Promise.all([
+    const [songsResult, postsResult, pagesResult, sellersResult] = await Promise.all([
       supabase
         .from('songs')
         .select('id', { count: 'exact', head: true })
@@ -99,12 +99,17 @@ Deno.serve(async (req) => {
         .eq('status', 'published')
         .or('no_index.is.null,no_index.eq.false')
         .not('slug', 'in', '(home,homepage,index)'),
+      supabase
+        .from('user_roles')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('role', 'seller'),
     ]);
 
     const songCount = songsResult.count || 0;
     const postCount = postsResult.count || 0;
     const pageCount = pagesResult.count || 0;
-    const totalCount = songCount + postCount + pageCount;
+    const sellerCount = sellersResult.count || 0;
+    const totalCount = songCount + postCount + pageCount + sellerCount;
     const needsIndex = totalCount > SITEMAP_LIMIT;
 
     // Handle different sitemap types
@@ -138,20 +143,48 @@ Deno.serve(async (req) => {
           changefreq: 'daily',
           priority: '0.8',
         });
+        
+        // License pages
+        entries.push({
+          loc: getCanonicalUrl(baseUrl, '/licenses'),
+          lastmod: formatDate(null),
+          changefreq: 'monthly',
+          priority: '0.7',
+        });
+        entries.push({
+          loc: getCanonicalUrl(baseUrl, '/licenses/personal'),
+          lastmod: formatDate(null),
+          changefreq: 'monthly',
+          priority: '0.6',
+        });
+        entries.push({
+          loc: getCanonicalUrl(baseUrl, '/licenses/commercial'),
+          lastmod: formatDate(null),
+          changefreq: 'monthly',
+          priority: '0.6',
+        });
+        entries.push({
+          loc: getCanonicalUrl(baseUrl, '/licenses/exclusive'),
+          lastmod: formatDate(null),
+          changefreq: 'monthly',
+          priority: '0.6',
+        });
       }
 
-      // Fetch songs
+      // Fetch songs with slug
       const { data: songs } = await supabase
         .from('songs')
-        .select('id, updated_at, canonical_url, no_index')
+        .select('id, slug, updated_at, canonical_url, no_index')
         .eq('status', 'approved')
         .or('no_index.is.null,no_index.eq.false')
         .order('updated_at', { ascending: false });
 
       if (songs) {
         for (const song of songs) {
+          // Use slug-based URL if available
+          const songPath = song.slug ? `/songs/${song.slug}` : `/song/${song.id}`;
           entries.push({
-            loc: getCanonicalUrl(baseUrl, `/song/${song.id}`, song.canonical_url),
+            loc: getCanonicalUrl(baseUrl, songPath, song.canonical_url),
             lastmod: formatDate(song.updated_at),
             changefreq: 'weekly',
             priority: '0.9',
@@ -159,8 +192,54 @@ Deno.serve(async (req) => {
         }
       }
 
-      // If combined sitemap, also include blog and pages
+      // If combined sitemap, also include sellers, blog and pages
       if (!needsIndex) {
+        // Fetch sellers with username
+        const { data: sellerRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'seller');
+
+        if (sellerRoles && sellerRoles.length > 0) {
+          const sellerIds = sellerRoles.map(r => r.user_id);
+          const { data: sellers } = await supabase
+            .from('profiles')
+            .select('id, username, updated_at')
+            .in('id', sellerIds);
+
+          if (sellers) {
+            for (const seller of sellers) {
+              // Use username-based URL if available
+              const sellerPath = seller.username 
+                ? `/sellers/${seller.username}` 
+                : `/seller/${seller.id}`;
+              entries.push({
+                loc: getCanonicalUrl(baseUrl, sellerPath),
+                lastmod: formatDate(seller.updated_at),
+                changefreq: 'weekly',
+                priority: '0.7',
+              });
+            }
+          }
+        }
+
+        // Fetch genres for genre pages
+        const { data: genres } = await supabase
+          .from('genres')
+          .select('name')
+          .order('name');
+
+        if (genres) {
+          for (const genre of genres) {
+            entries.push({
+              loc: getCanonicalUrl(baseUrl, `/browse?genre=${encodeURIComponent(genre.name)}`),
+              lastmod: formatDate(null),
+              changefreq: 'weekly',
+              priority: '0.6',
+            });
+          }
+        }
+
         // Fetch blog posts
         const { data: posts } = await supabase
           .from('cms_content')
@@ -198,6 +277,54 @@ Deno.serve(async (req) => {
               lastmod: formatDate(page.updated_at),
               changefreq: 'monthly',
               priority: '0.6',
+            });
+          }
+        }
+      }
+
+      return new Response(generateSitemapXml(entries), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/xml; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+        },
+      });
+    }
+
+    if (sitemapType === 'sellers') {
+      const entries: SitemapEntry[] = [];
+
+      // Sellers listing page
+      entries.push({
+        loc: getCanonicalUrl(baseUrl, '/sellers'),
+        lastmod: formatDate(null),
+        changefreq: 'weekly',
+        priority: '0.7',
+      });
+
+      // Fetch sellers with username
+      const { data: sellerRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'seller');
+
+      if (sellerRoles && sellerRoles.length > 0) {
+        const sellerIds = sellerRoles.map(r => r.user_id);
+        const { data: sellers } = await supabase
+          .from('profiles')
+          .select('id, username, updated_at')
+          .in('id', sellerIds);
+
+        if (sellers) {
+          for (const seller of sellers) {
+            const sellerPath = seller.username 
+              ? `/sellers/${seller.username}` 
+              : `/seller/${seller.id}`;
+            entries.push({
+              loc: getCanonicalUrl(baseUrl, sellerPath),
+              lastmod: formatDate(seller.updated_at),
+              changefreq: 'weekly',
+              priority: '0.7',
             });
           }
         }
@@ -273,6 +400,32 @@ Deno.serve(async (req) => {
         changefreq: 'weekly',
         priority: '0.7',
       });
+      
+      // License pages
+      entries.push({
+        loc: getCanonicalUrl(baseUrl, '/licenses'),
+        lastmod: formatDate(null),
+        changefreq: 'monthly',
+        priority: '0.7',
+      });
+      entries.push({
+        loc: getCanonicalUrl(baseUrl, '/licenses/personal'),
+        lastmod: formatDate(null),
+        changefreq: 'monthly',
+        priority: '0.6',
+      });
+      entries.push({
+        loc: getCanonicalUrl(baseUrl, '/licenses/commercial'),
+        lastmod: formatDate(null),
+        changefreq: 'monthly',
+        priority: '0.6',
+      });
+      entries.push({
+        loc: getCanonicalUrl(baseUrl, '/licenses/exclusive'),
+        lastmod: formatDate(null),
+        changefreq: 'monthly',
+        priority: '0.6',
+      });
 
       const { data: pages } = await supabase
         .from('cms_content')
@@ -308,6 +461,7 @@ Deno.serve(async (req) => {
       const today = formatDate(null);
       const sitemaps = [
         { name: 'songs', lastmod: today },
+        { name: 'sellers', lastmod: today },
         { name: 'blog', lastmod: today },
         { name: 'pages', lastmod: today },
       ];

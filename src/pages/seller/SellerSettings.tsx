@@ -20,10 +20,20 @@ export default function SellerSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const updateDynamicPricing = useUpdateSellerDynamicPricing();
 
+  // Cast profile to include new SEO fields (they exist in DB but types may not be updated yet)
+  const profileWithSEO = profile as typeof profile & {
+    username?: string;
+    role?: string;
+    specialties?: string[];
+  };
+
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     bio: profile?.bio || '',
     website: profile?.website || '',
+    username: profileWithSEO?.username || '',
+    role: profileWithSEO?.role || '',
+    specialties: profileWithSEO?.specialties || [],
   });
 
   const [dynamicPricingEnabled, setDynamicPricingEnabled] = useState(true);
@@ -74,6 +84,9 @@ export default function SellerSettings() {
           full_name: formData.full_name,
           bio: formData.bio,
           website: formData.website,
+          username: formData.username || null,
+          role: formData.role || null,
+          specialties: formData.specialties.length > 0 ? formData.specialties : null,
         })
         .eq('id', profile.id);
 
@@ -206,6 +219,58 @@ export default function SellerSettings() {
                 onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                 placeholder="https://yourwebsite.com"
               />
+            </div>
+
+            {/* SEO Fields */}
+            <Separator className="my-6" />
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                SEO & Public Profile
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Optimize your profile for search engines and make it easier for buyers to find you.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="username">Profile URL (Username)</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">songkart.com/sellers/</span>
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                    placeholder="your-username"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, and hyphens allowed.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Your Role / Title</Label>
+                <Input
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  placeholder="e.g., Lyricist, Composer, Music Producer"
+                />
+                <p className="text-xs text-muted-foreground">This appears in search results and your profile page.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="specialties">Specialties / Genres</Label>
+                <Input
+                  id="specialties"
+                  value={formData.specialties.join(', ')}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    specialties: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  }))}
+                  placeholder="e.g., Bollywood, Pop, Romantic, Hindi"
+                />
+                <p className="text-xs text-muted-foreground">Comma-separated list of genres or styles you specialize in.</p>
+              </div>
             </div>
 
             <Button type="submit" disabled={isLoading}>
