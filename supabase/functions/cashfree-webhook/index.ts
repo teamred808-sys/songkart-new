@@ -6,6 +6,97 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-webhook-timestamp",
 };
 
+// Convert hex string to Uint8Array
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+// Convert ArrayBuffer to hex string
+function bytesToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Verify Cashfree webhook signature using HMAC-SHA256
+async function verifyWebhookSignature(
+  body: string,
+  signature: string | null,
+  timestamp: string | null,
+  secretKey: string
+): Promise<{ valid: boolean; reason?: string }> {
+  // Cashfree sends signature in header
+  if (!signature) {
+    return { valid: false, reason: "Missing webhook signature header" };
+  }
+
+  if (!timestamp) {
+    return { valid: false, reason: "Missing webhook timestamp header" };
+  }
+
+  // Validate timestamp to prevent replay attacks (5 minute window)
+  const timestampMs = parseInt(timestamp, 10);
+  const currentMs = Date.now();
+  const fiveMinutesMs = 5 * 60 * 1000;
+  
+  if (isNaN(timestampMs)) {
+    return { valid: false, reason: "Invalid timestamp format" };
+  }
+  
+  if (Math.abs(currentMs - timestampMs) > fiveMinutesMs) {
+    return { valid: false, reason: "Webhook timestamp too old (possible replay attack)" };
+  }
+
+  try {
+    // Cashfree signature format: timestamp + raw body
+    const signaturePayload = timestamp + body;
+    
+    // Import the secret key for HMAC
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secretKey);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    // Generate expected signature
+    const signatureBuffer = await crypto.subtle.sign(
+      "HMAC",
+      cryptoKey,
+      encoder.encode(signaturePayload)
+    );
+    
+    const expectedSignature = bytesToHex(signatureBuffer);
+    
+    // Constant-time comparison to prevent timing attacks
+    if (signature.length !== expectedSignature.length) {
+      return { valid: false, reason: "Signature length mismatch" };
+    }
+    
+    let result = 0;
+    for (let i = 0; i < signature.length; i++) {
+      result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+    }
+    
+    if (result !== 0) {
+      return { valid: false, reason: "Signature verification failed" };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    console.error("Signature verification error:", error);
+    return { valid: false, reason: "Signature verification error" };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +105,15 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const cashfreeSecretKey = Deno.env.get("CASHFREE_SECRET_KEY")!;
+    const cashfreeSecretKey = Deno.env.get("CASHFREE_SECRET_KEY");
+    
+    if (!cashfreeSecretKey) {
+      console.error("CASHFREE_SECRET_KEY not configured");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -22,10 +121,35 @@ serve(async (req) => {
     const signature = req.headers.get("x-webhook-signature");
     const timestamp = req.headers.get("x-webhook-timestamp");
 
-    console.log("Webhook received:", body);
+    console.log("Webhook received, verifying signature...");
 
-    // Verify webhook signature (simplified - in production use proper HMAC verification)
-    // For now, we'll trust the webhook but log for debugging
+    // Verify webhook signature to prevent fake payment notifications
+    const verification = await verifyWebhookSignature(body, signature, timestamp, cashfreeSecretKey);
+    
+    if (!verification.valid) {
+      console.error("Webhook signature verification failed:", verification.reason);
+      
+      // Log the failed attempt for security monitoring
+      await supabase
+        .from("activity_logs")
+        .insert({
+          entity_type: "webhook",
+          action: "signature_verification_failed",
+          metadata: {
+            reason: verification.reason,
+            ip_address: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
+            user_agent: req.headers.get("user-agent"),
+            timestamp: new Date().toISOString(),
+          }
+        });
+      
+      return new Response(JSON.stringify({ error: "Invalid webhook signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Webhook signature verified successfully");
     
     const payload = JSON.parse(body);
     const { data, type } = payload;
