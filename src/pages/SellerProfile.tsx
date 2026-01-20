@@ -9,6 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SongCard } from "@/components/songs/SongCard";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
 import { useSellerTier } from "@/hooks/useSellerTier";
+import { SellerSEOHead } from "@/components/seo/SellerSEOHead";
+import { ProfilePageSchema, BreadcrumbSchema } from "@/components/seo/SchemaOrg";
+import { SEOBreadcrumbs } from "@/components/seo/InternalLinks";
 import { CheckCircle, Music, Play, Eye, Globe, ExternalLink } from "lucide-react";
 
 interface SellerProfile {
@@ -151,17 +154,38 @@ const SellerProfile = () => {
     );
   }
 
+  // Prepare social links for schema
+  const socialLinks = seller.social_links 
+    ? Object.values(seller.social_links).filter(Boolean) as string[]
+    : [];
+
+  const breadcrumbItems = [
+    { name: 'Home', url: '/' },
+    { name: 'Sellers', url: '/sellers' },
+    { name: seller.full_name || 'Seller', url: seller.username ? `/sellers/${seller.username}` : `/seller/${seller.id}` },
+  ];
+
   return (
     <MainLayout>
+      {/* SEO Components */}
+      <SellerSEOHead seller={seller} songCount={totalSongs} />
+      <ProfilePageSchema
+        name={seller.full_name || 'Music Creator'}
+        description={seller.bio || undefined}
+        image={seller.avatar_url || undefined}
+        url={`${window.location.origin}${seller.username ? `/sellers/${seller.username}` : `/seller/${seller.id}`}`}
+        sameAs={socialLinks}
+        role={seller.role || 'Music Creator'}
+        worksCount={totalSongs}
+      />
+      <BreadcrumbSchema items={breadcrumbItems.map(item => ({ 
+        name: item.name, 
+        url: `${window.location.origin}${item.url}` 
+      }))} />
+
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
-        <nav className="text-sm text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-foreground">Home</Link>
-          <span className="mx-2">/</span>
-          <Link to="/sellers" className="hover:text-foreground">Sellers</Link>
-          <span className="mx-2">/</span>
-          <span className="text-foreground">{seller.full_name || "Seller"}</span>
-        </nav>
+        <SEOBreadcrumbs items={breadcrumbItems} className="mb-6" />
 
         {/* Profile Header */}
         <div className="flex flex-col md:flex-row items-start gap-6 mb-8">

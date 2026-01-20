@@ -13,6 +13,7 @@ import { useAudioPlayerOptional } from "@/contexts/AudioPlayerContext";
 
 interface SongCardProps {
   id: string;
+  slug?: string | null;
   title: string;
   sellerName: string;
   coverUrl?: string | null;
@@ -36,6 +37,7 @@ interface SongCardProps {
 
 export const SongCard = memo(function SongCard({
   id,
+  slug,
   title,
   sellerName,
   coverUrl,
@@ -52,6 +54,8 @@ export const SongCard = memo(function SongCard({
   totalRatings,
   sellerTier,
 }: SongCardProps) {
+  // Use slug-based URL if available
+  const songUrl = slug ? `/songs/${slug}` : `/song/${id}`;
   const [showPlayer, setShowPlayer] = useState(false);
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const playerRef = useRef<MiniAudioPlayerHandle>(null);
@@ -93,7 +97,7 @@ export const SongCard = memo(function SongCard({
   const shouldShowOverlay = showPlayer || isCurrentlyPlaying;
 
   return (
-    <Link to={`/song/${id}`}>
+    <Link to={songUrl}>
       <Card className={cn(
         "group overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1",
         className
