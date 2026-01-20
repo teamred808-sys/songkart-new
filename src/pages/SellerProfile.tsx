@@ -19,6 +19,9 @@ interface SellerProfile {
   is_verified: boolean | null;
   website: string | null;
   social_links: Record<string, string> | null;
+  username?: string | null;
+  role?: string | null;
+  specialties?: string[] | null;
 }
 
 interface Song {
@@ -38,54 +41,63 @@ interface Song {
 }
 
 const SellerProfile = () => {
-  const { id } = useParams<{ id: string }>();
-  const { data: sellerTier } = useSellerTier(id);
+  const { id, identifier } = useParams<{ id?: string; identifier?: string }>();
+  const sellerIdentifier = identifier || id;
+  const { data: sellerTier } = useSellerTier(sellerIdentifier);
 
   const { data: seller, isLoading: isLoadingSeller } = useQuery({
-    queryKey: ["seller-profile", id],
+    queryKey: ["seller-profile", sellerIdentifier],
     queryFn: async () => {
-      if (!id) throw new Error("Seller ID required");
+      if (!sellerIdentifier) throw new Error("Seller ID required");
+
+      // Try to find by username first, then by ID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sellerIdentifier);
+      
+      let profileQuery = supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, bio, is_verified, website, social_links, username, role, specialties");
+      
+      if (isUUID) {
+        profileQuery = profileQuery.eq("id", sellerIdentifier);
+      } else {
+        profileQuery = profileQuery.eq("username", sellerIdentifier);
+      }
+      
+      const { data: profile, error: profileError } = await profileQuery.maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile) return null;
 
       // Verify this user has seller role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", id)
+        .eq("user_id", profile.id)
         .eq("role", "seller")
         .maybeSingle();
 
       if (roleError) throw roleError;
       if (!roleData) return null;
 
-      // Fetch profile
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, bio, is_verified, website, social_links")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as SellerProfile | null;
+      return profile as SellerProfile | null;
     },
-    enabled: !!id,
+    enabled: !!sellerIdentifier,
   });
 
   const { data: songs, isLoading: isLoadingSongs } = useQuery({
-    queryKey: ["seller-songs", id],
+    queryKey: ["seller-songs", seller?.id],
     queryFn: async () => {
-      if (!id) return [];
+      if (!seller?.id) return [];
 
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, description, cover_image_url, preview_audio_url, base_price, play_count, view_count, has_lyrics, has_audio, seller_id, genres(name), moods(name)")
-        .eq("seller_id", id)
+        .select("id, title, description, cover_image_url, preview_audio_url, base_price, play_count, view_count, has_lyrics, has_audio, seller_id, slug, genres(name), moods(name)")
+        .eq("seller_id", seller.id)
         .eq("status", "approved")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-      return (data || []) as Song[];
+      return (data || []) as (Song & { slug?: string })[];
     },
-    enabled: !!id,
+    enabled: !!seller?.id,
   });
 
   // Calculate stats

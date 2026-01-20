@@ -1717,11 +1717,14 @@ export type Database = {
           is_verified: boolean | null
           kyc_documents: Json | null
           kyc_status: string | null
+          role: string | null
           social_links: Json | null
+          specialties: string[] | null
           suspended_at: string | null
           suspension_reason: string | null
           updated_at: string
           upload_limit: number | null
+          username: string | null
           website: string | null
         }
         Insert: {
@@ -1737,11 +1740,14 @@ export type Database = {
           is_verified?: boolean | null
           kyc_documents?: Json | null
           kyc_status?: string | null
+          role?: string | null
           social_links?: Json | null
+          specialties?: string[] | null
           suspended_at?: string | null
           suspension_reason?: string | null
           updated_at?: string
           upload_limit?: number | null
+          username?: string | null
           website?: string | null
         }
         Update: {
@@ -1757,11 +1763,14 @@ export type Database = {
           is_verified?: boolean | null
           kyc_documents?: Json | null
           kyc_status?: string | null
+          role?: string | null
           social_links?: Json | null
+          specialties?: string[] | null
           suspended_at?: string | null
           suspension_reason?: string | null
           updated_at?: string
           upload_limit?: number | null
+          username?: string | null
           website?: string | null
         }
         Relationships: []
@@ -2256,6 +2265,7 @@ export type Database = {
           seo_content: string | null
           seo_description: string | null
           seo_title: string | null
+          slug: string | null
           status: Database["public"]["Enums"]["song_status"]
           title: string
           total_ratings: number | null
@@ -2306,6 +2316,7 @@ export type Database = {
           seo_content?: string | null
           seo_description?: string | null
           seo_title?: string | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title: string
           total_ratings?: number | null
@@ -2356,6 +2367,7 @@ export type Database = {
           seo_content?: string | null
           seo_description?: string | null
           seo_title?: string | null
+          slug?: string | null
           status?: Database["public"]["Enums"]["song_status"]
           title?: string
           total_ratings?: number | null
@@ -2763,6 +2775,7 @@ export type Database = {
         Returns: Json
       }
       generate_order_number: { Args: never; Returns: string }
+      generate_slug: { Args: { title: string }; Returns: string }
       get_country_pricing: {
         Args: { p_country_code: string }
         Returns: {

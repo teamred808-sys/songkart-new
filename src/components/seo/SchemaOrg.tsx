@@ -87,6 +87,8 @@ interface MusicRecordingSchemaProps {
   description?: string;
   image?: string;
   datePublished?: string;
+  averageRating?: number;
+  ratingCount?: number;
   offers?: {
     price: number;
     currency: string;
@@ -101,6 +103,8 @@ export function MusicRecordingSchema({
   description,
   image,
   datePublished,
+  averageRating,
+  ratingCount,
   offers
 }: MusicRecordingSchemaProps) {
   const schema: Record<string, unknown> = {
@@ -118,6 +122,17 @@ export function MusicRecordingSchema({
   if (description) schema.description = description;
   if (image) schema.image = image;
   if (datePublished) schema.datePublished = datePublished;
+
+  // Add aggregate rating if available
+  if (averageRating && ratingCount && ratingCount > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      "ratingValue": averageRating,
+      "ratingCount": ratingCount,
+      "bestRating": 5,
+      "worstRating": 1
+    };
+  }
 
   if (offers && offers.length > 0) {
     schema.offers = offers.map(offer => ({
@@ -264,6 +279,86 @@ export function WebSiteSchema() {
       },
       "query-input": "required name=search_term_string"
     }
+  };
+
+  return <SchemaOrg schema={schema} />;
+}
+
+// ProfilePage schema for seller profiles
+interface ProfilePageSchemaProps {
+  name: string;
+  description?: string;
+  image?: string;
+  url: string;
+  sameAs?: string[];
+  role?: string;
+  worksCount?: number;
+}
+
+export function ProfilePageSchema({
+  name,
+  description,
+  image,
+  url,
+  sameAs,
+  role,
+  worksCount
+}: ProfilePageSchemaProps) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": name,
+      "description": description,
+      "image": image,
+      "url": url,
+      "sameAs": sameAs || [],
+      "jobTitle": role || "Music Creator",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "SongKart"
+      },
+      ...(worksCount && {
+        "makesOffer": {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "CreativeWork",
+            "name": `${worksCount} Licensed Tracks`
+          }
+        }
+      })
+    }
+  };
+
+  return <SchemaOrg schema={schema} />;
+}
+
+// ItemList schema for browse/category pages
+interface ItemListSchemaProps {
+  name: string;
+  description?: string;
+  items: {
+    name: string;
+    url: string;
+    image?: string;
+  }[];
+}
+
+export function ItemListSchema({ name, description, items }: ItemListSchemaProps) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": name,
+    "description": description,
+    "numberOfItems": items.length,
+    "itemListElement": items.map((item, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": item.name,
+      "url": item.url,
+      ...(item.image && { "image": item.image })
+    }))
   };
 
   return <SchemaOrg schema={schema} />;

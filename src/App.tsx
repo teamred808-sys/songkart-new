@@ -25,6 +25,9 @@ import NotFound from "./pages/NotFound";
 import ContentPage from "./pages/ContentPage";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import LicensesPage from "./pages/LicensesPage";
+import { SongRedirect } from "./components/redirects/SongRedirect";
+import { SellerRedirect } from "./components/redirects/SellerRedirect";
 import VerifyEmail from "./pages/VerifyEmail";
 
 // Lazy loaded seller pages
@@ -96,8 +99,18 @@ const App = () => (
             <Route path="/auth" element={<HomepageGuard><Auth /></HomepageGuard>} />
             <Route path="/browse" element={<HomepageGuard><Browse /></HomepageGuard>} />
             <Route path="/sellers" element={<HomepageGuard><Sellers /></HomepageGuard>} />
-            <Route path="/seller/:id" element={<HomepageGuard><SellerProfile /></HomepageGuard>} />
-            <Route path="/song/:id" element={<HomepageGuard><SongDetail /></HomepageGuard>} />
+            
+            {/* SEO-friendly seller routes */}
+            <Route path="/sellers/:identifier" element={<HomepageGuard><SellerProfile /></HomepageGuard>} />
+            <Route path="/seller/:id" element={<HomepageGuard><SellerRedirect /></HomepageGuard>} />
+            
+            {/* SEO-friendly song routes */}
+            <Route path="/songs/:identifier" element={<HomepageGuard><SongDetail /></HomepageGuard>} />
+            <Route path="/song/:id" element={<HomepageGuard><SongRedirect /></HomepageGuard>} />
+            
+            {/* License information pages */}
+            <Route path="/licenses" element={<HomepageGuard><LicensesPage /></HomepageGuard>} />
+            <Route path="/licenses/:type" element={<HomepageGuard><LicensesPage /></HomepageGuard>} />
             
             {/* Buyer Dashboard Routes */}
             <Route path="/buyer" element={

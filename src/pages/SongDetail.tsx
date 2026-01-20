@@ -31,19 +31,20 @@ import { SEOContentSection } from "@/components/seo/SEOContentSection";
 import { RelatedSongs } from "@/components/songs/RelatedSongs";
 
 export default function SongDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id, identifier } = useParams<{ id?: string; identifier?: string }>();
+  const songIdentifier = identifier || id;
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
 
-  const { data: song, isLoading: songLoading } = useSong(id!);
-  const { data: licenseTiers, isLoading: tiersLoading } = useLicenseTiers(id!);
+  const { data: song, isLoading: songLoading } = useSong(songIdentifier!);
+  const { data: licenseTiers, isLoading: tiersLoading } = useLicenseTiers(song?.id || songIdentifier!);
   const { data: sellerTier } = useSellerTier(song?.seller?.id);
   const addToCart = useValidatedAddToCart();
 
   const handlePlay = async () => {
-    if (id) {
-      await supabase.rpc("increment_play_count", { song_uuid: id });
+    if (song?.id) {
+      await supabase.rpc("increment_play_count", { song_uuid: song.id });
     }
   };
 
@@ -59,7 +60,7 @@ export default function SongDetail() {
       return;
     }
 
-    addToCart.mutate({ songId: id!, licenseTierId: selectedLicense });
+    addToCart.mutate({ songId: song?.id || songIdentifier!, licenseTierId: selectedLicense });
   };
 
   const formatDuration = (seconds: number | null) => {

@@ -170,24 +170,28 @@ export function useFeaturedSongs() {
   });
 }
 
-export function useSong(id: string) {
+export function useSong(identifier: string) {
   return useQuery({
-    queryKey: ["song", id],
+    queryKey: ["song", identifier],
     queryFn: async () => {
-      // Validate UUID before querying
-      if (!isValidUUID(id)) {
-        throw new Error("Invalid song ID");
-      }
+      // Check if identifier is a UUID or slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("songs")
         .select(`
           *,
           genres (id, name),
           moods (id, name)
-        `)
-        .eq("id", id)
-        .single();
+        `);
+      
+      if (isUUID) {
+        query = query.eq("id", identifier);
+      } else {
+        query = query.eq("slug", identifier);
+      }
+      
+      const { data, error } = await query.single();
       
       if (error) throw error;
       
@@ -196,18 +200,18 @@ export function useSong(id: string) {
       if (isValidUUID(data.seller_id)) {
         const { data: sellerData } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, bio, is_verified")
+          .select("id, full_name, avatar_url, bio, is_verified, username")
           .eq("id", data.seller_id)
           .maybeSingle();
         seller = sellerData;
       }
       
       // Increment view count
-      await supabase.rpc("increment_view_count", { song_uuid: id });
+      await supabase.rpc("increment_view_count", { song_uuid: data.id });
       
       return { ...data, seller } as Song;
     },
-    enabled: isValidUUID(id),
+    enabled: !!identifier,
   });
 }
 
