@@ -35,9 +35,12 @@ Disallow: /auth
 Disallow: /verify-email
 Disallow: /*?*checkout
 Disallow: /*?*session
+Disallow: /*preview_audio_url*
+Disallow: /*audio-token*
 
-# Sitemap location (main sitemap - auto-splits if content exceeds limits)
+# Sitemap locations
 Sitemap: https://songkart.com/sitemap.xml
+Sitemap: https://songkart.com/sitemap-sellers.xml
 
 # Sub-sitemaps (generated automatically when needed)
 # Sitemap: https://songkart.com/sitemap-songs.xml
