@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect } from "react";
+import { memo, useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Music, FileText, Play, Heart, Star, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,29 +69,32 @@ export const SongCard = memo(function SongCard({
     }
   }, [isCurrentlyPlaying, showPlayer, isStartingPlayback]);
 
-  const handlePlayClick = async (e: React.MouseEvent) => {
+  // Optimized click handler for INP - defers heavy work
+  const handlePlayClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (!hasAudio) return;
     
-    // Show the player UI immediately
+    // Show visual feedback immediately
     setShowPlayer(true);
     setIsStartingPlayback(true);
     
-    // Small delay to ensure the ref is available after render
-    setTimeout(async () => {
-      try {
-        await playerRef.current?.play();
-      } finally {
-        setIsStartingPlayback(false);
-      }
-    }, 0);
-  };
+    // Defer actual playback to avoid blocking interaction
+    requestAnimationFrame(() => {
+      setTimeout(async () => {
+        try {
+          await playerRef.current?.play();
+        } finally {
+          setIsStartingPlayback(false);
+        }
+      }, 0);
+    });
+  }, [hasAudio]);
 
-  const handlePlayerEnded = () => {
+  const handlePlayerEnded = useCallback(() => {
     setShowPlayer(false);
-  };
+  }, []);
 
   // Determine if we should show the overlay
   const shouldShowOverlay = showPlayer || isCurrentlyPlaying;
@@ -99,18 +102,23 @@ export const SongCard = memo(function SongCard({
   return (
     <Link to={songUrl}>
       <Card className={cn(
-        "group overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1",
+        "group overflow-hidden bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1",
+        // Disable backdrop-blur on mobile for performance (handled via CSS)
+        "md:backdrop-blur",
         className
       )}>
-        {/* Mobile: 16:9 landscape, Desktop: square */}
-        <div className="relative aspect-video md:aspect-square overflow-hidden">
+        {/* Mobile: 16:9 landscape, Desktop: square - fixed dimensions for CLS */}
+        <div className="relative aspect-video md:aspect-square overflow-hidden bg-muted">
           {coverUrl ? (
             <img
               src={coverUrl}
               alt={title}
               loading="lazy"
               decoding="async"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              width={300}
+              height={300}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">

@@ -7,6 +7,10 @@ interface OptimizedImageProps {
   className?: string;
   fallback?: React.ReactNode;
   loading?: "lazy" | "eager";
+  priority?: boolean;
+  width?: number;
+  height?: number;
+  sizes?: string;
 }
 
 export const OptimizedImage = memo(function OptimizedImage({
@@ -15,6 +19,10 @@ export const OptimizedImage = memo(function OptimizedImage({
   className,
   fallback,
   loading = "lazy",
+  priority = false,
+  width,
+  height,
+  sizes,
 }: OptimizedImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -27,8 +35,12 @@ export const OptimizedImage = memo(function OptimizedImage({
     <img
       src={src}
       alt={alt}
-      loading={loading}
+      loading={priority ? "eager" : loading}
       decoding="async"
+      fetchPriority={priority ? "high" : "auto"}
+      width={width}
+      height={height}
+      sizes={sizes}
       onLoad={() => setIsLoaded(true)}
       onError={() => setHasError(true)}
       className={cn(
