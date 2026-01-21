@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Always-available minimal sitemap (never empty / never depends on backend) -->
+  <sitemap>
+    <loc>https://songkart.com/sitemap-static.xml</loc>
+  </sitemap>
+
+  <!-- Dynamic sitemaps generated at the edge (songs/sellers/blog/pages) -->
+  <sitemap>
+    <loc>https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap?baseUrl=https%3A%2F%2Fsongkart.com&amp;type=songs</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap?baseUrl=https%3A%2F%2Fsongkart.com&amp;type=sellers</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap?baseUrl=https%3A%2F%2Fsongkart.com&amp;type=blog</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://vxegvnndkeoubqnruiqj.supabase.co/functions/v1/sitemap?baseUrl=https%3A%2F%2Fsongkart.com&amp;type=pages</loc>
+  </sitemap>
+</sitemapindex>
