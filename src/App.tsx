@@ -60,6 +60,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const SongModeration = lazy(() => import("./pages/admin/SongModeration"));
 const SongReview = lazy(() => import("./pages/admin/SongReview"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const UserDetail = lazy(() => import("./pages/admin/UserDetail"));
 const TransactionManagement = lazy(() => import("./pages/admin/TransactionManagement"));
 const OrderManagement = lazy(() => import("./pages/admin/OrderManagement"));
 const LicenseManagement = lazy(() => import("./pages/admin/LicenseManagement"));
@@ -168,6 +169,7 @@ const App = () => (
               <Route path="songs" element={<Suspense fallback={<PageLoader />}><SongModeration /></Suspense>} />
               <Route path="songs/:id/review" element={<Suspense fallback={<PageLoader />}><SongReview /></Suspense>} />
               <Route path="users" element={<Suspense fallback={<PageLoader />}><UserManagement /></Suspense>} />
+              <Route path="users/:userId" element={<Suspense fallback={<PageLoader />}><UserDetail /></Suspense>} />
               <Route path="transactions" element={<Suspense fallback={<PageLoader />}><TransactionManagement /></Suspense>} />
               <Route path="orders" element={<Suspense fallback={<PageLoader />}><OrderManagement /></Suspense>} />
               <Route path="licenses" element={<Suspense fallback={<PageLoader />}><LicenseManagement /></Suspense>} />
