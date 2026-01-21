@@ -343,6 +343,94 @@ export default function SongDetail() {
               </TabsContent>
             </Tabs>
 
+            {/* License Options - Mobile Only (below tabs, before SEO content) */}
+            {isMobile && (
+              <Card className="bg-card/50 backdrop-blur border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg">License Options</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {tiersLoading ? (
+                    <>
+                      <Skeleton className="h-20 rounded-lg" />
+                      <Skeleton className="h-20 rounded-lg" />
+                    </>
+                  ) : licenseTiers && licenseTiers.length > 0 ? (
+                    licenseTiers.map((tier) => {
+                      const licenseInfo = LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES];
+                      const isSelected = selectedLicense === tier.id;
+                      const isExclusive = tier.license_type === 'exclusive';
+                      const isSoldOut = tier.max_sales && tier.current_sales >= tier.max_sales;
+                      
+                      return (
+                        <button
+                          key={tier.id}
+                          onClick={() => !isSoldOut && setSelectedLicense(tier.id)}
+                          disabled={isSoldOut}
+                          className={`w-full p-4 rounded-lg border text-left transition-all ${
+                            isSoldOut
+                              ? "opacity-50 cursor-not-allowed bg-muted"
+                              : isSelected
+                                ? "border-primary bg-primary/10"
+                                : "border-border/50 bg-background/50 hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{licenseInfo?.label || tier.license_type}</span>
+                              {isExclusive && (
+                                <Badge variant="default" className="bg-amber-500 text-xs">
+                                  Exclusive
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-lg font-bold text-primary">
+                              <Price amount={tier.price} />
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {tier.description || licenseInfo?.description}
+                          </p>
+                          {isExclusive && !isSoldOut && (
+                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Full ownership - song removed from marketplace
+                            </p>
+                          )}
+                          {tier.max_sales && (
+                            <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive' : 'text-accent'}`}>
+                              {isSoldOut 
+                                ? 'Sold out' 
+                                : `${tier.max_sales - (tier.current_sales || 0)} of ${tier.max_sales} remaining`
+                              }
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No license options available
+                    </p>
+                  )}
+
+                  <Button 
+                    className="w-full mt-4" 
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={!selectedLicense || addToCart.isPending}
+                  >
+                    {addToCart.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                    )}
+                    {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* SEO Content Section - Crawlable content for Google */}
             <SEOContentSection song={{
               id: song.id,
@@ -427,91 +515,93 @@ export default function SongDetail() {
             {/* License Comparison */}
             <LicenseComparisonTable />
 
-            {/* License Tiers */}
-            <Card className="bg-card/50 backdrop-blur border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg">License Options</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {tiersLoading ? (
-                  <>
-                    <Skeleton className="h-20 rounded-lg" />
-                    <Skeleton className="h-20 rounded-lg" />
-                  </>
-                ) : licenseTiers && licenseTiers.length > 0 ? (
-                  licenseTiers.map((tier) => {
-                    const licenseInfo = LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES];
-                    const isSelected = selectedLicense === tier.id;
-                    const isExclusive = tier.license_type === 'exclusive';
-                    const isSoldOut = tier.max_sales && tier.current_sales >= tier.max_sales;
-                    
-                    return (
-                      <button
-                        key={tier.id}
-                        onClick={() => !isSoldOut && setSelectedLicense(tier.id)}
-                        disabled={isSoldOut}
-                        className={`w-full p-4 rounded-lg border text-left transition-all ${
-                          isSoldOut
-                            ? "opacity-50 cursor-not-allowed bg-muted"
-                            : isSelected
-                              ? "border-primary bg-primary/10"
-                              : "border-border/50 bg-background/50 hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{licenseInfo?.label || tier.license_type}</span>
-                            {isExclusive && (
-                              <Badge variant="default" className="bg-amber-500 text-xs">
-                                Exclusive
-                              </Badge>
-                            )}
+            {/* License Tiers - Desktop Only */}
+            {!isMobile && (
+              <Card className="bg-card/50 backdrop-blur border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-lg">License Options</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {tiersLoading ? (
+                    <>
+                      <Skeleton className="h-20 rounded-lg" />
+                      <Skeleton className="h-20 rounded-lg" />
+                    </>
+                  ) : licenseTiers && licenseTiers.length > 0 ? (
+                    licenseTiers.map((tier) => {
+                      const licenseInfo = LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES];
+                      const isSelected = selectedLicense === tier.id;
+                      const isExclusive = tier.license_type === 'exclusive';
+                      const isSoldOut = tier.max_sales && tier.current_sales >= tier.max_sales;
+                      
+                      return (
+                        <button
+                          key={tier.id}
+                          onClick={() => !isSoldOut && setSelectedLicense(tier.id)}
+                          disabled={isSoldOut}
+                          className={`w-full p-4 rounded-lg border text-left transition-all ${
+                            isSoldOut
+                              ? "opacity-50 cursor-not-allowed bg-muted"
+                              : isSelected
+                                ? "border-primary bg-primary/10"
+                                : "border-border/50 bg-background/50 hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{licenseInfo?.label || tier.license_type}</span>
+                              {isExclusive && (
+                                <Badge variant="default" className="bg-amber-500 text-xs">
+                                  Exclusive
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="text-lg font-bold text-primary">
+                              <Price amount={tier.price} />
+                            </span>
                           </div>
-                          <span className="text-lg font-bold text-primary">
-                            <Price amount={tier.price} />
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {tier.description || licenseInfo?.description}
-                        </p>
-                        {isExclusive && !isSoldOut && (
-                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            Full ownership - song removed from marketplace
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {tier.description || licenseInfo?.description}
                           </p>
-                        )}
-                        {tier.max_sales && (
-                          <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive' : 'text-accent'}`}>
-                            {isSoldOut 
-                              ? 'Sold out' 
-                              : `${tier.max_sales - (tier.current_sales || 0)} of ${tier.max_sales} remaining`
-                            }
-                          </p>
-                        )}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No license options available
-                  </p>
-                )}
-
-                <Button 
-                  className="w-full mt-4" 
-                  size="lg"
-                  onClick={handleAddToCart}
-                  disabled={!selectedLicense || addToCart.isPending}
-                >
-                  {addToCart.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {isExclusive && !isSoldOut && (
+                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Full ownership - song removed from marketplace
+                            </p>
+                          )}
+                          {tier.max_sales && (
+                            <p className={`text-xs mt-1 ${isSoldOut ? 'text-destructive' : 'text-accent'}`}>
+                              {isSoldOut 
+                                ? 'Sold out' 
+                                : `${tier.max_sales - (tier.current_sales || 0)} of ${tier.max_sales} remaining`
+                              }
+                            </p>
+                          )}
+                        </button>
+                      );
+                    })
                   ) : (
-                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No license options available
+                    </p>
                   )}
-                  {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
-                </Button>
-              </CardContent>
-            </Card>
+
+                  <Button 
+                    className="w-full mt-4" 
+                    size="lg"
+                    onClick={handleAddToCart}
+                    disabled={!selectedLicense || addToCart.isPending}
+                  >
+                    {addToCart.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                    )}
+                    {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
