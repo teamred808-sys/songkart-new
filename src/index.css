@@ -139,8 +139,21 @@ html, body {
 }
 
 @layer base {
-  * {
+  *, *::before, *::after {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  /* Global text overflow prevention for mobile */
+  p, span, div, h1, h2, h3, h4, h5, h6, label, a, li {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Ensure media doesn't overflow */
+  img, video, iframe {
+    max-width: 100%;
+    height: auto;
   }
 
   html {
@@ -266,6 +279,20 @@ html, body {
 
   .word-break-break-word {
     word-break: break-word;
+  }
+
+  /* Aggressive text breaking for long strings */
+  .break-anywhere {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  /* Mobile-safe container utility */
+  .mobile-safe {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
 
