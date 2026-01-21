@@ -265,7 +265,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     return (
       <div 
         className={cn(
-          "flex items-center gap-2",
+          "flex items-center gap-2 min-h-[48px]", // Fixed min-height for CLS
           className
         )}
         onClick={(e) => e.stopPropagation()}

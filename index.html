@@ -13,6 +13,22 @@
     <meta name="description" content="Buy legally licensed songs, lyrics, and compositions for your projects. Instant downloads, verified sellers, and full legal protection." />
     <meta name="author" content="SongKart" />
 
+    <!-- Preconnect to critical third-party origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://vxegvnndkeoubqnruiqj.supabase.co" />
+    <link rel="dns-prefetch" href="https://sdk.cashfree.com" />
+
+    <!-- Non-blocking font loading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&display=swap" as="style" />
+    <link rel="stylesheet" 
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+          media="print" 
+          onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" />
+    </noscript>
+
     <meta property="og:title" content="SongKart - Licensed Music Marketplace" />
     <meta property="og:description" content="Lovable Generated Project" />
     <meta property="og:type" content="website" />
@@ -21,13 +37,12 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    
-    <!-- Cashfree Payment Gateway SDK -->
-    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Cashfree Payment Gateway SDK - Deferred loading -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
   </body>
 </html>
