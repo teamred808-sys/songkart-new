@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useCartCount } from '@/hooks/useCartCount';
 import { toast } from 'sonner';
+import songkartLogo from '@/assets/songkart-logo.png';
 import {
   Tooltip,
   TooltipContent,
@@ -117,22 +118,35 @@ export function BuyerSidebar() {
       >
         {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
+          <Link to="/" className={cn("flex items-center gap-2", collapsed && "justify-center w-full")}>
+            <img src={songkartLogo} alt="SongKart" className="h-8 w-8" />
+            {!collapsed && (
+              <span className="font-display tracking-tight text-foreground">
+                <span className="font-extrabold">SONG</span>
+                <span className="font-normal">KART</span>
+              </span>
+            )}
+          </Link>
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-display font-semibold text-foreground">Buyer Hub</span>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="ml-auto h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto h-8 w-8"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+          {collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="absolute right-1 top-4 h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Navigation */}
