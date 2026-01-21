@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
+}
+
 /* Font fallback with size adjustment to minimize CLS during font swap */
 @font-face {
   font-family: 'Outfit Fallback';
