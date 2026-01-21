@@ -274,7 +274,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
           size="icon"
           variant="ghost"
           className={cn(
-            "h-10 w-10 rounded-full transition-all",
+            "h-12 w-12 min-h-[48px] min-w-[48px] rounded-full transition-all",
             isPlaying 
               ? "bg-primary text-primary-foreground hover:bg-primary/90" 
               : "bg-background/80 hover:bg-background"
@@ -296,11 +296,14 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
         {/* Progress bar - only show when playing */}
         {(isPlaying || currentTime > 0) && (
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="relative h-1 flex-1 bg-muted rounded-full overflow-hidden min-w-[60px]">
-              <div 
-                className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-100"
-                style={{ width: `${progress}%` }}
-              />
+            {/* Larger touch target for progress bar */}
+            <div className="relative h-4 flex-1 min-w-[60px] flex items-center">
+              <div className="absolute inset-x-0 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-primary rounded-full transition-all duration-100"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
             <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">
               {formatTime(currentTime)}

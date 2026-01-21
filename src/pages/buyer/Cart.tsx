@@ -11,6 +11,9 @@ import { AcknowledgmentCheckbox } from '@/components/cart/AcknowledgmentCheckbox
 import { PriceBreakdown } from '@/components/cart/PriceBreakdown';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileActionBar } from '@/components/mobile/MobileActionBar';
+import { Price } from '@/components/ui/Price';
 
 const steps = [
   { id: 1, label: "Cart", icon: ShoppingCart },
@@ -24,6 +27,7 @@ export default function Cart() {
   const removeFromCart = useRemoveFromCartWithReservation();
   const createCheckout = useCreateCheckoutSession();
   const freeCheckout = useFreeCheckoutFromCart();
+  const isMobile = useIsMobile();
   const [acknowledged, setAcknowledged] = useState(false);
 
   const handleRemove = (cartItemId: string, songId: string, isExclusive: boolean) => {
@@ -129,7 +133,8 @@ export default function Cart() {
           )}
         </div>
 
-        <div>
+        {/* Desktop Order Summary */}
+        <div className="hidden md:block">
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -178,6 +183,44 @@ export default function Cart() {
           </Card>
         </div>
       </div>
+
+      {/* Mobile Sticky Checkout Bar */}
+      {isMobile && cart?.items && cart.items.length > 0 && (
+        <MobileActionBar>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{cart?.itemCount} item{(cart?.itemCount || 0) > 1 ? 's' : ''}</p>
+                <p className="text-lg font-bold">
+                  {isFreeCheckout ? (
+                    <span className="text-green-500">FREE</span>
+                  ) : (
+                    <Price amount={cart?.total || 0} />
+                  )}
+                </p>
+              </div>
+              <Button
+                size="lg"
+                disabled={!cart?.itemCount || !acknowledged || isProcessing}
+                onClick={handleCheckout}
+                className="min-w-[160px]"
+              >
+                {isFreeCheckout ? (
+                  <>
+                    <Gift className="mr-2 h-4 w-4" />
+                    {isProcessing ? 'Processing...' : 'Claim Free'}
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    {isProcessing ? 'Processing...' : 'Checkout'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </MobileActionBar>
+      )}
     </div>
   );
 }

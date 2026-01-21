@@ -119,10 +119,13 @@ export default function Auth() {
                   <Input
                     id="signin-email"
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     placeholder="you@example.com"
                     value={signInEmail}
                     onChange={(e) => setSignInEmail(e.target.value)}
                     required
+                    className="h-12"
                   />
                 </div>
 
@@ -132,19 +135,21 @@ export default function Auth() {
                     <Input
                       id="signin-password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
                       placeholder="••••••••"
                       value={signInPassword}
                       onChange={(e) => setSignInPassword(e.target.value)}
                       required
+                      className="h-12 pr-12"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-0 top-0 h-full"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </Button>
                   </div>
                 </div>
@@ -174,9 +179,11 @@ export default function Auth() {
                   <Input
                     id="signup-name"
                     type="text"
+                    autoComplete="name"
                     placeholder="John Doe"
                     value={signUpName}
                     onChange={(e) => setSignUpName(e.target.value)}
+                    className="h-12"
                   />
                 </div>
 
@@ -185,10 +192,13 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     placeholder="you@example.com"
                     value={signUpEmail}
                     onChange={(e) => setSignUpEmail(e.target.value)}
                     required
+                    className="h-12"
                   />
                 </div>
 
@@ -198,20 +208,22 @@ export default function Auth() {
                     <Input
                       id="signup-password"
                       type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
                       placeholder="••••••••"
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
                       required
                       minLength={6}
+                      className="h-12 pr-12"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-0 top-0 h-full"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </Button>
                   </div>
                 </div>

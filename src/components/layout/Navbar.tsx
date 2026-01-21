@@ -151,7 +151,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-11 w-11"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -165,31 +165,31 @@ export function Navbar() {
             isMobileMenuOpen ? 'max-h-96 pb-4' : 'max-h-0'
           )}
         >
-          <div className="flex flex-col gap-2 pt-4">
+          <div className="flex flex-col gap-1 pt-4">
             <Link 
               to="/browse" 
-              className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Browse
             </Link>
             <Link 
               to="/browse?type=lyrics" 
-              className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Lyrics
             </Link>
             <Link 
               to="/browse?type=audio" 
-              className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Audio
             </Link>
             <Link 
               to="/sellers" 
-              className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Sellers
@@ -202,7 +202,7 @@ export function Navbar() {
                 {isAdmin && (
                   <Link 
                     to="/admin" 
-                    className="px-4 py-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors font-medium"
+                    className="px-4 py-3 min-h-[48px] flex items-center text-destructive hover:bg-destructive/10 rounded-lg transition-colors font-medium"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Admin Panel
@@ -210,14 +210,14 @@ export function Navbar() {
                 )}
                 <Link 
                   to={getDashboardLink()} 
-                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   to="/buyer/cart" 
-                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center justify-between"
+                  className="px-4 py-3 min-h-[48px] text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center justify-between"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <span>Cart</span>
@@ -232,7 +232,7 @@ export function Navbar() {
                     handleSignOut();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="px-4 py-2 text-left text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                  className="px-4 py-3 min-h-[48px] flex items-center text-left text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                 >
                   Sign Out
                 </button>
@@ -241,14 +241,14 @@ export function Navbar() {
               <>
                 <Link 
                   to="/auth" 
-                  className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sign In
                 </Link>
                 <Link 
                   to="/auth?tab=signup" 
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-center font-medium"
+                  className="px-4 py-3 min-h-[48px] flex items-center justify-center bg-primary text-primary-foreground rounded-lg text-center font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Get Started

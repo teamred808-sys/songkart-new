@@ -200,7 +200,12 @@ export const SongCard = memo(function SongCard({
                 )}
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-11 w-11 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity" 
+              onClick={(e) => e.preventDefault()}
+            >
               <Heart className="h-4 w-4" />
             </Button>
           </div>
