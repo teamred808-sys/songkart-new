@@ -26,6 +26,7 @@ interface CartItemCardProps {
     reservation?: {
       expires_at: string;
     };
+    isOwnSong?: boolean;
   };
   onRemove: (cartItemId: string, songId: string, isExclusive: boolean) => void;
   isRemoving: boolean;
@@ -63,7 +64,7 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
     <div
       className={`flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors ${
         isExpired ? 'border-destructive/50 bg-destructive/5' : ''
-      }`}
+      } ${item.isOwnSong ? 'border-amber-500/50 bg-amber-500/5' : ''}`}
     >
       <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
         {item.songs?.cover_image_url ? (
@@ -90,14 +91,21 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
             {item.license_tiers?.license_type} License
           </Badge>
           
-          {item.is_exclusive && timeLeft && (
+          {item.isOwnSong && (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Your Song - Cannot Purchase
+            </Badge>
+          )}
+          
+          {item.is_exclusive && timeLeft && !item.isOwnSong && (
             <Badge variant="secondary" className="gap-1">
               <Clock className="h-3 w-3" />
               Reserved: {timeLeft}
             </Badge>
           )}
           
-          {isExpired && (
+          {isExpired && !item.isOwnSong && (
             <Badge variant="destructive" className="gap-1">
               <AlertTriangle className="h-3 w-3" />
               Reservation expired
