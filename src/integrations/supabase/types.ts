@@ -1945,6 +1945,81 @@ export type Database = {
           },
         ]
       }
+      seller_account_health: {
+        Row: {
+          community_strikes_active: number
+          copyright_strikes_active: number
+          created_at: string
+          deactivated_at: string | null
+          deactivation_reason: string | null
+          forfeited_amount: number | null
+          forfeited_at: string | null
+          freeze_reason: string | null
+          frozen_at: string | null
+          frozen_until: string | null
+          funds_forfeited: boolean
+          health_score: number
+          id: string
+          is_deactivated: boolean
+          is_frozen: boolean
+          last_health_update: string | null
+          last_strike_at: string | null
+          restoration_notes: string | null
+          restored_at: string | null
+          restored_by: string | null
+          seller_id: string
+          updated_at: string
+        }
+        Insert: {
+          community_strikes_active?: number
+          copyright_strikes_active?: number
+          created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
+          forfeited_amount?: number | null
+          forfeited_at?: string | null
+          freeze_reason?: string | null
+          frozen_at?: string | null
+          frozen_until?: string | null
+          funds_forfeited?: boolean
+          health_score?: number
+          id?: string
+          is_deactivated?: boolean
+          is_frozen?: boolean
+          last_health_update?: string | null
+          last_strike_at?: string | null
+          restoration_notes?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
+          seller_id: string
+          updated_at?: string
+        }
+        Update: {
+          community_strikes_active?: number
+          copyright_strikes_active?: number
+          created_at?: string
+          deactivated_at?: string | null
+          deactivation_reason?: string | null
+          forfeited_amount?: number | null
+          forfeited_at?: string | null
+          freeze_reason?: string | null
+          frozen_at?: string | null
+          frozen_until?: string | null
+          funds_forfeited?: boolean
+          health_score?: number
+          id?: string
+          is_deactivated?: boolean
+          is_frozen?: boolean
+          last_health_update?: string | null
+          last_strike_at?: string | null
+          restoration_notes?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
+          seller_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seller_payout_profiles: {
         Row: {
           account_holder_name: string
@@ -2025,6 +2100,86 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: true
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_strikes: {
+        Row: {
+          appeal_reason: string | null
+          appeal_response: string | null
+          appeal_reviewed_at: string | null
+          appeal_reviewed_by: string | null
+          appeal_status: string | null
+          appeal_submitted_at: string | null
+          created_at: string
+          details: string | null
+          evidence_urls: Json | null
+          expires_at: string | null
+          id: string
+          issued_by: string | null
+          reason: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          seller_id: string
+          song_id: string | null
+          status: string
+          strike_type: string
+          updated_at: string
+        }
+        Insert: {
+          appeal_reason?: string | null
+          appeal_response?: string | null
+          appeal_reviewed_at?: string | null
+          appeal_reviewed_by?: string | null
+          appeal_status?: string | null
+          appeal_submitted_at?: string | null
+          created_at?: string
+          details?: string | null
+          evidence_urls?: Json | null
+          expires_at?: string | null
+          id?: string
+          issued_by?: string | null
+          reason: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          seller_id: string
+          song_id?: string | null
+          status?: string
+          strike_type: string
+          updated_at?: string
+        }
+        Update: {
+          appeal_reason?: string | null
+          appeal_response?: string | null
+          appeal_reviewed_at?: string | null
+          appeal_reviewed_by?: string | null
+          appeal_status?: string | null
+          appeal_submitted_at?: string | null
+          created_at?: string
+          details?: string | null
+          evidence_urls?: Json | null
+          expires_at?: string | null
+          id?: string
+          issued_by?: string | null
+          reason?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          seller_id?: string
+          song_id?: string | null
+          status?: string
+          strike_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_strikes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
             referencedColumns: ["id"]
           },
         ]
@@ -2615,6 +2770,56 @@ export type Database = {
           },
         ]
       }
+      strike_notifications: {
+        Row: {
+          created_at: string
+          email_sent: boolean
+          email_sent_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          read_at: string | null
+          seller_id: string
+          strike_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type: string
+          read_at?: string | null
+          seller_id: string
+          strike_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          read_at?: string | null
+          seller_id?: string
+          strike_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strike_notifications_strike_id_fkey"
+            columns: ["strike_id"]
+            isOneToOne: false
+            referencedRelation: "seller_strikes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_error_logs: {
         Row: {
           action_performed: string | null
@@ -3070,6 +3275,10 @@ export type Database = {
           zone_multiplier: number
         }[]
       }
+      calculate_seller_health: {
+        Args: { p_seller_id: string }
+        Returns: number
+      }
       calculate_song_rating: {
         Args: { p_song_id: string }
         Returns: {
@@ -3084,6 +3293,11 @@ export type Database = {
       }
       check_self_purchase: {
         Args: { p_buyer_id: string; p_song_id: string }
+        Returns: Json
+      }
+      check_seller_can_upload: { Args: { p_seller_id: string }; Returns: Json }
+      check_seller_can_withdraw: {
+        Args: { p_seller_id: string }
         Returns: Json
       }
       check_upload_rate_limit: { Args: { p_seller_id: string }; Returns: Json }
@@ -3184,6 +3398,18 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      issue_seller_strike: {
+        Args: {
+          p_details?: string
+          p_evidence_urls?: Json
+          p_reason: string
+          p_seller_id: string
+          p_song_id?: string
+          p_strike_type: string
+        }
+        Returns: Json
+      }
+      process_strike_expiry: { Args: never; Returns: Json }
       record_song_view: {
         Args: {
           p_device_fingerprint?: string
@@ -3202,6 +3428,14 @@ export type Database = {
           transaction_count: number
         }[]
       }
+      restore_seller_account: {
+        Args: { p_notes: string; p_seller_id: string }
+        Returns: Json
+      }
+      reverse_seller_strike: {
+        Args: { p_reason: string; p_strike_id: string }
+        Returns: Json
+      }
       submit_rating: {
         Args: {
           p_device_fingerprint?: string
@@ -3209,6 +3443,10 @@ export type Database = {
           p_rating: number
           p_song_id: string
         }
+        Returns: Json
+      }
+      submit_strike_appeal: {
+        Args: { p_reason: string; p_strike_id: string }
         Returns: Json
       }
       validate_song_price: {
