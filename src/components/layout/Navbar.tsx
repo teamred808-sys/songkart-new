@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, LayoutDashboard, Shield, ShoppingCart } from 'lucide-react';
 import songkartLogo from '@/assets/songkart-logo.png';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -147,15 +147,35 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden h-11 w-11"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          {/* Mobile Right Actions */}
+          <div className="flex md:hidden items-center gap-1">
+            {/* Cart Icon - always visible on mobile for logged-in users */}
+            {user && (
+              <Button variant="ghost" size="icon" className="h-11 w-11 relative" asChild>
+                <Link to="/buyer/cart">
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+            )}
+            
+            {/* Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
