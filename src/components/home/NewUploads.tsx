@@ -22,7 +22,7 @@ export default function NewUploads() {
   }
 
   return (
-    <section className="py-16 px-4 bg-gradient-to-b from-background to-muted/30">
+    <section className="py-16 px-4 bg-gradient-to-b from-background to-muted/30 min-h-[400px]">
       <div className="container mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between mb-8">

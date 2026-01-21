@@ -10,7 +10,7 @@ const LatestReleases = () => {
   const latestSongs = songs?.slice(0, 8);
 
   return (
-    <section className="py-24 bg-muted/30">
+    <section className="py-24 bg-muted/30 min-h-[500px]">
       <div className="container px-4">
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-4">

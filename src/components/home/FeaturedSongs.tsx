@@ -9,7 +9,7 @@ const FeaturedSongs = () => {
   const { data: songs, isLoading } = useFeaturedSongs();
 
   return (
-    <section className="py-24 bg-background">
+    <section className="py-24 bg-background min-h-[500px]">
       <div className="container px-4">
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-4">
