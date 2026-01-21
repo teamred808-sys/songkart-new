@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font fallback with size adjustment to minimize CLS during font swap */
+@font-face {
+  font-family: 'Outfit Fallback';
+  src: local('Arial');
+  size-adjust: 105%;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
 /* 
   🎵 LYRIC LOUNGE - Premium Music Marketplace Design System
   Dark, premium aesthetic inspired by Spotify/SoundCloud
@@ -77,8 +87,8 @@
     --shadow-card: 0 4px 30px -10px hsla(0, 0%, 0%, 0.5);
     --shadow-button: 0 0 20px -5px hsl(270, 95%, 65%);
 
-    /* Typography */
-    --font-display: 'Outfit', system-ui, sans-serif;
+    /* Typography - with fallback fonts for CLS stability */
+    --font-display: 'Outfit', 'Outfit Fallback', system-ui, sans-serif;
     --font-body: 'Space Grotesk', system-ui, sans-serif;
   }
 

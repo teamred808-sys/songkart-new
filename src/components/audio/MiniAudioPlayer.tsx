@@ -65,7 +65,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
           setDuration(total);
           setProgress(total > 0 ? (current / total) * 100 : 0);
         }
-      }, 100);
+      }, 250); // Reduced from 100ms for better INP
     }, []);
 
     const stopProgressTracking = useCallback(() => {
