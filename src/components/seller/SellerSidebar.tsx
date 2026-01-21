@@ -1,4 +1,5 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
+import songkartLogo from '@/assets/songkart-logo.png';
 import { 
   LayoutDashboard, 
   Music, 
@@ -74,24 +75,38 @@ export function SellerSidebar() {
       >
         {/* Header */}
         <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <Music className="w-4 h-4 text-primary-foreground" />
+          <Link to="/" className={cn("flex items-center gap-2", collapsed && "justify-center w-full")}>
+            <img src={songkartLogo} alt="SongKart" className="h-8 w-8" />
+            {!collapsed && (
+              <div className="flex flex-col">
+                <span className="font-display tracking-tight text-sidebar-foreground leading-tight">
+                  <span className="font-extrabold">SONG</span>
+                  <span className="font-normal">KART</span>
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">Seller Hub</span>
               </div>
-              <span className="font-display font-semibold text-sidebar-foreground">
-                Seller Hub
-              </span>
-            </div>
+            )}
+          </Link>
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="ml-auto h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCollapsed(!collapsed)}
-            className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent ml-auto"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
+          {collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+              className="absolute right-1 top-4 h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Navigation */}
