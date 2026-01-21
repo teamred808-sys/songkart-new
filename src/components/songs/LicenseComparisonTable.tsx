@@ -51,13 +51,13 @@ export function LicenseComparisonTable() {
           </TooltipProvider>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="w-full max-w-full overflow-hidden">
         {/* Responsive: vertical on mobile, horizontal on desktop */}
-        <div className="flex flex-col lg:flex-row gap-3 w-full">
+        <div className="flex flex-col lg:flex-row gap-3 w-full max-w-full overflow-hidden">
           {tiers.map((tier) => (
-            <div key={tier.id} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1 min-w-0">
-              <h4 className="font-medium text-primary mb-3 text-sm">{tier.name}</h4>
-              <ul className="space-y-2">
+            <div key={tier.id} className="border border-border/50 rounded-lg p-4 bg-background/30 flex-1 min-w-0 overflow-hidden">
+              <h4 className="font-medium text-primary mb-3 text-sm truncate">{tier.name}</h4>
+              <ul className="space-y-2 w-full max-w-full">
                 {labels.map((label) => {
                   const hasRight = (tier.rights as LicenseRights)[label.right_key as keyof LicenseRights];
                   return (

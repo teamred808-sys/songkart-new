@@ -185,7 +185,7 @@ export default function SongDetail() {
         { question: 'What files do I receive after purchase?', answer: `You receive high-quality audio files${song.has_lyrics ? ', full lyrics document,' : ''} and a PDF license certificate.` }
       ]} />
 
-      <div className="container py-8 px-4">
+      <div className="container py-8 px-4 max-w-full overflow-hidden box-border">
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-6 w-full max-w-full overflow-hidden" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-foreground shrink-0">Home</Link>
@@ -203,7 +203,7 @@ export default function SongDetail() {
           <span className="text-foreground truncate min-w-0 flex-1">{song.title}</span>
         </nav>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 w-full max-w-full">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Cover & Audio */}
@@ -313,16 +313,16 @@ export default function SongDetail() {
                 {song.has_lyrics && <TabsTrigger value="lyrics">Lyrics Preview</TabsTrigger>}
                 <TabsTrigger value="reviews">Reviews</TabsTrigger>
               </TabsList>
-              <TabsContent value="description" className="mt-4">
-                <p className="text-muted-foreground whitespace-pre-wrap">
+              <TabsContent value="description" className="mt-4 w-full max-w-full overflow-hidden">
+                <p className="text-muted-foreground whitespace-pre-wrap break-words overflow-wrap-anywhere max-w-full leading-relaxed">
                   {song.description || "No description available."}
                 </p>
               </TabsContent>
               {song.has_lyrics && (
-                <TabsContent value="lyrics" className="mt-4">
-                  <Card className="bg-card/50">
-                    <CardContent className="pt-6">
-                      <pre className="whitespace-pre-wrap font-sans text-muted-foreground">
+                <TabsContent value="lyrics" className="mt-4 w-full max-w-full overflow-hidden">
+                  <Card className="bg-card/50 w-full max-w-full">
+                    <CardContent className="pt-6 overflow-hidden">
+                      <pre className="whitespace-pre-wrap break-words font-sans text-muted-foreground max-w-full overflow-x-hidden" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                         {song.preview_lyrics || "Lyrics preview not available."}
                       </pre>
                       <div className="mt-4 pt-4 border-t border-border/50 text-center">

@@ -100,13 +100,13 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
           </Link>
         )}
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <CardContent className="w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full max-w-full">
           {songs.map((song) => (
             <Link
               key={song.id}
               to={`/song/${song.id}`}
-              className="group block"
+              className="group block min-w-0 overflow-hidden"
             >
               <div className="aspect-video md:aspect-square rounded-lg overflow-hidden bg-muted mb-1.5 md:mb-2">
                 {song.cover_art_url ? (
@@ -122,10 +122,10 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
                   </div>
                 )}
               </div>
-              <h3 className="font-medium text-xs md:text-sm line-clamp-2 md:truncate group-hover:text-primary transition-colors">
+              <h3 className="font-medium text-xs md:text-sm line-clamp-2 md:truncate group-hover:text-primary transition-colors break-words min-w-0">
                 {song.title}
               </h3>
-              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate min-w-0">
                 {song.seller?.full_name || 'Unknown Artist'}
               </p>
               <p className="text-[10px] md:text-xs font-medium text-primary mt-0.5 md:mt-1">
