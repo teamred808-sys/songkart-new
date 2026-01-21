@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Download, Music, Loader2, FileText, Sparkles, ArrowRight } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { CheckCircle2, XCircle, Music, Loader2, FileText, Sparkles } from 'lucide-react';
 import { useVerifyPayment } from '@/hooks/useCheckout';
 import { Price } from '@/components/ui/Price';
 
@@ -70,6 +71,10 @@ export default function OrderConfirmation() {
   }
 
   const order = paymentData.order;
+  
+  // Calculate buyer's platform fee from order data
+  // If total_amount > subtotal, the difference is the buyer's platform fee
+  const buyerPlatformFee = order ? Math.max(0, Number(order.total_amount) - Number(order.subtotal)) : 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 relative overflow-hidden">
@@ -117,14 +122,30 @@ export default function OrderConfirmation() {
       {order && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Order #{order.order_number}</span>
-              <span className="text-lg font-normal text-primary">
-                <Price amount={Number(order.total_amount)} />
-              </span>
-            </CardTitle>
+            <CardTitle>Order #{order.order_number}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Price Breakdown */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Song Price</span>
+                <span><Price amount={Number(order.subtotal)} /></span>
+              </div>
+              {buyerPlatformFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Platform Service Fee</span>
+                  <span><Price amount={buyerPlatformFee} /></span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total Paid</span>
+                <span className="text-primary"><Price amount={Number(order.total_amount)} /></span>
+              </div>
+            </div>
+            
+            <Separator />
+            
             <div className="flex gap-4">
               <Button asChild className="flex-1">
                 <Link to="/buyer/downloads">

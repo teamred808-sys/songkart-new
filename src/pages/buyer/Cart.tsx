@@ -165,6 +165,8 @@ export default function Cart() {
             <CardContent>
               <PriceBreakdown
                 subtotal={cart?.subtotal || 0}
+                platformFee={cart?.buyerPlatformFee || 0}
+                total={cart?.total || 0}
                 itemCount={cart?.itemCount || 0}
               />
             </CardContent>

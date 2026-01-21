@@ -387,6 +387,8 @@ export type Database = {
           id: string
           ip_address: string | null
           platform_fee: number
+          platform_fee_buyer: number | null
+          platform_fee_seller: number | null
           pricing_zone_id: string | null
           status: string | null
           subtotal: number
@@ -411,6 +413,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           platform_fee: number
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
           pricing_zone_id?: string | null
           status?: string | null
           subtotal: number
@@ -435,6 +439,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           platform_fee?: number
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
           pricing_zone_id?: string | null
           status?: string | null
           subtotal?: number
@@ -1385,6 +1391,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          buyer_total_paid: number | null
           commission_amount: number
           commission_rate: number
           created_at: string | null
@@ -1396,13 +1403,18 @@ export type Database = {
           license_type: string
           max_downloads: number | null
           order_id: string
+          platform_fee_buyer: number | null
+          platform_fee_seller: number | null
+          platform_fee_total: number | null
           price: number
           seller_amount: number
           seller_id: string
           song_id: string
+          song_price: number | null
           watermark_code: string | null
         }
         Insert: {
+          buyer_total_paid?: number | null
           commission_amount: number
           commission_rate: number
           created_at?: string | null
@@ -1414,13 +1426,18 @@ export type Database = {
           license_type: string
           max_downloads?: number | null
           order_id: string
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
+          platform_fee_total?: number | null
           price: number
           seller_amount: number
           seller_id: string
           song_id: string
+          song_price?: number | null
           watermark_code?: string | null
         }
         Update: {
+          buyer_total_paid?: number | null
           commission_amount?: number
           commission_rate?: number
           created_at?: string | null
@@ -1432,10 +1449,14 @@ export type Database = {
           license_type?: string
           max_downloads?: number | null
           order_id?: string
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
+          platform_fee_total?: number | null
           price?: number
           seller_amount?: number
           seller_id?: string
           song_id?: string
+          song_price?: number | null
           watermark_code?: string | null
         }
         Relationships: [
@@ -2719,6 +2740,7 @@ export type Database = {
         Row: {
           amount: number
           buyer_id: string
+          buyer_total_paid: number | null
           cleared_at: string | null
           commission_amount: number
           commission_rate: number
@@ -2730,13 +2752,17 @@ export type Database = {
           payment_id: string | null
           payment_method: string | null
           payment_status: string | null
+          platform_fee_buyer: number | null
+          platform_fee_seller: number | null
           seller_amount: number
           seller_id: string
           song_id: string
+          song_price: number | null
         }
         Insert: {
           amount: number
           buyer_id: string
+          buyer_total_paid?: number | null
           cleared_at?: string | null
           commission_amount: number
           commission_rate: number
@@ -2748,13 +2774,17 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
           seller_amount: number
           seller_id: string
           song_id: string
+          song_price?: number | null
         }
         Update: {
           amount?: number
           buyer_id?: string
+          buyer_total_paid?: number | null
           cleared_at?: string | null
           commission_amount?: number
           commission_rate?: number
@@ -2766,9 +2796,12 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string | null
+          platform_fee_buyer?: number | null
+          platform_fee_seller?: number | null
           seller_amount?: number
           seller_id?: string
           song_id?: string
+          song_price?: number | null
         }
         Relationships: [
           {
