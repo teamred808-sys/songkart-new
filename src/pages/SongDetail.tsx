@@ -22,6 +22,7 @@ import { useSong, useLicenseTiers } from "@/hooks/useSongs";
 import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useSellerTier } from "@/hooks/useSellerTier";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { LICENSE_TYPES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,18 +30,23 @@ import { SongSEOHead } from "@/components/seo/SongSEOHead";
 import { MusicRecordingSchema, BreadcrumbSchema, ProductSchema, FAQSchema } from "@/components/seo/SchemaOrg";
 import { SEOContentSection } from "@/components/seo/SEOContentSection";
 import { RelatedSongs } from "@/components/songs/RelatedSongs";
+import { MobileActionBar } from "@/components/mobile/MobileActionBar";
 
 export default function SongDetail() {
   const { id, identifier } = useParams<{ id?: string; identifier?: string }>();
   const songIdentifier = identifier || id;
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
 
   const { data: song, isLoading: songLoading } = useSong(songIdentifier!);
   const { data: licenseTiers, isLoading: tiersLoading } = useLicenseTiers(song?.id || songIdentifier!);
   const { data: sellerTier } = useSellerTier(song?.seller?.id);
   const addToCart = useValidatedAddToCart();
+  
+  // Get selected license price for mobile action bar
+  const selectedLicenseData = licenseTiers?.find(t => t.id === selectedLicense);
 
   const handlePlay = async () => {
     if (song?.id) {
@@ -488,6 +494,37 @@ export default function SongDetail() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Sticky Action Bar */}
+      {isMobile && (
+        <MobileActionBar>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">
+                {selectedLicenseData 
+                  ? LICENSE_TYPES[selectedLicenseData.license_type as keyof typeof LICENSE_TYPES]?.label || 'License'
+                  : 'Select a license'}
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {selectedLicenseData ? <Price amount={selectedLicenseData.price} /> : '--'}
+              </p>
+            </div>
+            <Button 
+              size="lg"
+              onClick={handleAddToCart}
+              disabled={!selectedLicense || addToCart.isPending}
+              className="min-w-[140px]"
+            >
+              {addToCart.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <ShoppingCart className="h-4 w-4 mr-2" />
+              )}
+              {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+            </Button>
+          </div>
+        </MobileActionBar>
+      )}
     </MainLayout>
   );
 }

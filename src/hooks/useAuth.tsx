@@ -146,7 +146,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Handle visibility change for mobile app backgrounding/foregrounding
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh session when app returns to foreground
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user && !user) {
+            setSession(session);
+            setUser(session.user);
+            fetchUserData(session.user.id);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, role: AppRole, fullName?: string) => {
