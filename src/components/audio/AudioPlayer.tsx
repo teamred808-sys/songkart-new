@@ -98,7 +98,7 @@ export function AudioPlayer({ src, duration, className, onPlay, onViewThreshold 
   const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
 
   return (
-    <div className={cn("flex items-center gap-3 p-3 rounded-lg bg-card/50 backdrop-blur", className)}>
+    <div className={cn("flex items-center gap-3 p-3 rounded-lg bg-card/50 backdrop-blur w-full max-w-full overflow-hidden", className)}>
       <audio ref={audioRef} src={src} preload="none" />
       
       <Button
@@ -110,7 +110,7 @@ export function AudioPlayer({ src, duration, className, onPlay, onViewThreshold 
         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
       </Button>
 
-      <div className="flex-1 space-y-1">
+      <div className="flex-1 min-w-0 space-y-1 overflow-hidden">
         <div className="relative h-2 bg-muted rounded-full overflow-hidden">
           <div
             className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-accent rounded-full transition-all"

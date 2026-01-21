@@ -9,9 +9,9 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, hideFooter = false }: MainLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col w-full max-w-full overflow-x-clip">
       <Navbar />
-      <main className="flex-1 pt-16">
+      <main className="flex-1 pt-16 w-full max-w-full overflow-x-clip">
         {children}
       </main>
       {!hideFooter && <Footer />}
