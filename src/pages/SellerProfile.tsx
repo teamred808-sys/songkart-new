@@ -189,16 +189,16 @@ const SellerProfile = () => {
         <SEOBreadcrumbs items={breadcrumbItems} className="mb-6" />
 
         {/* Profile Header */}
-        <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
-          <Avatar className="h-24 w-24 md:h-32 md:w-32">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
+          <Avatar className="h-24 w-24 md:h-32 md:w-32 shrink-0">
             <AvatarImage src={seller.avatar_url || undefined} alt={seller.full_name || "Seller"} />
             <AvatarFallback className="text-2xl">
               {seller.full_name?.charAt(0)?.toUpperCase() || "S"}
             </AvatarFallback>
           </Avatar>
 
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2 flex-wrap">
+          <div className="flex-1 text-center md:text-left">
+            <div className="flex items-center gap-3 mb-2 flex-wrap justify-center md:justify-start">
               <h1 className="text-3xl font-bold">{seller.full_name || "Anonymous Seller"}</h1>
               {seller.is_verified && (
                 <Badge variant="secondary" className="gap-1 bg-blue-500/10 border-blue-500/30 text-blue-500">
@@ -220,7 +220,7 @@ const SellerProfile = () => {
               <p className="text-muted-foreground mb-4 max-w-2xl">{seller.bio}</p>
             )}
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
               {seller.website && (
                 <a
                   href={ensureHttps(seller.website)}
@@ -248,7 +248,7 @@ const SellerProfile = () => {
           </div>
 
           {/* Health Meter */}
-          <ProfileHealthMeter sellerId={seller.id} />
+          <ProfileHealthMeter sellerId={seller.id} className="shrink-0" />
         </div>
 
         {/* Stats */}
