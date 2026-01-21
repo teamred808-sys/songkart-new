@@ -30,6 +30,9 @@ import { SongRedirect } from "./components/redirects/SongRedirect";
 import { SellerRedirect } from "./components/redirects/SellerRedirect";
 import VerifyEmail from "./pages/VerifyEmail";
 
+// Lazy loaded sitemap page
+const Sitemap = lazy(() => import("./pages/Sitemap"));
+
 // Lazy loaded seller pages
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 const MySongs = lazy(() => import("./pages/seller/MySongs"));
@@ -95,6 +98,13 @@ const App = () => (
           <CurrencyProvider>
             <AudioPlayerProvider>
             <Routes>
+            {/* Sitemap routes - must be before SPA catch-all */}
+            <Route path="/sitemap.xml" element={<Suspense fallback={null}><Sitemap type="index" /></Suspense>} />
+            <Route path="/sitemap-songs.xml" element={<Suspense fallback={null}><Sitemap type="songs" /></Suspense>} />
+            <Route path="/sitemap-sellers.xml" element={<Suspense fallback={null}><Sitemap type="sellers" /></Suspense>} />
+            <Route path="/sitemap-blog.xml" element={<Suspense fallback={null}><Sitemap type="blog" /></Suspense>} />
+            <Route path="/sitemap-pages.xml" element={<Suspense fallback={null}><Sitemap type="pages" /></Suspense>} />
+            
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<HomepageGuard><Auth /></HomepageGuard>} />
             <Route path="/browse" element={<HomepageGuard><Browse /></HomepageGuard>} />

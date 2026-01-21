@@ -19,5 +19,9 @@ Disallow: /*?session
 # Block audio token endpoints
 Disallow: /audio-token
 
-# Sitemap location
+# Sitemap locations
 Sitemap: https://songkart.lovable.app/sitemap.xml
+Sitemap: https://songkart.lovable.app/sitemap-songs.xml
+Sitemap: https://songkart.lovable.app/sitemap-sellers.xml
+Sitemap: https://songkart.lovable.app/sitemap-blog.xml
+Sitemap: https://songkart.lovable.app/sitemap-pages.xml
