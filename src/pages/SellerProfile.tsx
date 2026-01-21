@@ -277,17 +277,17 @@ const SellerProfile = () => {
           <h2 className="text-2xl font-bold mb-6">Songs by {seller.full_name || "this seller"}</h2>
 
           {isLoadingSongs ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-square rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                <div key={i} className="space-y-2 md:space-y-3">
+                  <Skeleton className="aspect-video md:aspect-square rounded-lg" />
+                  <Skeleton className="h-3 md:h-4 w-3/4" />
+                  <Skeleton className="h-2.5 md:h-4 w-1/2" />
                 </div>
               ))}
             </div>
           ) : songs && songs.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {songs.map((song) => (
                 <SongCard
                   key={song.id}

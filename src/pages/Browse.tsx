@@ -126,10 +126,10 @@ export default function Browse() {
           {songsLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
               {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-square rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+                <div key={i} className="space-y-2 md:space-y-3">
+                  <Skeleton className="aspect-video md:aspect-square rounded-lg" />
+                  <Skeleton className="h-3 md:h-4 w-3/4" />
+                  <Skeleton className="h-2.5 md:h-3 w-1/2" />
                 </div>
               ))}
             </div>

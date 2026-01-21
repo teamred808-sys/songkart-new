@@ -70,9 +70,9 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
           <CardTitle className="text-lg">Similar Tracks</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {Array.from({ length: limit }).map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-lg" />
+              <Skeleton key={i} className="aspect-video md:aspect-square rounded-lg" />
             ))}
           </div>
         </CardContent>
@@ -101,14 +101,14 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
         )}
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {songs.map((song) => (
             <Link
               key={song.id}
               to={`/song/${song.id}`}
               className="group block"
             >
-              <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-2">
+              <div className="aspect-video md:aspect-square rounded-lg overflow-hidden bg-muted mb-1.5 md:mb-2">
                 {song.cover_art_url ? (
                   <img
                     src={song.cover_art_url}
@@ -118,17 +118,17 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Music className="h-8 w-8 text-muted-foreground" />
+                    <Music className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground" />
                   </div>
                 )}
               </div>
-              <h3 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+              <h3 className="font-medium text-xs md:text-sm line-clamp-2 md:truncate group-hover:text-primary transition-colors">
                 {song.title}
               </h3>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                 {song.seller?.full_name || 'Unknown Artist'}
               </p>
-              <p className="text-xs font-medium text-primary mt-1">
+              <p className="text-[10px] md:text-xs font-medium text-primary mt-0.5 md:mt-1">
                 From ₹{song.base_price.toLocaleString()}
               </p>
             </Link>

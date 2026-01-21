@@ -31,17 +31,17 @@ const LatestReleases = () => {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="space-y-4">
-                <Skeleton className="aspect-square rounded-xl" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+              <div key={i} className="space-y-2 md:space-y-4">
+                <Skeleton className="aspect-video md:aspect-square rounded-xl" />
+                <Skeleton className="h-3 md:h-4 w-3/4" />
+                <Skeleton className="h-2.5 md:h-4 w-1/2" />
               </div>
             ))}
           </div>
         ) : latestSongs && latestSongs.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {latestSongs.map((song) => (
               <SongCard
                 key={song.id}
