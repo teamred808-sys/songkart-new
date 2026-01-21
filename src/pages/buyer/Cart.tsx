@@ -203,15 +203,26 @@ export default function Cart() {
       {/* Mobile Sticky Checkout Bar */}
       {isMobile && cart?.items && cart.items.length > 0 && (
         <MobileActionBar>
-          <div className="space-y-3">
+          <div className="space-y-2">
+            {/* Price Breakdown Row - Only show for paid checkouts with platform fee */}
+            {!isFreeCheckout && (cart?.buyerPlatformFee || 0) > 0 && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Song Price: <Price amount={cart?.subtotal || 0} /></span>
+                <span>Platform Fee: <Price amount={cart?.buyerPlatformFee || 0} /></span>
+              </div>
+            )}
+            
+            {/* Total + Checkout Button Row */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">{cart?.itemCount} item{(cart?.itemCount || 0) > 1 ? 's' : ''}</p>
+                <p className="text-xs text-muted-foreground">
+                  {cart?.itemCount} item{(cart?.itemCount || 0) > 1 ? 's' : ''}
+                </p>
                 <p className="text-lg font-bold">
                   {isFreeCheckout ? (
                     <span className="text-green-500">FREE</span>
                   ) : (
-                    <Price amount={cart?.total || 0} />
+                    <>Total: <Price amount={cart?.total || 0} /></>
                   )}
                 </p>
               </div>
