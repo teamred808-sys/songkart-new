@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import songkartLogo from '@/assets/songkart-logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useDisplayNameAvailability, checkDisplayNameAvailable } from '@/hooks/useDisplayNameCheck';
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -49,6 +50,9 @@ export default function Auth() {
   const [signUpName, setSignUpName] = useState('');
   const [selectedRole, setSelectedRole] = useState<'buyer' | 'seller'>(defaultRole);
 
+  // Display name availability check
+  const { isAvailable: isNameAvailable, isChecking: isCheckingName } = useDisplayNameAvailability(signUpName);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -74,6 +78,20 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check name availability before signup
+    if (signUpName.trim()) {
+      const available = await checkDisplayNameAvailable(signUpName.trim());
+      if (!available) {
+        toast({
+          title: 'Name already taken',
+          description: 'Please choose a different display name.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     const { error } = await signUp(signUpEmail, signUpPassword, selectedRole, signUpName);
@@ -91,6 +109,8 @@ export default function Auth() {
 
     setIsLoading(false);
   };
+
+  const isSignUpDisabled = isLoading || (signUpName.trim().length >= 2 && isNameAvailable === false);
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
@@ -176,15 +196,39 @@ export default function Auth() {
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    autoComplete="name"
-                    placeholder="John Doe"
-                    value={signUpName}
-                    onChange={(e) => setSignUpName(e.target.value)}
-                    className="h-12"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-name"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="John Doe"
+                      value={signUpName}
+                      onChange={(e) => setSignUpName(e.target.value)}
+                      className={`h-12 pr-10 ${
+                        signUpName.trim().length >= 2 
+                          ? isNameAvailable === true 
+                            ? 'border-green-500 focus-visible:ring-green-500' 
+                            : isNameAvailable === false 
+                              ? 'border-destructive focus-visible:ring-destructive' 
+                              : ''
+                          : ''
+                      }`}
+                    />
+                    {signUpName.trim().length >= 2 && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {isCheckingName ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : isNameAvailable === true ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : isNameAvailable === false ? (
+                          <X className="h-4 w-4 text-destructive" />
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                  {signUpName.trim().length >= 2 && isNameAvailable === false && (
+                    <p className="text-xs text-destructive">This name is already taken</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -248,7 +292,7 @@ export default function Auth() {
                   </RadioGroup>
                 </div>
 
-                <Button type="submit" className="w-full btn-glow" disabled={isLoading}>
+                <Button type="submit" className="w-full btn-glow" disabled={isSignUpDisabled}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
                 </Button>

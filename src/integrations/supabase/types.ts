@@ -3398,6 +3398,10 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      is_display_name_available: {
+        Args: { p_exclude_user_id?: string; p_name: string }
+        Returns: boolean
+      }
       issue_seller_strike: {
         Args: {
           p_details?: string
