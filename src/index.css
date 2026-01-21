@@ -254,6 +254,19 @@ html, body {
   .animation-delay-300 { animation-delay: 300ms; }
   .animation-delay-400 { animation-delay: 400ms; }
   .animation-delay-500 { animation-delay: 500ms; }
+
+  /* Text overflow utilities for mobile */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  .overflow-wrap-break-word {
+    overflow-wrap: break-word;
+  }
+
+  .word-break-break-word {
+    word-break: break-word;
+  }
 }
 
 /* Keyframes - GPU-composited animations using transform/opacity only */

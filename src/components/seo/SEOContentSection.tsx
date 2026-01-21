@@ -47,66 +47,66 @@ export function SEOContentSection({ song, className = '' }: SEOContentSectionPro
   const seoContent = song.seo_content || generateDefaultContent(song);
 
   return (
-    <section className={`py-8 ${className}`} aria-label="About this track">
-      <Card className="bg-muted/30 border-muted">
+    <section className={`py-8 w-full max-w-full overflow-hidden box-border ${className}`} aria-label="About this track">
+      <Card className="bg-muted/30 border-muted w-full max-w-full">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Music className="h-5 w-5 text-primary" />
-            About "{song.title}" - Licensed {genre} Track
+          <CardTitle className="text-lg flex items-center gap-2 break-words">
+            <Music className="h-5 w-5 text-primary shrink-0" />
+            <span className="break-words">About "{song.title}" - Licensed {genre} Track</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 w-full max-w-full overflow-hidden">
           {/* Track metadata for crawlers */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4 text-muted-foreground" />
-              <div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 w-full max-w-full">
+            <div className="flex items-center gap-2 min-w-0">
+              <Palette className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Genre</p>
                 <Link 
                   to={`/browse?genre=${song.genre?.id}`}
-                  className="text-sm font-medium hover:text-primary transition-colors"
+                  className="text-sm font-medium hover:text-primary transition-colors truncate block"
                 >
                   {genre}
                 </Link>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Music className="h-4 w-4 text-muted-foreground" />
-              <div>
+            <div className="flex items-center gap-2 min-w-0">
+              <Music className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Mood</p>
                 <Link 
                   to={`/browse?mood=${song.mood?.id}`}
-                  className="text-sm font-medium hover:text-primary transition-colors"
+                  className="text-sm font-medium hover:text-primary transition-colors truncate block"
                 >
                   {mood}
                 </Link>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <div>
+            <div className="flex items-center gap-2 min-w-0">
+              <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Language</p>
-                <p className="text-sm font-medium">{language}</p>
+                <p className="text-sm font-medium truncate">{language}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-              <div>
+            <div className="flex items-center gap-2 min-w-0">
+              <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">License</p>
-                <p className="text-sm font-medium text-green-600">Copyright-Safe</p>
+                <p className="text-sm font-medium text-green-600 dark:text-green-500">Copyright-Safe</p>
               </div>
             </div>
           </div>
 
           {/* Use cases */}
-          <div>
+          <div className="w-full max-w-full overflow-hidden">
             <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-              <Film className="h-4 w-4" />
+              <Film className="h-4 w-4 shrink-0" />
               Perfect for:
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 max-w-full">
               {useCases.map((useCase) => (
-                <Badge key={useCase} variant="secondary" className="text-xs">
+                <Badge key={useCase} variant="secondary" className="text-xs whitespace-nowrap shrink-0">
                   {useCase}
                 </Badge>
               ))}
@@ -114,37 +114,37 @@ export function SEOContentSection({ song, className = '' }: SEOContentSectionPro
           </div>
 
           {/* Main SEO content - crawlable text */}
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="text-muted-foreground leading-relaxed">
+          <div className="prose prose-sm dark:prose-invert max-w-full w-full overflow-hidden">
+            <p className="text-muted-foreground leading-relaxed break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
               {seoContent}
             </p>
           </div>
 
           {/* Content availability */}
-          <div className="flex items-center gap-4 pt-4 border-t border-muted">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-4 border-t border-muted w-full max-w-full">
+            <div className="flex items-center gap-2 text-sm shrink-0">
               <Download className="h-4 w-4 text-primary" />
               <span>Includes:</span>
             </div>
             {song.has_audio && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
                 High-Quality Audio
               </Badge>
             )}
             {song.has_lyrics && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
                 Lyrics Document
               </Badge>
             )}
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs whitespace-nowrap">
               License Certificate
             </Badge>
           </div>
 
           {/* License reassurance */}
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-            <p className="text-sm text-green-700 dark:text-green-400">
-              <Shield className="h-4 w-4 inline mr-2" />
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 w-full max-w-full overflow-hidden">
+            <p className="text-sm text-green-700 dark:text-green-400 break-words" style={{ overflowWrap: 'anywhere' }}>
+              <Shield className="h-4 w-4 inline mr-2 shrink-0" />
               <strong>100% Copyright Safe:</strong> Every purchase includes a legally binding license certificate. 
               Use this track in monetized content without copyright claims or strikes.
             </p>
