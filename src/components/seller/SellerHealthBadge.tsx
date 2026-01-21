@@ -8,13 +8,15 @@ interface SellerHealthBadgeProps {
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  alwaysShow?: boolean;
 }
 
 export function SellerHealthBadge({ 
   sellerId, 
   showLabel = false, 
   size = 'md',
-  className 
+  className,
+  alwaysShow = false
 }: SellerHealthBadgeProps) {
   const { data: health, isLoading } = useSellerHealth(sellerId);
 
@@ -106,8 +108,8 @@ export function SellerHealthBadge({
     );
   }
 
-  // Only show badge if score is below 90 (to avoid clutter) or if showLabel is true
-  if (score >= 90 && !showLabel) return null;
+  // Only show badge if score is below 90 (to avoid clutter) or if showLabel/alwaysShow is true
+  if (score >= 90 && !showLabel && !alwaysShow) return null;
 
   return (
     <TooltipProvider>
