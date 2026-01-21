@@ -4,6 +4,7 @@ import {
   Music, FileText, Play, Heart, Share2, ShoppingCart, 
   Clock, Gauge, Globe, User, BadgeCheck, ChevronRight, AlertTriangle, Loader2, Shield
 } from "lucide-react";
+import { SellerHealthBadge } from "@/components/seller/SellerHealthBadge";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { Button } from "@/components/ui/button";
@@ -388,12 +389,19 @@ export default function SongDetail() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-semibold group-hover:text-primary transition-colors">
                         {song.seller?.full_name || "Unknown"}
                       </span>
                       {song.seller?.is_verified && (
                         <BadgeCheck className="h-4 w-4 text-blue-500 animate-pulse" />
+                      )}
+                      {song.seller?.id && (
+                        <SellerHealthBadge 
+                          sellerId={song.seller.id} 
+                          size="sm"
+                          showLabel={false}
+                        />
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-1">
