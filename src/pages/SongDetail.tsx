@@ -93,7 +93,7 @@ export default function SongDetail() {
   if (songLoading) {
     return (
       <MainLayout>
-        <div className="container py-8">
+        <div className="container py-8 px-4">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <Skeleton className="aspect-video rounded-xl" />
@@ -113,7 +113,7 @@ export default function SongDetail() {
   if (!song) {
     return (
       <MainLayout>
-        <div className="container py-20 text-center">
+        <div className="container py-20 px-4 text-center">
           <h1 className="text-2xl font-bold mb-4">Song not found</h1>
           <Link to="/browse">
             <Button>Browse Songs</Button>
@@ -185,7 +185,7 @@ export default function SongDetail() {
         { question: 'What files do I receive after purchase?', answer: `You receive high-quality audio files${song.has_lyrics ? ', full lyrics document,' : ''} and a PDF license certificate.` }
       ]} />
 
-      <div className="container py-8">
+      <div className="container py-8 px-4">
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-6 w-full max-w-full overflow-hidden" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-foreground shrink-0">Home</Link>
