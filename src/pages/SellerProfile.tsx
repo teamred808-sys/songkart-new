@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { SongCard } from "@/components/songs/SongCard";
 import { SellerTierBadge } from "@/components/seller/SellerTierBadge";
+import { MiniHealthMeter } from "@/components/seller/MiniHealthMeter";
 import { useSellerTier } from "@/hooks/useSellerTier";
 import { SellerSEOHead } from "@/components/seo/SellerSEOHead";
 import { ProfilePageSchema, BreadcrumbSchema } from "@/components/seo/SchemaOrg";
@@ -213,6 +214,11 @@ const SellerProfile = () => {
                   size="md"
                 />
               )}
+              <MiniHealthMeter 
+                sellerId={seller.id}
+                size={36}
+                showStrikes={true}
+              />
             </div>
 
             {seller.bio && (
