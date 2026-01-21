@@ -90,6 +90,16 @@ serve(async (req) => {
 
     // Re-validate all items
     for (const item of cartItems) {
+      // Check if buyer is trying to purchase their own song
+      if (item.song?.seller_id === user.id) {
+        return new Response(JSON.stringify({ 
+          error: `You cannot purchase your own song "${item.song.title}"` 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       if (!item.song || item.song.status !== "approved") {
         return new Response(JSON.stringify({ 
           error: `Song "${item.song?.title || 'Unknown'}" is no longer available` 

@@ -14,6 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileActionBar } from '@/components/mobile/MobileActionBar';
 import { Price } from '@/components/ui/Price';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const steps = [
   { id: 1, label: "Cart", icon: ShoppingCart },
@@ -29,6 +38,7 @@ export default function Cart() {
   const freeCheckout = useFreeCheckoutFromCart();
   const isMobile = useIsMobile();
   const [acknowledged, setAcknowledged] = useState(false);
+  const [showOwnSongAlert, setShowOwnSongAlert] = useState(false);
 
   const handleRemove = (cartItemId: string, songId: string, isExclusive: boolean) => {
     removeFromCart.mutate({ cartItemId, songId, isExclusive });
@@ -38,6 +48,12 @@ export default function Cart() {
   const isFreeCheckout = cart?.total === 0 && (cart?.itemCount || 0) > 0;
 
   const handleCheckout = () => {
+    // Check if user is trying to buy their own song
+    if (cart?.hasOwnSongs) {
+      setShowOwnSongAlert(true);
+      return;
+    }
+    
     if (isFreeCheckout) {
       freeCheckout.mutate({ acknowledgmentAccepted: acknowledged });
     } else {
@@ -221,6 +237,23 @@ export default function Cart() {
           </div>
         </MobileActionBar>
       )}
+      {/* Own Song Alert Dialog */}
+      <AlertDialog open={showOwnSongAlert} onOpenChange={setShowOwnSongAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot Purchase Own Song
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You cannot buy your own song. Please remove your song(s) from the cart to proceed with checkout.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Got it</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

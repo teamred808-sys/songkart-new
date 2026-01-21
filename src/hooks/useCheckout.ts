@@ -119,83 +119,87 @@ export function useValidatedAddToCart() {
 }
 
 export function useCartWithTotals() {
-  const { user } = useAuth();
-
   return useQuery({
-    queryKey: ['cart-with-totals', user?.id],
+    queryKey: ['cart-with-totals'],
     queryFn: async () => {
-      if (!user) throw new Error('Not authenticated');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { items: [], subtotal: 0, platformFee: 0, total: 0, itemCount: 0, hasExclusiveItems: false, hasOwnSongs: false };
+      }
 
+      // Fetch cart items with related data
       const { data: cartItems, error } = await supabase
         .from('cart_items')
         .select(`
-          *,
-          songs:song_id (
+          id,
+          song_id,
+          license_tier_id,
+          is_exclusive,
+          base_price,
+          final_price,
+          songs (
             id,
             title,
             cover_image_url,
-            seller_id,
-            exclusive_sold
+            seller_id
           ),
-          license_tiers:license_tier_id (
+          license_tiers (
             id,
             license_type,
-            price,
-            terms
+            price
           )
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      // Get seller profiles - filter out invalid UUIDs
-      const sellerIds = filterValidUUIDs([...new Set(cartItems?.map(item => item.songs?.seller_id).filter(Boolean))]);
+      // Get unique seller IDs
+      const sellerIds = [...new Set(cartItems?.map(item => item.songs?.seller_id).filter(Boolean))] as string[];
       
-      let profileMap = new Map<string, string | null>();
-      if (sellerIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', sellerIds);
-        profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-      }
+      // Fetch seller profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username')
+        .in('id', sellerIds);
 
-      // Get active reservations for exclusive items
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.username || 'Unknown Artist']));
+
+      // Fetch active exclusive reservations for items that are exclusive
       const exclusiveItems = cartItems?.filter(item => item.is_exclusive) || [];
-      let reservationMap = new Map();
-
-      if (exclusiveItems.length > 0) {
+      const exclusiveSongIds = exclusiveItems.map(item => item.song_id);
+      
+      let reservationsMap = new Map<string, { expires_at: string }>();
+      
+      if (exclusiveSongIds.length > 0) {
         const { data: reservations } = await supabase
           .from('exclusive_reservations')
-          .select('*')
+          .select('song_id, expires_at')
+          .in('song_id', exclusiveSongIds)
           .eq('buyer_id', user.id)
           .eq('status', 'active')
-          .in('song_id', exclusiveItems.map(i => i.song_id));
-
-        reservationMap = new Map(reservations?.map(r => [r.song_id, r]));
+          .gt('expires_at', new Date().toISOString());
+        
+        reservationsMap = new Map(reservations?.map(r => [r.song_id, { expires_at: r.expires_at }]));
       }
 
-      // Fetch commission rate for calculations
+      // Get commission rate
       const commissionRate = await getCommissionRate();
-      
-      // Calculate totals
-      let subtotal = 0;
-      const items = cartItems?.map(item => {
-        const price = Number(item.license_tiers?.price || 0);
-        const commission = price * commissionRate;
-        subtotal += price;
 
+      // Map items with seller names, reservations, and own song flag
+      const items = cartItems?.map(item => {
+        const isOwnSong = item.songs?.seller_id === user.id;
         return {
           ...item,
           seller_name: profileMap.get(item.songs?.seller_id) || 'Unknown Artist',
-          price,
-          commission,
-          reservation: reservationMap.get(item.song_id),
+          price: item.final_price || item.license_tiers?.price || 0,
+          reservation: reservationsMap.get(item.song_id),
+          isOwnSong,
         };
       }) || [];
 
-      const platformFee = subtotal * commissionRate;
+      // Calculate totals
+      const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+      const platformFee = Math.round(subtotal * commissionRate);
       const total = subtotal;
 
       return {
@@ -204,10 +208,10 @@ export function useCartWithTotals() {
         platformFee,
         total,
         itemCount: items.length,
-        hasExclusiveItems: items.some(i => i.is_exclusive),
+        hasExclusiveItems: items.some(item => item.is_exclusive),
+        hasOwnSongs: items.some(item => item.isOwnSong),
       };
     },
-    enabled: !!user,
   });
 }
 
