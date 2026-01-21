@@ -4,7 +4,7 @@ import {
   Music, FileText, Play, Heart, Share2, ShoppingCart, 
   Clock, Gauge, Globe, User, BadgeCheck, ChevronRight, AlertTriangle, Loader2, Shield
 } from "lucide-react";
-import { SellerHealthBadge } from "@/components/seller/SellerHealthBadge";
+import { MiniHealthMeter } from "@/components/seller/MiniHealthMeter";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { Button } from "@/components/ui/button";
@@ -397,11 +397,9 @@ export default function SongDetail() {
                         <BadgeCheck className="h-4 w-4 text-blue-500 animate-pulse" />
                       )}
                       {song.seller?.id && (
-                        <SellerHealthBadge 
-                          sellerId={song.seller.id} 
-                          size="sm"
-                          showLabel={false}
-                          alwaysShow={true}
+                        <MiniHealthMeter 
+                          sellerId={song.seller.id}
+                          size={24}
                         />
                       )}
                     </div>
