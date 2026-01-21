@@ -32,7 +32,7 @@ import { SongSEOHead } from "@/components/seo/SongSEOHead";
 import { MusicRecordingSchema, BreadcrumbSchema, ProductSchema, FAQSchema } from "@/components/seo/SchemaOrg";
 import { SEOContentSection } from "@/components/seo/SEOContentSection";
 import { RelatedSongs } from "@/components/songs/RelatedSongs";
-import { MobileActionBar } from "@/components/mobile/MobileActionBar";
+
 
 export default function SongDetail() {
   const { id, identifier } = useParams<{ id?: string; identifier?: string }>();
@@ -50,8 +50,6 @@ export default function SongDetail() {
   // View tracking - only counts authenticated, non-seller views after 5s playback
   const { startTracking, checkAndRecordView } = useViewTracking(song?.id, song?.seller_id);
   
-  // Get selected license price for mobile action bar
-  const selectedLicenseData = licenseTiers?.find(t => t.id === selectedLicense);
 
   const handlePlay = useCallback(async () => {
     // Start view tracking when playback begins
@@ -606,36 +604,6 @@ export default function SongDetail() {
         </div>
       </div>
 
-      {/* Mobile Sticky Action Bar */}
-      {isMobile && (
-        <MobileActionBar>
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">
-                {selectedLicenseData 
-                  ? LICENSE_TYPES[selectedLicenseData.license_type as keyof typeof LICENSE_TYPES]?.label || 'License'
-                  : 'Select a license'}
-              </p>
-              <p className="text-lg font-bold text-primary">
-                {selectedLicenseData ? <Price amount={selectedLicenseData.price} /> : '--'}
-              </p>
-            </div>
-            <Button 
-              size="lg"
-              onClick={handleAddToCart}
-              disabled={!selectedLicense || addToCart.isPending}
-              className="min-w-[140px]"
-            >
-              {addToCart.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <ShoppingCart className="h-4 w-4 mr-2" />
-              )}
-              {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
-            </Button>
-          </div>
-        </MobileActionBar>
-      )}
     </MainLayout>
   );
 }
