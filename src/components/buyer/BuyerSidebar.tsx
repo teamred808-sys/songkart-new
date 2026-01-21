@@ -121,10 +121,13 @@ export function BuyerSidebar() {
           <Link to="/" className={cn("flex items-center gap-2", collapsed && "justify-center w-full")}>
             <img src={songkartLogo} alt="SongKart" className="h-8 w-8" />
             {!collapsed && (
-              <span className="font-display tracking-tight text-foreground">
-                <span className="font-extrabold">SONG</span>
-                <span className="font-normal">KART</span>
-              </span>
+              <div className="flex flex-col">
+                <span className="font-display tracking-tight text-foreground leading-tight">
+                  <span className="font-extrabold">SONG</span>
+                  <span className="font-normal">KART</span>
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">Buyer Hub</span>
+              </div>
             )}
           </Link>
           {!collapsed && (
