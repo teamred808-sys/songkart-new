@@ -66,7 +66,7 @@ export default function Cart() {
   const currentStep = 1;
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="space-y-6 w-full max-w-full overflow-hidden pb-32 md:pb-0">
       {/* Step Indicator */}
       <div className="flex items-center justify-center gap-2 py-4">
         {steps.map((step, index) => (
