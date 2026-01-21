@@ -187,7 +187,7 @@ export default function SongDetail() {
 
       <div className="container py-8">
         {/* Breadcrumb */}
-        <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-6 min-w-0" aria-label="Breadcrumb">
+        <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-6 w-full max-w-full overflow-hidden" aria-label="Breadcrumb">
           <Link to="/" className="hover:text-foreground shrink-0">Home</Link>
           <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
           <Link to="/browse" className="hover:text-foreground shrink-0">Browse</Link>
@@ -200,7 +200,7 @@ export default function SongDetail() {
               <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </>
           )}
-          <span className="text-foreground truncate">{song.title}</span>
+          <span className="text-foreground truncate min-w-0 flex-1">{song.title}</span>
         </nav>
 
         <div className="grid lg:grid-cols-3 gap-8">
