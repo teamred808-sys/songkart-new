@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useUpdateSellerDynamicPricing } from '@/hooks/useSellerData';
+import { useDisplayNameAvailability, checkDisplayNameAvailable } from '@/hooks/useDisplayNameCheck';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Upload, CheckCircle, Shield, Bell, Globe } from 'lucide-react';
+import { Loader2, Upload, CheckCircle, Shield, Bell, Globe, Check, X } from 'lucide-react';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 export default function SellerSettings() {
@@ -43,6 +44,13 @@ export default function SellerSettings() {
     email_approvals: true,
     email_withdrawals: true,
   });
+
+  // Check if display name is different from original and available
+  const nameChanged = formData.full_name !== (profile?.full_name || '');
+  const { isAvailable: isNameAvailable, isChecking: isCheckingName } = useDisplayNameAvailability(
+    nameChanged ? formData.full_name : '',
+    profile?.id
+  );
 
   // Initialize dynamic pricing state from profile
   useEffect(() => {
@@ -78,6 +86,20 @@ export default function SellerSettings() {
 
     setIsLoading(true);
     try {
+      // Check name availability if changed
+      if (formData.full_name !== profile.full_name && formData.full_name.trim()) {
+        const available = await checkDisplayNameAvailable(formData.full_name.trim(), profile.id);
+        if (!available) {
+          toast({ 
+            title: 'Name not available', 
+            description: 'This display name is already taken by another user.', 
+            variant: 'destructive' 
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -90,7 +112,12 @@ export default function SellerSettings() {
         })
         .eq('id', profile.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505' && error.message.includes('full_name')) {
+          throw new Error('This display name is already taken.');
+        }
+        throw error;
+      }
 
       await refreshProfile();
       toast({ title: 'Profile updated successfully' });
@@ -192,12 +219,37 @@ export default function SellerSettings() {
 
             <div className="space-y-2">
               <Label htmlFor="full_name">Display Name</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                placeholder="Your display name"
-              />
+              <div className="relative">
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  placeholder="Your display name"
+                  className={`pr-10 ${
+                    nameChanged && formData.full_name.trim().length >= 2
+                      ? isNameAvailable === true 
+                        ? 'border-green-500 focus-visible:ring-green-500' 
+                        : isNameAvailable === false 
+                          ? 'border-destructive focus-visible:ring-destructive' 
+                          : ''
+                      : ''
+                  }`}
+                />
+                {nameChanged && formData.full_name.trim().length >= 2 && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {isCheckingName ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : isNameAvailable === true ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : isNameAvailable === false ? (
+                      <X className="h-4 w-4 text-destructive" />
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              {nameChanged && formData.full_name.trim().length >= 2 && isNameAvailable === false && (
+                <p className="text-xs text-destructive">This name is already taken</p>
+              )}
             </div>
 
             <div className="space-y-2">
