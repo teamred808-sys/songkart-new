@@ -1,23 +1,78 @@
-# SongKart Robots.txt
-# Licensed Music Marketplace
+# SongKart Production robots.txt
+# Last updated: 2026-01-22
 
 User-agent: *
-Allow: /
 
-# Block private/admin areas
+# Allow all public pages
+Allow: /
+Allow: /browse
+Allow: /browse/*
+Allow: /sellers
+Allow: /sellers/*
+Allow: /song/*
+Allow: /artist/*
+Allow: /blog
+Allow: /blog/*
+Allow: /licenses
+Allow: /about
+Allow: /contact
+Allow: /how-it-works
+Allow: /page/*
+
+# Block all private/admin areas
 Disallow: /admin
+Disallow: /admin/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /seller-dashboard
+Disallow: /seller-dashboard/*
+Disallow: /buyer-dashboard
+Disallow: /buyer-dashboard/*
 Disallow: /seller
+Disallow: /seller/*
 Disallow: /buyer
-Disallow: /cart
+Disallow: /buyer/*
+
+# Block authentication pages
 Disallow: /auth
+Disallow: /auth/*
+Disallow: /login
+Disallow: /signup
+Disallow: /register
+Disallow: /reset-password
 Disallow: /verify-email
 
-# Block checkout and session parameters
+# Block API endpoints
+Disallow: /api
+Disallow: /api/*
+
+# Block checkout flow
+Disallow: /cart
+Disallow: /cart/*
+Disallow: /checkout
+Disallow: /checkout/*
+
+# Block user-specific pages
+Disallow: /profile
+Disallow: /profile/*
+Disallow: /settings
+Disallow: /settings/*
+Disallow: /purchases
+Disallow: /sales
+
+# Block search results with query params
+Disallow: /*?search=
+Disallow: /*?filter=
+Disallow: /*?sort=
 Disallow: /*?checkout
 Disallow: /*?session
 
 # Block audio token endpoints
 Disallow: /audio-token
 
-# Sitemap location
+# Crawl-delay (seconds between requests)
+Crawl-delay: 1
+
+# Sitemap locations
 Sitemap: https://songkart.com/sitemap.xml
+Sitemap: https://songkart.com/sitemap-static.xml
