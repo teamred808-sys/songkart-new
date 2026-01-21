@@ -51,11 +51,11 @@ export function ProfileHealthMeter({ sellerId, className }: ProfileHealthMeterPr
 
   if (isLoading) {
     return (
-      <div className={cn("flex flex-col items-center gap-4", className)}>
-        <Skeleton className="w-32 h-32 rounded-full" />
-        <div className="flex gap-4">
-          <Skeleton className="w-20 h-14 rounded-lg" />
-          <Skeleton className="w-20 h-14 rounded-lg" />
+      <div className={cn("flex flex-col items-center gap-3 md:gap-4", className)}>
+        <Skeleton className="w-24 h-24 md:w-32 md:h-32 rounded-full" />
+        <div className="flex gap-2 md:gap-4">
+          <Skeleton className="w-16 h-12 md:w-20 md:h-14 rounded-lg" />
+          <Skeleton className="w-16 h-12 md:w-20 md:h-14 rounded-lg" />
         </div>
       </div>
     );
@@ -64,38 +64,38 @@ export function ProfileHealthMeter({ sellerId, className }: ProfileHealthMeterPr
   const config = getHealthConfig(score);
 
   return (
-    <div className={cn("flex flex-col items-center gap-4", className)}>
-      {/* Circular Progress */}
+    <div className={cn("flex flex-col items-center gap-3 md:gap-4", className)}>
+      {/* Circular Progress - Responsive */}
       <div className="relative">
-        <div className={cn("w-32 h-32 rounded-full ring-8 flex items-center justify-center", config.ringColor)}>
+        <div className={cn("w-24 h-24 md:w-32 md:h-32 rounded-full ring-4 md:ring-8 flex items-center justify-center", config.ringColor)}>
           <div
-            className={cn("w-24 h-24 rounded-full flex flex-col items-center justify-center bg-card border-4", config.borderColor)}
+            className={cn("w-[72px] h-[72px] md:w-24 md:h-24 rounded-full flex flex-col items-center justify-center bg-card border-[3px] md:border-4", config.borderColor)}
           >
-            <span className="text-3xl font-bold">{score}</span>
-            <span className="text-xs text-muted-foreground">/ 100</span>
+            <span className="text-2xl md:text-3xl font-bold">{score}</span>
+            <span className="text-[10px] md:text-xs text-muted-foreground">/ 100</span>
           </div>
         </div>
-        <div className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-white text-xs font-medium", config.bgColor)}>
+        <div className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 md:px-3 py-0.5 md:py-1 rounded-full text-white text-[10px] md:text-xs font-medium whitespace-nowrap", config.bgColor)}>
           {config.label}
         </div>
       </div>
 
       {/* Status Alerts */}
       {(isFrozen || isDeactivated) && (
-        <div className={cn("px-3 py-1.5 rounded-lg text-sm font-medium", isDeactivated ? "bg-red-500/10 text-red-500" : "bg-orange-500/10 text-orange-500")}>
+        <div className={cn("px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium", isDeactivated ? "bg-red-500/10 text-red-500" : "bg-orange-500/10 text-orange-500")}>
           {isDeactivated ? '⛔ Account Deactivated' : '🔒 Account Frozen'}
         </div>
       )}
 
-      {/* Strike Counts */}
-      <div className="flex gap-4 text-center">
-        <div className="px-3 py-2 rounded-lg bg-muted/50">
-          <div className="text-lg font-bold">{communityStrikes}</div>
-          <div className="text-xs text-muted-foreground">Community</div>
+      {/* Strike Counts - Responsive */}
+      <div className="flex gap-2 md:gap-4 text-center">
+        <div className="px-2 md:px-3 py-1.5 md:py-2 rounded-lg bg-muted/50">
+          <div className="text-base md:text-lg font-bold">{communityStrikes}</div>
+          <div className="text-[10px] md:text-xs text-muted-foreground">Community</div>
         </div>
-        <div className="px-3 py-2 rounded-lg bg-muted/50">
-          <div className="text-lg font-bold">{copyrightStrikes}</div>
-          <div className="text-xs text-muted-foreground">Copyright</div>
+        <div className="px-2 md:px-3 py-1.5 md:py-2 rounded-lg bg-muted/50">
+          <div className="text-base md:text-lg font-bold">{copyrightStrikes}</div>
+          <div className="text-[10px] md:text-xs text-muted-foreground">Copyright</div>
         </div>
       </div>
     </div>
