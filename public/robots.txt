@@ -1,48 +1,23 @@
 # SongKart Robots.txt
 # Licensed Music Marketplace
 
-User-agent: Googlebot
-Allow: /
-Disallow: /admin
-Disallow: /seller
-Disallow: /buyer
-Disallow: /cart
-Disallow: /auth
-Disallow: /verify-email
-
-User-agent: Bingbot
-Allow: /
-Disallow: /admin
-Disallow: /seller
-Disallow: /buyer
-Disallow: /cart
-Disallow: /auth
-Disallow: /verify-email
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Block private/admin areas
 Disallow: /admin
 Disallow: /seller
 Disallow: /buyer
 Disallow: /cart
 Disallow: /auth
 Disallow: /verify-email
-Disallow: /*?*checkout
-Disallow: /*?*session
-Disallow: /*preview_audio_url*
-Disallow: /*audio-token*
 
-# Sitemap locations
-Sitemap: https://songkart.com/sitemap.xml
-Sitemap: https://songkart.com/sitemap-sellers.xml
+# Block checkout and session parameters
+Disallow: /*?checkout
+Disallow: /*?session
 
-# Sub-sitemaps (generated automatically when needed)
-# Sitemap: https://songkart.com/sitemap-songs.xml
-# Sitemap: https://songkart.com/sitemap-blog.xml
-# Sitemap: https://songkart.com/sitemap-pages.xml
+# Block audio token endpoints
+Disallow: /audio-token
+
+# Sitemap location
+Sitemap: https://songkart.lovable.app/sitemap.xml
