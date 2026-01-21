@@ -206,8 +206,9 @@ export function useSong(identifier: string) {
         seller = sellerData;
       }
       
-      // Increment view count
-      await supabase.rpc("increment_view_count", { song_uuid: data.id });
+      // NOTE: View counting is now handled by useViewTracking hook
+      // Views are only counted for authenticated users after 5+ seconds of playback
+      // This prevents abuse from bots, sellers, admins, and page refreshes
       
       return { ...data, seller } as Song;
     },

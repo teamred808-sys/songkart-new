@@ -12,6 +12,7 @@ interface MiniAudioPlayerProps {
   onPlay?: () => void;
   onPause?: () => void;
   onEnded?: () => void;
+  onViewThreshold?: () => void; // Called when playback reaches 5+ seconds
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     onPlay,
     onPause,
     onEnded,
+    onViewThreshold,
     className,
   }, ref) {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -42,6 +44,7 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
     const progressIntervalRef = useRef<number | null>(null);
     const hasStartedRef = useRef(false);
     const hasEndedSuccessfullyRef = useRef(false);
+    const viewThresholdFiredRef = useRef(false); // Track if view threshold already fired
     
     const { getDirectPreviewUrl, getToken, getStreamUrl, checkAbuse } = useSecurePlayback();
     const audioContext = useAudioPlayerOptional();
@@ -64,9 +67,15 @@ export const MiniAudioPlayer = forwardRef<MiniAudioPlayerHandle, MiniAudioPlayer
           setCurrentTime(current);
           setDuration(total);
           setProgress(total > 0 ? (current / total) * 100 : 0);
+          
+          // Fire view threshold callback after 5 seconds of playback
+          if (current >= 5 && !viewThresholdFiredRef.current && onViewThreshold) {
+            viewThresholdFiredRef.current = true;
+            onViewThreshold();
+          }
         }
       }, 250); // Reduced from 100ms for better INP
-    }, []);
+    }, [onViewThreshold]);
 
     const stopProgressTracking = useCallback(() => {
       if (progressIntervalRef.current) {

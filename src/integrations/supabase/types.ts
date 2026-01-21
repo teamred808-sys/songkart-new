@@ -2389,6 +2389,47 @@ export type Database = {
           },
         ]
       }
+      song_views: {
+        Row: {
+          device_fingerprint: string | null
+          id: string
+          ip_address: string | null
+          playback_duration_seconds: number | null
+          song_id: string
+          user_agent: string | null
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          playback_duration_seconds?: number | null
+          song_id: string
+          user_agent?: string | null
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          device_fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          playback_duration_seconds?: number | null
+          song_id?: string
+          user_agent?: string | null
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_views_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       songs: {
         Row: {
           approved_at: string | null
@@ -3143,6 +3184,16 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      record_song_view: {
+        Args: {
+          p_device_fingerprint?: string
+          p_ip_address?: string
+          p_playback_seconds?: number
+          p_song_id: string
+          p_user_agent?: string
+        }
+        Returns: Json
+      }
       release_cleared_funds: {
         Args: never
         Returns: {

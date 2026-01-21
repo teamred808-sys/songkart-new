@@ -9,21 +9,31 @@ interface AudioPlayerProps {
   duration?: number;
   className?: string;
   onPlay?: () => void;
+  onViewThreshold?: () => void; // Called when playback reaches 5+ seconds
 }
 
-export function AudioPlayer({ src, duration, className, onPlay }: AudioPlayerProps) {
+export function AudioPlayer({ src, duration, className, onPlay, onViewThreshold }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(duration || 0);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const viewThresholdFiredRef = useRef(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+      
+      // Fire view threshold callback after 5 seconds of playback
+      if (audio.currentTime >= 5 && !viewThresholdFiredRef.current && onViewThreshold) {
+        viewThresholdFiredRef.current = true;
+        onViewThreshold();
+      }
+    };
     const updateDuration = () => setAudioDuration(audio.duration);
     const handleEnded = () => setIsPlaying(false);
 
@@ -36,7 +46,7 @@ export function AudioPlayer({ src, duration, className, onPlay }: AudioPlayerPro
       audio.removeEventListener("loadedmetadata", updateDuration);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [onViewThreshold]);
 
   const togglePlay = () => {
     const audio = audioRef.current;

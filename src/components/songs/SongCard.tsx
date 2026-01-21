@@ -10,12 +10,14 @@ import { Price } from "@/components/ui/Price";
 import { RatingBadge } from "@/components/songs/RatingDisplay";
 import { MiniAudioPlayer, MiniAudioPlayerHandle } from "@/components/audio/MiniAudioPlayer";
 import { useAudioPlayerOptional } from "@/contexts/AudioPlayerContext";
+import { useViewTracking } from "@/hooks/useViewTracking";
 
 interface SongCardProps {
   id: string;
   slug?: string | null;
   title: string;
   sellerName: string;
+  sellerId?: string; // For view tracking - to exclude seller's own views
   coverUrl?: string | null;
   previewUrl?: string | null;
   genre?: string;
@@ -40,6 +42,7 @@ export const SongCard = memo(function SongCard({
   slug,
   title,
   sellerName,
+  sellerId,
   coverUrl,
   previewUrl,
   genre,
@@ -61,6 +64,14 @@ export const SongCard = memo(function SongCard({
   const playerRef = useRef<MiniAudioPlayerHandle>(null);
   const audioContext = useAudioPlayerOptional();
   const isCurrentlyPlaying = audioContext?.isPlaying(id) ?? false;
+  
+  // View tracking - only counts authenticated, non-seller views after 5s playback
+  const { startTracking, checkAndRecordView } = useViewTracking(id, sellerId);
+
+  // Handle view threshold callback from player
+  const handleViewThreshold = useCallback(() => {
+    checkAndRecordView();
+  }, [checkAndRecordView]);
 
   // Auto-hide player UI when another song starts playing
   useEffect(() => {
@@ -76,6 +87,9 @@ export const SongCard = memo(function SongCard({
     
     if (!hasAudio) return;
     
+    // Start view tracking when playback begins
+    startTracking();
+    
     // Show visual feedback immediately
     setShowPlayer(true);
     setIsStartingPlayback(true);
@@ -90,7 +104,7 @@ export const SongCard = memo(function SongCard({
         }
       }, 0);
     });
-  }, [hasAudio]);
+  }, [hasAudio, startTracking]);
 
   const handlePlayerEnded = useCallback(() => {
     setShowPlayer(false);
@@ -140,7 +154,9 @@ export const SongCard = memo(function SongCard({
                 ref={playerRef}
                 songId={id}
                 previewUrl={previewUrl}
+                onPlay={startTracking}
                 onEnded={handlePlayerEnded}
+                onViewThreshold={handleViewThreshold}
                 className="px-3"
               />
             </div>

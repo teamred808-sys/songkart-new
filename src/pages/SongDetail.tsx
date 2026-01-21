@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   Music, FileText, Play, Heart, Share2, ShoppingCart, 
@@ -23,6 +23,7 @@ import { useValidatedAddToCart } from "@/hooks/useCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useSellerTier } from "@/hooks/useSellerTier";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useViewTracking } from "@/hooks/useViewTracking";
 import { LICENSE_TYPES } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,14 +46,26 @@ export default function SongDetail() {
   const { data: sellerTier } = useSellerTier(song?.seller?.id);
   const addToCart = useValidatedAddToCart();
   
+  // View tracking - only counts authenticated, non-seller views after 5s playback
+  const { startTracking, checkAndRecordView } = useViewTracking(song?.id, song?.seller_id);
+  
   // Get selected license price for mobile action bar
   const selectedLicenseData = licenseTiers?.find(t => t.id === selectedLicense);
 
-  const handlePlay = async () => {
+  const handlePlay = useCallback(async () => {
+    // Start view tracking when playback begins
+    startTracking();
+    
+    // Also track play count (separate metric)
     if (song?.id) {
       await supabase.rpc("increment_play_count", { song_uuid: song.id });
     }
-  };
+  }, [song?.id, startTracking]);
+
+  // Called when playback reaches 5+ seconds threshold
+  const handleViewThreshold = useCallback(() => {
+    checkAndRecordView();
+  }, [checkAndRecordView]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -213,6 +226,7 @@ export default function SongDetail() {
                 src={song.preview_audio_url}
                 duration={song.duration || undefined}
                 onPlay={handlePlay}
+                onViewThreshold={handleViewThreshold}
               />
             )}
 
