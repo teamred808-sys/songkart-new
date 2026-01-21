@@ -187,20 +187,20 @@ export default function SongDetail() {
 
       <div className="container py-8">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
-          <Link to="/" className="hover:text-foreground">Home</Link>
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          <Link to="/browse" className="hover:text-foreground">Browse</Link>
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        <nav className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-6 min-w-0" aria-label="Breadcrumb">
+          <Link to="/" className="hover:text-foreground shrink-0">Home</Link>
+          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <Link to="/browse" className="hover:text-foreground shrink-0">Browse</Link>
+          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
           {song.genres && (
             <>
-              <Link to={`/browse?genre=${song.genre_id}`} className="hover:text-foreground">
+              <Link to={`/browse?genre=${song.genre_id}`} className="hover:text-foreground shrink-0">
                 {song.genres.name}
               </Link>
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </>
           )}
-          <span className="text-foreground">{song.title}</span>
+          <span className="text-foreground truncate">{song.title}</span>
         </nav>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -232,13 +232,13 @@ export default function SongDetail() {
             )}
 
             {/* Title & Meta - Single H1 with licensing intent */}
-            <div>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">
+            <div className="min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">
                     {song.title} - Licensed {genreName} for {primaryUseCase}
                   </h1>
-                  <div className="flex items-center gap-3 text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
                     <div className="flex items-center gap-2">
                       {song.has_audio && (
                         <Badge variant="secondary">
@@ -261,7 +261,7 @@ export default function SongDetail() {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <Button variant="outline" size="icon">
                     <Heart className="h-4 w-4" />
                   </Button>
