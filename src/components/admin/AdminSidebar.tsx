@@ -35,6 +35,7 @@ const navItems = [
   { icon: FileText, label: 'Content', path: '/admin/content' },
   { icon: Music, label: 'Song Moderation', path: '/admin/songs' },
   { icon: Copyright, label: 'Content Review', path: '/admin/content-review' },
+  { icon: Shield, label: 'Strike Management', path: '/admin/strikes' },
   { icon: Users, label: 'User Management', path: '/admin/users' },
   { icon: Package, label: 'Orders', path: '/admin/orders' },
   { icon: CreditCard, label: 'Transactions', path: '/admin/transactions' },

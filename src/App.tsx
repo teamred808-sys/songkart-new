@@ -43,6 +43,7 @@ const Wallet = lazy(() => import("./pages/seller/Wallet"));
 const Analytics = lazy(() => import("./pages/seller/Analytics"));
 const SellerSettings = lazy(() => import("./pages/seller/SellerSettings"));
 const PayoutSettings = lazy(() => import("./pages/seller/PayoutSettings"));
+const AccountHealth = lazy(() => import("./pages/seller/AccountHealth"));
 
 // Lazy loaded buyer pages
 const BuyerDashboard = lazy(() => import("./pages/buyer/BuyerDashboard"));
@@ -76,6 +77,7 @@ const NewUploadsManagement = lazy(() => import("./pages/admin/NewUploadsManageme
 const RatingModeration = lazy(() => import("./pages/admin/RatingModeration"));
 const PayoutVerification = lazy(() => import("./pages/admin/PayoutVerification"));
 const ContentReviewQueue = lazy(() => import("./pages/admin/ContentReviewQueue"));
+const StrikeManagement = lazy(() => import("./pages/admin/StrikeManagement"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -153,6 +155,7 @@ const App = () => (
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
               <Route path="payout" element={<Suspense fallback={<PageLoader />}><PayoutSettings /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><SellerSettings /></Suspense>} />
+              <Route path="account-health" element={<Suspense fallback={<PageLoader />}><AccountHealth /></Suspense>} />
             </Route>
             
             {/* Admin Dashboard Routes */}
@@ -176,6 +179,7 @@ const App = () => (
               <Route path="new-uploads" element={<Suspense fallback={<PageLoader />}><NewUploadsManagement /></Suspense>} />
               <Route path="ratings" element={<Suspense fallback={<PageLoader />}><RatingModeration /></Suspense>} />
               <Route path="content-review" element={<Suspense fallback={<PageLoader />}><ContentReviewQueue /></Suspense>} />
+              <Route path="strikes" element={<Suspense fallback={<PageLoader />}><StrikeManagement /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><PlatformSettings /></Suspense>} />
               <Route path="logs" element={<Suspense fallback={<PageLoader />}><ActivityLogs /></Suspense>} />
               <Route path="bugs" element={<Suspense fallback={<PageLoader />}><BugReports /></Suspense>} />
