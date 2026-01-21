@@ -49,11 +49,11 @@ export default function NewUploads() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <Card key={i} className="overflow-hidden">
-                <Skeleton className="aspect-square w-full" />
-                <CardContent className="p-4 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="aspect-video md:aspect-square w-full" />
+                <CardContent className="p-3 md:p-4 space-y-1.5 md:space-y-2">
+                  <Skeleton className="h-3 md:h-4 w-3/4" />
+                  <Skeleton className="h-2.5 md:h-3 w-1/2" />
+                  <Skeleton className="h-4 md:h-5 w-1/3" />
                 </CardContent>
               </Card>
             ))}

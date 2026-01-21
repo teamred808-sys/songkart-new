@@ -102,7 +102,8 @@ export const SongCard = memo(function SongCard({
         "group overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1",
         className
       )}>
-        <div className="relative aspect-square overflow-hidden">
+        {/* Mobile: 16:9 landscape, Desktop: square */}
+        <div className="relative aspect-video md:aspect-square overflow-hidden">
           {coverUrl ? (
             <img
               src={coverUrl}
@@ -113,15 +114,17 @@ export const SongCard = memo(function SongCard({
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-              <Music className="h-16 w-16 text-muted-foreground/50" />
+              <Music className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground/50" />
             </div>
           )}
           
-          {/* Overlay on hover - show play button if has audio */}
+          {/* Overlay - always visible on mobile, hover on desktop */}
           <div className={cn(
-            "absolute inset-0 bg-black/60 transition-opacity duration-300 flex items-center justify-center",
-            shouldShowOverlay ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-            !shouldShowOverlay && "pointer-events-none group-hover:pointer-events-auto"
+            "absolute inset-0 bg-black/40 md:bg-black/60 transition-opacity duration-300 flex items-center justify-center",
+            shouldShowOverlay 
+              ? "opacity-100" 
+              : "opacity-100 md:opacity-0 md:group-hover:opacity-100",
+            !shouldShowOverlay && "md:pointer-events-none md:group-hover:pointer-events-auto"
           )}>
           {showPlayer ? (
             <div onClick={(e) => e.stopPropagation()}>
@@ -136,60 +139,62 @@ export const SongCard = memo(function SongCard({
             ) : hasAudio ? (
               <Button 
                 size="icon" 
-                className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary hover:bg-primary/90"
                 onClick={handlePlayClick}
                 disabled={isStartingPlayback}
               >
                 {isStartingPlayback ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-5 w-5 md:h-6 md:w-6 animate-spin" />
                 ) : (
-                  <Play className="h-6 w-6 ml-0.5" />
+                  <Play className="h-5 w-5 md:h-6 md:w-6 ml-0.5" />
                 )}
               </Button>
             ) : (
               <Button 
                 size="icon" 
-                className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90"
+                className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-primary hover:bg-primary/90"
                 onClick={(e) => e.stopPropagation()}
               >
-                <FileText className="h-6 w-6" />
+                <FileText className="h-5 w-5 md:h-6 md:w-6" />
               </Button>
             )}
           </div>
 
-          {/* Content type badges */}
-          <div className="absolute top-2 left-2 right-2 flex justify-between">
-            <div className="flex gap-1">
+          {/* Content type badges - compact on mobile */}
+          <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 right-1.5 md:right-2 flex justify-between">
+            <div className="flex gap-0.5 md:gap-1">
               {hasAudio && (
-                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
-                  <Music className="h-3 w-3 mr-1" />
-                  Audio
+                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-[10px] md:text-xs px-1.5 md:px-2 py-0.5">
+                  <Music className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 md:mr-1" />
+                  <span className="hidden sm:inline">Audio</span>
                 </Badge>
               )}
               {hasLyrics && (
-                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-xs">
-                  <FileText className="h-3 w-3 mr-1" />
-                  Lyrics
+                <Badge variant="secondary" className="bg-background/80 backdrop-blur text-[10px] md:text-xs px-1.5 md:px-2 py-0.5">
+                  <FileText className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 md:mr-1" />
+                  <span className="hidden sm:inline">Lyrics</span>
                 </Badge>
               )}
             </div>
             {hasExclusive && (
-              <Badge className="bg-amber-500/90 backdrop-blur text-xs">
-                <Star className="h-3 w-3 mr-1" />
-                Exclusive
+              <Badge className="bg-amber-500/90 backdrop-blur text-[10px] md:text-xs px-1.5 md:px-2 py-0.5">
+                <Star className="h-2.5 w-2.5 md:h-3 md:w-3 mr-0.5 md:mr-1" />
+                <span className="hidden sm:inline">Exclusive</span>
               </Badge>
             )}
           </div>
         </div>
 
-        <CardContent className="p-4 space-y-2">
-          <div className="flex items-start justify-between gap-2">
+        {/* Mobile: reduced padding, Desktop: normal */}
+        <CardContent className="p-3 md:p-4 space-y-1.5 md:space-y-2">
+          <div className="flex items-start justify-between gap-1.5 md:gap-2">
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+              {/* Mobile: 2 lines max, Desktop: single line truncate */}
+              <h3 className="font-semibold text-sm md:text-base text-foreground line-clamp-2 md:truncate group-hover:text-primary transition-colors">
                 {title}
               </h3>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground truncate">{sellerName}</p>
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <p className="text-xs md:text-sm text-muted-foreground truncate">{sellerName}</p>
                 {sellerTier && (
                   <SellerTierBadge
                     tierLevel={sellerTier.level}
@@ -203,42 +208,44 @@ export const SongCard = memo(function SongCard({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-11 w-11 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity" 
+              className="h-9 w-9 md:h-11 md:w-11 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity" 
               onClick={(e) => e.preventDefault()}
             >
-              <Heart className="h-4 w-4" />
+              <Heart className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </Button>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Badges - compact on mobile */}
+          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
             {genre && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0">
                 {genre}
               </Badge>
             )}
             {mood && (
-              <Badge variant="outline" className="text-xs bg-accent/10 border-accent/30 text-accent">
+              <Badge variant="outline" className="text-[10px] md:text-xs px-1.5 md:px-2 py-0 bg-accent/10 border-accent/30 text-accent">
                 {mood}
               </Badge>
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          {/* Price section - compact on mobile */}
+          <div className="flex items-center justify-between pt-1.5 md:pt-2 border-t border-border/50">
             <div>
-              <span className="text-xs text-muted-foreground">Starting from</span>
-              <p className="text-lg font-bold text-primary">
+              <span className="text-[10px] md:text-xs text-muted-foreground">Starting from</span>
+              <p className="text-base md:text-lg font-bold text-primary">
                 <Price amount={basePrice} />
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               {/* Rating Badge */}
               <RatingBadge 
                 averageRating={averageRating || 0} 
                 totalRatings={totalRatings || 0} 
               />
               {playCount > 0 && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Play className="h-3 w-3" />
+                <span className="text-[10px] md:text-xs text-muted-foreground flex items-center gap-0.5 md:gap-1">
+                  <Play className="h-2.5 w-2.5 md:h-3 md:w-3" />
                   {playCount.toLocaleString()}
                 </span>
               )}
