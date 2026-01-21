@@ -24,9 +24,9 @@ const Index = () => {
       <WhatYouGet />
       <NewUploads />
       <FeaturedSongs />
-      <GenreSection />
-      <HowItWorks />
       <LatestReleases />
+      <HowItWorks />
+      <GenreSection />
       <CTABanner />
     </MainLayout>
   );
