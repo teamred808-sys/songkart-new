@@ -401,6 +401,7 @@ export default function SongDetail() {
                           sellerId={song.seller.id} 
                           size="sm"
                           showLabel={false}
+                          alwaysShow={true}
                         />
                       )}
                     </div>
