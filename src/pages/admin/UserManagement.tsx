@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAllUsers, useUpdateUserStatus, useVerifyUser } from '@/hooks/useAdminData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -8,13 +11,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, CheckCircle, Ban, UserX } from 'lucide-react';
+import { AdminHealthMeter } from '@/components/admin/AdminHealthMeter';
+import { Search, MoreHorizontal, CheckCircle, Ban, UserX, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
+// Hook to fetch health data for all sellers
+function useAllSellersHealth() {
+  return useQuery({
+    queryKey: ['admin-all-sellers-health'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('seller_account_health')
+        .select('seller_id, health_score, is_frozen, is_deactivated, community_strikes_active, copyright_strikes_active');
+      
+      if (error) throw error;
+      
+      // Convert to map for quick lookup
+      const healthMap: Record<string, any> = {};
+      data?.forEach(h => { healthMap[h.seller_id] = h; });
+      return healthMap;
+    }
+  });
+}
+
 export default function UserManagement() {
+  const navigate = useNavigate();
   const [roleFilter, setRoleFilter] = useState<'admin' | 'seller' | 'buyer' | undefined>();
   const [search, setSearch] = useState('');
   const { data: users, isLoading } = useAllUsers({ role: roleFilter, search });
+  const { data: healthMap = {} } = useAllSellersHealth();
   const updateStatus = useUpdateUserStatus();
   const verifyUser = useVerifyUser();
 
@@ -26,6 +51,8 @@ export default function UserManagement() {
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  const isSeller = (user: any) => user.user_roles?.some((r: any) => r.role === 'seller');
 
   return (
     <div className="space-y-6">
@@ -62,6 +89,7 @@ export default function UserManagement() {
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Health</TableHead>
                 <TableHead>Verified</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -69,34 +97,56 @@ export default function UserManagement() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">Loading...</TableCell></TableRow>
               ) : users?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users found</TableCell></TableRow>
-              ) : users?.map((user: any) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar><AvatarImage src={user.avatar_url} /><AvatarFallback>{user.full_name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
-                      <div><p className="font-medium">{user.full_name || 'Unknown'}</p><p className="text-xs text-muted-foreground">{user.email}</p></div>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{user.user_roles?.[0]?.role || 'buyer'}</Badge></TableCell>
-                  <TableCell>{statusBadge(user.account_status || 'active')}</TableCell>
-                  <TableCell>{user.is_verified ? <CheckCircle className="h-4 w-4 text-blue-500 animate-pulse" /> : <span className="text-muted-foreground">-</span>}</TableCell>
-                  <TableCell>{format(new Date(user.created_at), 'MMM dd, yyyy')}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => verifyUser.mutate({ userId: user.id, verified: !user.is_verified })}>{user.is_verified ? 'Remove Verification' : 'Verify User'}</DropdownMenuItem>
-                        {user.account_status !== 'suspended' && <DropdownMenuItem onClick={() => updateStatus.mutate({ userId: user.id, status: 'suspended' })}><UserX className="mr-2 h-4 w-4" />Suspend</DropdownMenuItem>}
-                        {user.account_status !== 'banned' && <DropdownMenuItem className="text-red-500" onClick={() => updateStatus.mutate({ userId: user.id, status: 'banned' })}><Ban className="mr-2 h-4 w-4" />Ban</DropdownMenuItem>}
-                        {user.account_status !== 'active' && <DropdownMenuItem onClick={() => updateStatus.mutate({ userId: user.id, status: 'active' })}>Activate</DropdownMenuItem>}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No users found</TableCell></TableRow>
+              ) : users?.map((user: any) => {
+                const health = healthMap[user.id];
+                const userIsSeller = isSeller(user);
+                
+                return (
+                  <TableRow 
+                    key={user.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/admin/users/${user.id}`)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar><AvatarImage src={user.avatar_url} /><AvatarFallback>{user.full_name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
+                        <div><p className="font-medium">{user.full_name || 'Unknown'}</p><p className="text-xs text-muted-foreground">{user.email}</p></div>
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{user.user_roles?.[0]?.role || 'buyer'}</Badge></TableCell>
+                    <TableCell>{statusBadge(user.account_status || 'active')}</TableCell>
+                    <TableCell>
+                      {userIsSeller && health ? (
+                        <AdminHealthMeter
+                          score={health.health_score ?? 100}
+                          isFrozen={health.is_frozen}
+                          isDeactivated={health.is_deactivated}
+                          compact
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{user.is_verified ? <CheckCircle className="h-4 w-4 text-blue-500 animate-pulse" /> : <span className="text-muted-foreground">-</span>}</TableCell>
+                    <TableCell>{format(new Date(user.created_at), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/users/${user.id}`)}><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => verifyUser.mutate({ userId: user.id, verified: !user.is_verified })}>{user.is_verified ? 'Remove Verification' : 'Verify User'}</DropdownMenuItem>
+                          {user.account_status !== 'suspended' && <DropdownMenuItem onClick={() => updateStatus.mutate({ userId: user.id, status: 'suspended' })}><UserX className="mr-2 h-4 w-4" />Suspend</DropdownMenuItem>}
+                          {user.account_status !== 'banned' && <DropdownMenuItem className="text-red-500" onClick={() => updateStatus.mutate({ userId: user.id, status: 'banned' })}><Ban className="mr-2 h-4 w-4" />Ban</DropdownMenuItem>}
+                          {user.account_status !== 'active' && <DropdownMenuItem onClick={() => updateStatus.mutate({ userId: user.id, status: 'active' })}>Activate</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
