@@ -196,7 +196,7 @@ serve(async (req) => {
       const { data: orderNumberData } = await supabase.rpc("generate_order_number");
       const orderNumber = orderNumberData || `ORD${Date.now()}`;
 
-      // Create order
+      // Create order with split fee data
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -231,7 +231,7 @@ serve(async (req) => {
         // Generate watermark code
         const watermarkCode = `WM-${order.id.substring(0, 8)}-${item.song_id.substring(0, 8)}-${Date.now()}`;
 
-        // Create order item
+        // Create order item with split fee fields
         const { data: orderItem, error: itemError } = await supabase
           .from("order_items")
           .insert({
@@ -241,9 +241,16 @@ serve(async (req) => {
             license_tier_id: item.license_tier_id,
             license_type: item.license_type,
             is_exclusive: item.is_exclusive,
-            price: item.price,
+            // New split fee fields
+            song_price: item.song_price || item.price,
+            platform_fee_total: item.platform_fee_total || item.commission_amount,
+            platform_fee_buyer: item.platform_fee_buyer || 0,
+            platform_fee_seller: item.platform_fee_seller || item.commission_amount,
+            buyer_total_paid: item.buyer_total_paid || item.price,
+            // Legacy fields for compatibility
+            price: item.song_price || item.price,
             commission_rate: item.commission_rate,
-            commission_amount: item.commission_amount,
+            commission_amount: item.platform_fee_total || item.commission_amount,
             seller_amount: item.seller_amount,
             watermark_code: watermarkCode,
           })
@@ -288,7 +295,7 @@ serve(async (req) => {
             onConflict: "buyer_id,song_id"
           });
 
-        // Credit seller wallet
+        // Credit seller wallet with seller_amount (song price - seller's platform fee portion)
         const { data: wallet } = await supabase
           .from("seller_wallets")
           .select("*")
@@ -339,7 +346,7 @@ serve(async (req) => {
           })
           .eq("id", item.license_tier_id);
 
-        // Create transaction record
+        // Create transaction record with split fee fields
         await supabase
           .from("transactions")
           .insert({
@@ -347,9 +354,15 @@ serve(async (req) => {
             seller_id: item.seller_id,
             song_id: item.song_id,
             license_tier_id: item.license_tier_id,
-            amount: item.price,
+            // New split fee fields
+            song_price: item.song_price || item.price,
+            platform_fee_buyer: item.platform_fee_buyer || 0,
+            platform_fee_seller: item.platform_fee_seller || item.commission_amount,
+            buyer_total_paid: item.buyer_total_paid || item.price,
+            // Legacy fields
+            amount: item.song_price || item.price,
             commission_rate: item.commission_rate,
-            commission_amount: item.commission_amount,
+            commission_amount: item.platform_fee_total || item.commission_amount,
             seller_amount: item.seller_amount,
             payment_status: "completed",
             payment_method: "cashfree",

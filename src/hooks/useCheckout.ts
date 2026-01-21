@@ -124,7 +124,15 @@ export function useCartWithTotals() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        return { items: [], subtotal: 0, platformFee: 0, total: 0, itemCount: 0, hasExclusiveItems: false, hasOwnSongs: false };
+        return { 
+          items: [], 
+          subtotal: 0, 
+          buyerPlatformFee: 0, 
+          total: 0, 
+          itemCount: 0, 
+          hasExclusiveItems: false, 
+          hasOwnSongs: false 
+        };
       }
 
       // Fetch cart items with related data
@@ -182,31 +190,41 @@ export function useCartWithTotals() {
         reservationsMap = new Map(reservations?.map(r => [r.song_id, { expires_at: r.expires_at }]));
       }
 
-      // Get commission rate
+      // Get commission rate for split fee calculation
       const commissionRate = await getCommissionRate();
 
-      // Map items with seller names, reservations, and own song flag
+      // Map items with seller names, reservations, own song flag, and split fees
       const items = cartItems?.map(item => {
         const isOwnSong = item.songs?.seller_id === user.id;
+        const songPrice = item.final_price || item.license_tiers?.price || 0;
+        
+        // Calculate split platform fee (50/50)
+        const platformFeeTotal = Math.round(songPrice * commissionRate);
+        const platformFeeBuyer = Math.round(platformFeeTotal / 2);
+        const buyerTotalPaid = songPrice + platformFeeBuyer;
+        
         return {
           ...item,
           seller_name: profileMap.get(item.songs?.seller_id) || 'Unknown Artist',
-          price: item.final_price || item.license_tiers?.price || 0,
+          price: songPrice,
+          songPrice,
+          platformFeeBuyer,
+          buyerTotalPaid,
           reservation: reservationsMap.get(item.song_id),
           isOwnSong,
         };
       }) || [];
 
-      // Calculate totals
-      const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-      const platformFee = Math.round(subtotal * commissionRate);
-      const total = subtotal;
+      // Calculate totals with split platform fee
+      const subtotal = items.reduce((sum, item) => sum + item.songPrice, 0);
+      const buyerPlatformFee = items.reduce((sum, item) => sum + item.platformFeeBuyer, 0);
+      const total = subtotal + buyerPlatformFee;
 
       return {
         items,
-        subtotal,
-        platformFee,
-        total,
+        subtotal,         // Song prices only
+        buyerPlatformFee, // Buyer's portion of platform fee (50%)
+        total,            // What buyer actually pays (subtotal + buyerPlatformFee)
         itemCount: items.length,
         hasExclusiveItems: items.some(item => item.is_exclusive),
         hasOwnSongs: items.some(item => item.isOwnSong),

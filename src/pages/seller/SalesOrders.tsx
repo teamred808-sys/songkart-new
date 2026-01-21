@@ -26,7 +26,8 @@ import {
   TrendingUp, 
   DollarSign,
   ArrowUpRight,
-  Music
+  Music,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -48,8 +49,14 @@ export default function SalesOrders() {
     tx.song?.title?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Calculate totals - seller_amount is net after their platform fee portion
   const totalRevenue = transactions?.reduce((sum, tx) => sum + Number(tx.seller_amount), 0) || 0;
-  const totalCommission = transactions?.reduce((sum, tx) => sum + Number(tx.commission_amount), 0) || 0;
+  // Platform fees = seller's share of platform fee (what's deducted from them)
+  const totalPlatformFees = transactions?.reduce((sum, tx) => {
+    // Use platform_fee_seller if available, otherwise fall back to commission_amount
+    const sellerFee = Number((tx as unknown as { platform_fee_seller?: number }).platform_fee_seller || tx.commission_amount || 0);
+    return sum + sellerFee;
+  }, 0) || 0;
   const totalOrders = transactions?.length || 0;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -94,13 +101,23 @@ export default function SalesOrders() {
           <Card className="bg-card border-border hover:border-muted-foreground/30 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground font-medium">Platform Fees</span>
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  Your Platform Fees
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Your share of the platform fee (50% of total). Buyers also pay 50% of the platform fee separately.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </span>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold font-display text-muted-foreground">
-                {formatPrice(totalCommission)}
+                {formatPrice(totalPlatformFees)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">15% commission</p>
+              <p className="text-xs text-muted-foreground mt-1">Your 50% share</p>
             </CardContent>
           </Card>
 
@@ -138,9 +155,9 @@ export default function SalesOrders() {
                   <TableHead>Date</TableHead>
                   <TableHead>Song</TableHead>
                   <TableHead>License</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Commission</TableHead>
-                  <TableHead className="text-right">Your Earning</TableHead>
+                  <TableHead className="text-right">Song Price</TableHead>
+                  <TableHead className="text-right">Your Platform Fee</TableHead>
+                  <TableHead className="text-right">Your Earnings</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -171,77 +188,85 @@ export default function SalesOrders() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTx?.map((tx) => (
-                    <TableRow key={tx.id} className="group">
-                      <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger className="text-muted-foreground text-left">
-                            {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {format(new Date(tx.created_at), 'PPpp')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 rounded-lg">
-                            <AvatarImage 
-                              src={tx.song?.cover_image_url || ''} 
-                              className="object-cover"
-                            />
-                            <AvatarFallback className="rounded-lg bg-muted text-xs">
-                              {tx.song?.title?.charAt(0) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium truncate max-w-[150px]">
-                            {tx.song?.title || 'Unknown'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {tx.license_tier?.license_type || 'Standard'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        ₹{Number(tx.amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        <span className="text-destructive">-₹{Number(tx.commission_amount).toFixed(2)}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-semibold text-emerald-500">+₹{Number(tx.seller_amount).toFixed(2)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={cn("capitalize", statusColors[tx.payment_status || 'pending'])}
-                        >
-                          {tx.payment_status || 'pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {tx.license_pdf_url && (
+                  filteredTx?.map((tx) => {
+                    // Get song price and seller's platform fee (cast to access new columns not yet in types)
+                    const txExt = tx as unknown as { song_price?: number; platform_fee_seller?: number };
+                    const songPrice = Number(txExt.song_price || tx.amount || 0);
+                    const sellerPlatformFee = Number(txExt.platform_fee_seller || tx.commission_amount || 0);
+                    const sellerEarnings = Number(tx.seller_amount || 0);
+                    
+                    return (
+                      <TableRow key={tx.id} className="group">
+                        <TableCell>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                asChild
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <a href={tx.license_pdf_url} target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4" />
-                                </a>
-                              </Button>
+                            <TooltipTrigger className="text-muted-foreground text-left">
+                              {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
                             </TooltipTrigger>
-                            <TooltipContent>Download license PDF</TooltipContent>
+                            <TooltipContent>
+                              {format(new Date(tx.created_at), 'PPpp')}
+                            </TooltipContent>
                           </Tooltip>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 rounded-lg">
+                              <AvatarImage 
+                                src={tx.song?.cover_image_url || ''} 
+                                className="object-cover"
+                              />
+                              <AvatarFallback className="rounded-lg bg-muted text-xs">
+                                {tx.song?.title?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium truncate max-w-[150px]">
+                              {tx.song?.title || 'Unknown'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {tx.license_tier?.license_type || 'Standard'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{songPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          <span className="text-destructive">-₹{sellerPlatformFee.toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="font-semibold text-emerald-500">+₹{sellerEarnings.toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={cn("capitalize", statusColors[tx.payment_status || 'pending'])}
+                          >
+                            {tx.payment_status || 'pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {tx.license_pdf_url && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  asChild
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <a href={tx.license_pdf_url} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Download license PDF</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

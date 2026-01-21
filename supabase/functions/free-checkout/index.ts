@@ -228,7 +228,7 @@ serve(async (req) => {
       .eq("id", song.seller_id)
       .single();
 
-    // 12. Create checkout session
+    // 12. Create checkout session with split fee fields (all 0 for free songs)
     const { data: checkoutSession, error: sessionError } = await supabase
       .from("checkout_sessions")
       .insert({
@@ -238,11 +238,21 @@ serve(async (req) => {
           license_tier_id,
           song_title: song.title,
           license_type: licenseTier.license_type,
+          // Split fee fields - all 0 for free songs
+          song_price: 0,
+          platform_fee_total: 0,
+          platform_fee_buyer: 0,
+          platform_fee_seller: 0,
+          buyer_total_paid: 0,
+          seller_amount: 0,
+          // Legacy fields
           price: 0,
           is_exclusive: isExclusive,
         }],
         subtotal: 0,
         platform_fee: 0,
+        platform_fee_buyer: 0,
+        platform_fee_seller: 0,
         total_amount: 0,
         status: "completed",
         acknowledgment_accepted: true,
@@ -292,6 +302,13 @@ serve(async (req) => {
         license_tier_id,
         license_type: licenseTier.license_type,
         is_exclusive: isExclusive,
+        // Split fee fields - all 0 for free songs
+        song_price: 0,
+        platform_fee_total: 0,
+        platform_fee_buyer: 0,
+        platform_fee_seller: 0,
+        buyer_total_paid: 0,
+        // Legacy fields
         price: 0,
         commission_rate: commissionRate,
         commission_amount: 0,

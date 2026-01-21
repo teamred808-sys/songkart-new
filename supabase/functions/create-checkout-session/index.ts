@@ -143,12 +143,31 @@ serve(async (req) => {
     const commissionRate = await getCommissionRate(supabase);
     console.log(`Using commission rate: ${commissionRate * 100}%`);
 
-    // Calculate totals with fresh prices
+    // Calculate totals with SPLIT platform fee (50/50 buyer/seller)
     let subtotal = 0;
+    let totalBuyerFee = 0;
+    let totalSellerFee = 0;
+    let totalPlatformFee = 0;
+
     const cartSnapshot = cartItems.map(item => {
-      const price = Number(item.license_tier.price);
-      const commission = price * commissionRate;
-      subtotal += price;
+      const songPrice = Number(item.license_tier.price);
+      const platformFeeTotal = Math.round(songPrice * commissionRate);
+      
+      // Split 50/50 - buyer pays half, seller pays half
+      // Round buyer's portion, seller gets remainder to ensure total matches
+      const platformFeeBuyer = Math.round(platformFeeTotal / 2);
+      const platformFeeSeller = platformFeeTotal - platformFeeBuyer;
+      
+      // Buyer pays: song price + their half of platform fee
+      const buyerTotalPaid = songPrice + platformFeeBuyer;
+      
+      // Seller receives: song price - their half of platform fee
+      const sellerAmount = songPrice - platformFeeSeller;
+      
+      subtotal += songPrice;
+      totalBuyerFee += platformFeeBuyer;
+      totalSellerFee += platformFeeSeller;
+      totalPlatformFee += platformFeeTotal;
       
       return {
         song_id: item.song_id,
@@ -157,16 +176,23 @@ serve(async (req) => {
         license_tier_id: item.license_tier_id,
         license_type: item.license_tier.license_type,
         is_exclusive: item.is_exclusive,
-        price,
+        // New split fee fields
+        song_price: songPrice,
+        platform_fee_total: platformFeeTotal,
+        platform_fee_buyer: platformFeeBuyer,
+        platform_fee_seller: platformFeeSeller,
+        buyer_total_paid: buyerTotalPaid,
+        seller_amount: sellerAmount,
+        // Legacy fields for compatibility
+        price: songPrice,
         commission_rate: commissionRate,
-        commission_amount: commission,
-        seller_amount: price - commission,
+        commission_amount: platformFeeTotal,
         cover_image_url: item.song.cover_image_url,
       };
     });
 
-    const platformFee = subtotal * commissionRate;
-    const totalAmount = subtotal;
+    // Total amount buyer pays = subtotal (song prices) + buyer's portion of platform fees
+    const totalAmount = subtotal + totalBuyerFee;
 
     // Generate order ID
     const orderId = `order_${Date.now()}_${user.id.substring(0, 8)}`;
@@ -178,7 +204,7 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    // Create Cashfree order
+    // Create Cashfree order with the TOTAL amount buyer pays
     const cashfreeResponse = await fetch(CASHFREE_API_URL, {
       method: "POST",
       headers: {
@@ -224,21 +250,26 @@ serve(async (req) => {
       });
     }
 
-    // Log Cashfree response (frontend will use SDK with payment_session_id)
+    // Log Cashfree response
     console.log("=== Cashfree Order Created ===");
     console.log("Environment: PRODUCTION");
     console.log("Order ID:", orderId);
     console.log("Payment Session ID:", cashfreeData.payment_session_id);
-    console.log("Total Amount: INR", totalAmount);
+    console.log("Subtotal (song prices):", subtotal);
+    console.log("Buyer Platform Fee:", totalBuyerFee);
+    console.log("Seller Platform Fee:", totalSellerFee);
+    console.log("Total Amount (buyer pays):", totalAmount);
 
-    // Create checkout session
+    // Create checkout session with split fee fields
     const { data: checkoutSession, error: sessionError } = await supabase
       .from("checkout_sessions")
       .insert({
         buyer_id: user.id,
         cart_snapshot: cartSnapshot,
         subtotal,
-        platform_fee: platformFee,
+        platform_fee: totalPlatformFee,
+        platform_fee_buyer: totalBuyerFee,
+        platform_fee_seller: totalSellerFee,
         total_amount: totalAmount,
         cashfree_order_id: orderId,
         cashfree_payment_session_id: cashfreeData.payment_session_id,
