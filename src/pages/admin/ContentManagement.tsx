@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 export default function ContentManagement() {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<'pages' | 'posts'>('pages');
   const navigate = useNavigate();
 
   const { data: pages, isLoading: isLoadingPages } = useContentList('page');
@@ -165,27 +166,44 @@ export default function ContentManagement() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Pages</h3>
-        {isLoadingPages ? renderLoadingSkeleton() : filteredPages?.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              No pages found.
-            </CardContent>
-          </Card>
-        ) : (
-          filteredPages?.map(renderContentCard)
-        )}
+      <div className="flex gap-2">
+        <Button
+          variant={activeSection === 'pages' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('pages')}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Pages ({filteredPages?.length || 0})
+        </Button>
+        <Button
+          variant={activeSection === 'posts' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('posts')}
+        >
+          <Newspaper className="h-4 w-4 mr-2" />
+          Blog Posts ({filteredPosts?.length || 0})
+        </Button>
+      </div>
 
-        <h3 className="text-lg font-semibold mt-2">Blog Posts</h3>
-        {isLoadingPosts ? renderLoadingSkeleton() : filteredPosts?.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              No blog posts found.
-            </CardContent>
-          </Card>
+      <div className="space-y-4">
+        {activeSection === 'pages' ? (
+          isLoadingPages ? renderLoadingSkeleton() : filteredPages?.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No pages found.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredPages?.map(renderContentCard)
+          )
         ) : (
-          filteredPosts?.map(renderContentCard)
+          isLoadingPosts ? renderLoadingSkeleton() : filteredPosts?.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No blog posts found.
+              </CardContent>
+            </Card>
+          ) : (
+            filteredPosts?.map(renderContentCard)
+          )
         )}
       </div>
 
