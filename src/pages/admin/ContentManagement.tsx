@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FileText, Newspaper, Search, Eye, Pencil, Trash2, Globe, EyeOff } from 'lucide-react';
+import { FileText, Newspaper, Search, Eye, Pencil, Trash2, Globe, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -17,25 +16,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useContentList, useDeleteContent, usePublishContent, useUnpublishContent, type ContentType, type ContentStatus } from '@/hooks/useCmsContent';
+import { useContentList, useDeleteContent, usePublishContent, useUnpublishContent, type ContentStatus, type CmsContent } from '@/hooks/useCmsContent';
 import { format } from 'date-fns';
 
 export default function ContentManagement() {
-  const [activeTab, setActiveTab] = useState<'all' | ContentType>('all');
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const type = activeTab === 'all' ? undefined : activeTab;
-  const { data: content, isLoading } = useContentList(type);
+  const { data: pages, isLoading: isLoadingPages } = useContentList('page');
+  const { data: posts, isLoading: isLoadingPosts } = useContentList('post');
   const deleteContent = useDeleteContent();
   const publishContent = usePublishContent();
   const unpublishContent = useUnpublishContent();
 
-  const filteredContent = content?.filter(item =>
-    item.title.toLowerCase().includes(search.toLowerCase()) ||
-    item.slug.toLowerCase().includes(search.toLowerCase())
-  );
+  const filterBySearch = (items?: CmsContent[]) =>
+    items?.filter(item =>
+      item.title.toLowerCase().includes(search.toLowerCase()) ||
+      item.slug.toLowerCase().includes(search.toLowerCase())
+    );
+
+  const filteredPages = filterBySearch(pages);
+  const filteredPosts = filterBySearch(posts);
 
   const getStatusBadge = (status: ContentStatus) => {
     switch (status) {
@@ -56,6 +58,81 @@ export default function ContentManagement() {
       setDeleteId(null);
     }
   };
+
+  const renderContentCard = (item: CmsContent) => (
+    <Card key={item.id} className="hover:bg-muted/50 transition-colors">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {item.type === 'page' ? (
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Newspaper className="h-4 w-4 text-muted-foreground" />
+              )}
+              <h3 className="font-semibold truncate">{item.title}</h3>
+              {getStatusBadge(item.status)}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              /{item.slug} • Updated {format(new Date(item.updated_at), 'MMM d, yyyy')}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            {item.status === 'published' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => unpublishContent.mutate(item.id)}
+                disabled={unpublishContent.isPending}
+              >
+                <EyeOff className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => publishContent.mutate(item.id)}
+                disabled={publishContent.isPending}
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/${item.slug}`} target="_blank">
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/admin/content/${item.id}/edit`}>
+                <Pencil className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteId(item.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderLoadingSkeleton = () => (
+    <div className="space-y-3">
+      {[1, 2].map((i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <Skeleton className="h-6 w-1/3 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -88,98 +165,43 @@ export default function ContentManagement() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList>
-          <TabsTrigger value="all">All Content</TabsTrigger>
-          <TabsTrigger value="page">Pages</TabsTrigger>
-          <TabsTrigger value="post">Blog Posts</TabsTrigger>
-        </TabsList>
+      {/* Pages Management Section */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Pages Management</h2>
+        </div>
+        {isLoadingPages ? renderLoadingSkeleton() : filteredPages?.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              No pages found.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredPages?.map(renderContentCard)}
+          </div>
+        )}
+      </div>
 
-        <TabsContent value={activeTab} className="mt-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <Skeleton className="h-6 w-1/3 mb-2" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : filteredContent?.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                No content found. Create your first page or post!
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {filteredContent?.map((item) => (
-                <Card key={item.id} className="hover:bg-muted/50 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          {item.type === 'page' ? (
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Newspaper className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <h3 className="font-semibold truncate">{item.title}</h3>
-                          {getStatusBadge(item.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          /{item.slug} • Updated {format(new Date(item.updated_at), 'MMM d, yyyy')}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {item.status === 'published' ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => unpublishContent.mutate(item.id)}
-                            disabled={unpublishContent.isPending}
-                          >
-                            <EyeOff className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => publishContent.mutate(item.id)}
-                            disabled={publishContent.isPending}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/${item.slug}`} target="_blank">
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/admin/content/${item.id}/edit`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Blog Posts Management Section */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Newspaper className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Blog Posts Management</h2>
+        </div>
+        {isLoadingPosts ? renderLoadingSkeleton() : filteredPosts?.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              No blog posts found.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredPosts?.map(renderContentCard)}
+          </div>
+        )}
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
