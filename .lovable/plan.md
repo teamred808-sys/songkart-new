@@ -1,74 +1,78 @@
 
 
-## Fix: Add Image Upload and Drag-and-Drop Support to Content Editor
+## Add Image Resize Support to Post Editor
 
 ### Problem
-1. **Rich Text Editor**: The image button opens a dialog with upload support, but dragging and dropping images directly into the editor area does nothing.
-2. **Featured Image**: Only accepts a URL input -- no file upload button or drag-and-drop zone.
+Images inserted into the rich text editor cannot be resized. There are no drag handles or controls to adjust image dimensions after insertion.
 
-The upload infrastructure (`useUploadMedia` hook + `cms-media` storage bucket) already exists and works. The fix is purely about wiring up the UI.
+### Solution
+Replace the default `@tiptap/extension-image` with the `tiptap-extension-resize-image` package, which is a drop-in replacement that adds visual drag handles for resizing images directly in the editor.
 
 ---
 
 ### Changes
 
-#### 1. `src/components/cms/RichTextEditor.tsx` -- Add drag-and-drop image upload
+#### 1. Install `tiptap-extension-resize-image`
 
-- Import and use `useUploadMedia` from `useCmsMedia.ts`
-- Add `onDrop` and `onDragOver` handlers to the editor wrapper `div`
-- When an image file is dropped, upload it via `useUploadMedia`, then insert the returned public URL into the editor using `editor.chain().focus().setImage()`
-- Show a visual drop indicator (border highlight) while dragging over the editor
+Add the npm package which provides resize handles, alignment controls, and min/max width constraints.
 
-#### 2. `src/pages/admin/ContentEditor.tsx` -- Add Featured Image upload with drag-and-drop
+#### 2. Update `src/components/cms/RichTextEditor.tsx`
 
-Replace the simple URL input in the Featured Image card with:
-- A **drag-and-drop zone** with visual feedback (dashed border, icon, helper text)
-- A **"Choose File" upload button** that triggers a hidden file input
-- An **"Or enter URL" divider** followed by the existing URL input
-- A **preview with remove button** when an image is set
-- Use the same `useUploadMedia` hook for uploads
-- On successful upload, set `featuredImage` to the returned `public_url`
+- Replace `import Image from '@tiptap/extension-image'` with `import ImageResize from 'tiptap-extension-resize-image'`
+- Replace `Image.configure(...)` with `ImageResize.configure(...)` in the extensions array, keeping the same HTML attributes class
+- Optionally set `minWidth` and `maxWidth` constraints (e.g., 100px min, full container max)
 
----
-
-### Technical Details
-
-**RichTextEditor.tsx changes:**
+**Before:**
 ```tsx
-// Add to imports
-import { useUploadMedia } from '@/hooks/useCmsMedia';
+import Image from '@tiptap/extension-image';
 
-// Inside component
-const uploadMedia = useUploadMedia();
-const [isDragging, setIsDragging] = useState(false);
-
-const handleDrop = useCallback(async (e: React.DragEvent) => {
-  e.preventDefault();
-  setIsDragging(false);
-  const file = e.dataTransfer.files?.[0];
-  if (!file || !file.type.startsWith('image/')) return;
-  const result = await uploadMedia.mutateAsync({ file, altText: file.name });
-  editor?.chain().focus().setImage({ src: result.public_url, alt: result.alt_text || '' }).run();
-}, [editor, uploadMedia]);
-
-// Add onDragOver, onDragLeave, onDrop to wrapper div
-// Add visual drag indicator class when isDragging is true
+// In extensions:
+Image.configure({
+  HTMLAttributes: {
+    class: 'rounded-lg max-w-full',
+  },
+}),
 ```
 
-**ContentEditor.tsx Featured Image section changes:**
+**After:**
 ```tsx
-// Replace simple Input with drop zone + upload button + URL input
-<div
-  onDrop={handleFeaturedImageDrop}
-  onDragOver={...}
-  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer"
->
-  <Upload icon />
-  <p>Drag & drop image here</p>
-  <Button>Choose File</Button>
-</div>
-<div>Or enter URL</div>
-<Input value={featuredImage} ... />
+import ImageResize from 'tiptap-extension-resize-image';
+
+// In extensions:
+ImageResize.configure({
+  HTMLAttributes: {
+    class: 'rounded-lg max-w-full',
+  },
+  minWidth: 100,
+}),
+```
+
+#### 3. Add resize handle styles to `src/index.css`
+
+Add minimal CSS to style the resize handles so they're visible against the dark editor background:
+
+```css
+/* Tiptap image resize handles */
+.image-resizer {
+  display: inline-flex;
+  position: relative;
+}
+.image-resizer .resize-trigger {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: hsl(var(--primary));
+  border-radius: 2px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.image-resizer:hover .resize-trigger,
+.image-resizer.resizing .resize-trigger {
+  opacity: 1;
+}
 ```
 
 ---
@@ -77,6 +81,10 @@ const handleDrop = useCallback(async (e: React.DragEvent) => {
 
 | File | Change |
 |------|--------|
-| `src/components/cms/RichTextEditor.tsx` | Add drag-and-drop image upload handler with visual feedback |
-| `src/pages/admin/ContentEditor.tsx` | Replace Featured Image URL-only input with upload zone + drag-and-drop + URL fallback |
+| `package.json` | Add `tiptap-extension-resize-image` dependency |
+| `src/components/cms/RichTextEditor.tsx` | Swap `@tiptap/extension-image` for `tiptap-extension-resize-image` |
+| `src/index.css` | Add resize handle styling |
+
+### Result
+After this change, clicking on any image in the editor will show drag handles on the corners/edges, allowing the user to resize images by dragging. The `setImage` chain command remains the same, so drag-and-drop upload and toolbar image insertion continue to work unchanged.
 
