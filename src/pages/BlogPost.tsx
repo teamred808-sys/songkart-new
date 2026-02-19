@@ -3,16 +3,22 @@ import { format } from "date-fns";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useContentBySlug } from "@/hooks/useCmsContent";
+import { useContentCategories, useCategories } from "@/hooks/useCmsCategories";
 import { SEOHead } from "@/components/cms/SEOHead";
 import { ContentRenderer } from "@/components/cms/ContentRenderer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BlogPostingSchema, BreadcrumbSchema } from "@/components/seo/SchemaOrg";
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: post, isLoading, error } = useContentBySlug(slug || '', 'post');
+  const { data: categoryIds } = useContentCategories(post?.id);
+  const { data: allCategories } = useCategories();
+
+  const postCategories = (allCategories ?? []).filter(c => (categoryIds ?? []).includes(c.id));
 
   if (isLoading) {
     return (
@@ -113,6 +119,14 @@ const BlogPost = () => {
               </div>
             )}
           </div>
+
+          {postCategories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {postCategories.map(cat => (
+                <Badge key={cat.id} variant="secondary">{cat.name}</Badge>
+              ))}
+            </div>
+          )}
 
           {post.excerpt && (
             <p className="text-xl text-muted-foreground mt-6 leading-relaxed">
