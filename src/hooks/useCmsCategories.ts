@@ -67,14 +67,12 @@ export function useSaveContentCategories() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ contentId, categoryIds }: { contentId: string; categoryIds: string[] }) => {
-      // Delete existing
       const { error: delError } = await supabase
         .from('cms_content_categories')
         .delete()
         .eq('content_id', contentId);
       if (delError) throw delError;
 
-      // Insert selected
       if (categoryIds.length > 0) {
         const rows = categoryIds.map((category_id) => ({ content_id: contentId, category_id }));
         const { error: insError } = await supabase
@@ -85,9 +83,58 @@ export function useSaveContentCategories() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['cms-content-categories', vars.contentId] });
+      queryClient.invalidateQueries({ queryKey: ['all-content-categories'] });
     },
     onError: () => {
       toast.error('Failed to save categories');
+    },
+  });
+}
+
+export function useAllContentCategories() {
+  return useQuery({
+    queryKey: ['all-content-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cms_content_categories')
+        .select('content_id, category_id, cms_categories(name)');
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      for (const row of data) {
+        const name = (row as any).cms_categories?.name;
+        if (name) {
+          if (!map[row.content_id]) map[row.content_id] = [];
+          map[row.content_id].push(name);
+        }
+      }
+      return map;
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error: junctionError } = await supabase
+        .from('cms_content_categories')
+        .delete()
+        .eq('category_id', id);
+      if (junctionError) throw junctionError;
+
+      const { error } = await supabase
+        .from('cms_categories')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cms-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['all-content-categories'] });
+      toast.success('Category deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete category');
     },
   });
 }

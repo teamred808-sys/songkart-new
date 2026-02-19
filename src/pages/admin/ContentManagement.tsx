@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Newspaper, Search, Eye, Pencil, Trash2, Globe, EyeOff } from 'lucide-react';
+import { FileText, Newspaper, Search, Eye, Pencil, Trash2, Globe, EyeOff, X, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,12 +26,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useContentList, useDeleteContent, usePublishContent, useUnpublishContent, type ContentStatus, type CmsContent } from '@/hooks/useCmsContent';
+import { useAllContentCategories, useCategories, useDeleteCategory } from '@/hooks/useCmsCategories';
 import { format } from 'date-fns';
 
 export default function ContentManagement() {
   const ITEMS_PER_PAGE = 10;
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<'pages' | 'posts'>('posts');
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
@@ -41,6 +43,9 @@ export default function ContentManagement() {
   const deleteContent = useDeleteContent();
   const publishContent = usePublishContent();
   const unpublishContent = useUnpublishContent();
+  const { data: contentCategoriesMap } = useAllContentCategories();
+  const { data: allCategories } = useCategories();
+  const deleteCategory = useDeleteCategory();
 
   const filterBySearch = (items?: CmsContent[]) =>
     items?.filter(item =>
@@ -117,6 +122,17 @@ export default function ContentManagement() {
             <p className="text-sm text-muted-foreground">
               /{item.slug} • Updated {format(new Date(item.updated_at), 'MMM d, yyyy')}
             </p>
+            {item.type === 'post' && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(contentCategoriesMap?.[item.id]?.length ?? 0) > 0 ? (
+                  contentCategoriesMap![item.id].map((name) => (
+                    <Badge key={name} variant="secondary" className="text-xs">{name}</Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">Uncategorized</Badge>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             {item.status === 'published' ? (
@@ -223,6 +239,30 @@ export default function ContentManagement() {
         </Button>
       </div>
 
+      {activeSection === 'posts' && allCategories && allCategories.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Tags className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Manage Categories</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {allCategories.map((cat) => (
+                <Badge key={cat.id} variant="secondary" className="flex items-center gap-1 pr-1">
+                  {cat.name}
+                  <button
+                    onClick={() => setDeleteCategoryId(cat.id)}
+                    className="ml-1 rounded-full hover:bg-destructive/20 p-0.5"
+                  >
+                    <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-4">
         {(activeSection === 'pages' ? isLoadingPages : isLoadingPosts) ? (
           renderLoadingSkeleton()
@@ -284,6 +324,31 @@ export default function ContentManagement() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteCategoryId} onOpenChange={() => setDeleteCategoryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the category. Blog posts using this category will become uncategorized. No posts will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteCategoryId) {
+                  deleteCategory.mutate(deleteCategoryId);
+                  setDeleteCategoryId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
