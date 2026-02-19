@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Newspaper, Search, Eye, Pencil, Trash2, Globe, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +29,11 @@ import { useContentList, useDeleteContent, usePublishContent, useUnpublishConten
 import { format } from 'date-fns';
 
 export default function ContentManagement() {
+  const ITEMS_PER_PAGE = 10;
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<'pages' | 'posts'>('posts');
+  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
   const { data: pages, isLoading: isLoadingPages } = useContentList('page');
@@ -39,6 +50,35 @@ export default function ContentManagement() {
 
   const filteredPages = filterBySearch(pages);
   const filteredPosts = filterBySearch(posts);
+
+  // Reset page when tab or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeSection, search]);
+
+  const activeItems = activeSection === 'pages' ? filteredPages : filteredPosts;
+  const totalItems = activeItems?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const paginatedItems = activeItems?.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   const getStatusBadge = (status: ContentStatus) => {
     switch (status) {
@@ -184,28 +224,54 @@ export default function ContentManagement() {
       </div>
 
       <div className="space-y-4">
-        {activeSection === 'pages' ? (
-          isLoadingPages ? renderLoadingSkeleton() : filteredPages?.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                No pages found.
-              </CardContent>
-            </Card>
-          ) : (
-            filteredPages?.map(renderContentCard)
-          )
+        {(activeSection === 'pages' ? isLoadingPages : isLoadingPosts) ? (
+          renderLoadingSkeleton()
+        ) : totalItems === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              No {activeSection === 'pages' ? 'pages' : 'blog posts'} found.
+            </CardContent>
+          </Card>
         ) : (
-          isLoadingPosts ? renderLoadingSkeleton() : filteredPosts?.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                No blog posts found.
-              </CardContent>
-            </Card>
-          ) : (
-            filteredPosts?.map(renderContentCard)
-          )
+          paginatedItems?.map(renderContentCard)
         )}
       </div>
+
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+            {getPageNumbers().map((page, i) =>
+              page === 'ellipsis' ? (
+                <PaginationItem key={`ellipsis-${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={currentPage === page}
+                    onClick={() => setCurrentPage(page)}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
