@@ -37,7 +37,8 @@ export default function ContentEditor() {
   const seoTitleManuallyEdited = useRef(false);
   const seoDescManuallyEdited = useRef(false);
 
-  const contentType = existingContent?.type || defaultType;
+  const [selectedType, setSelectedType] = useState<ContentType>(defaultType);
+  const contentType = existingContent?.type || selectedType;
 
   const stripHtml = (html: string): string =>
     html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -161,7 +162,7 @@ export default function ContentEditor() {
   const handleSave = async () => {
     if (isNew) {
       const result = await createContent.mutateAsync({
-        type: defaultType,
+        type: selectedType,
         title,
         slug,
         excerpt,
@@ -195,7 +196,7 @@ export default function ContentEditor() {
   const handlePublish = async () => {
     if (isNew) {
       const result = await createContent.mutateAsync({
-        type: defaultType,
+        type: selectedType,
         title,
         slug,
         excerpt,
@@ -235,8 +236,30 @@ export default function ContentEditor() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              {isNew ? `New ${defaultType === 'page' ? 'Page' : 'Post'}` : 'Edit Content'}
+              {isNew ? `New ${selectedType === 'page' ? 'Page' : 'Post'}` : 'Edit Content'}
             </h1>
+            {isNew && (
+              <div className="flex items-center gap-2 mt-1">
+                <Button
+                  type="button"
+                  variant={selectedType === 'page' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => { setSelectedType('page'); setHasChanges(true); }}
+                >
+                  Page
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedType === 'post' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => { setSelectedType('post'); setHasChanges(true); }}
+                >
+                  Post
+                </Button>
+              </div>
+            )}
             {hasChanges && <p className="text-sm text-warning">Unsaved changes</p>}
           </div>
         </div>
