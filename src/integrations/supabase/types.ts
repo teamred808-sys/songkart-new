@@ -458,6 +458,27 @@ export type Database = {
           },
         ]
       }
+      cms_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       cms_content: {
         Row: {
           author_id: string | null
@@ -547,6 +568,42 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_content_categories: {
+        Row: {
+          category_id: string
+          content_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "cms_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_categories_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
             referencedColumns: ["id"]
           },
         ]
