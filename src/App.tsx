@@ -30,55 +30,71 @@ import { SongRedirect } from "./components/redirects/SongRedirect";
 import { SellerRedirect } from "./components/redirects/SellerRedirect";
 import VerifyEmail from "./pages/VerifyEmail";
 
+// Retry wrapper: reloads page once on stale chunk errors
+function lazyRetry(importFn: () => Promise<any>) {
+  return lazy(() =>
+    importFn().catch((error) => {
+      const hasRefreshed = sessionStorage.getItem('chunk_retry');
+      if (!hasRefreshed) {
+        sessionStorage.setItem('chunk_retry', '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves, page reloads
+      }
+      sessionStorage.removeItem('chunk_retry');
+      throw error;
+    })
+  );
+}
+
 // Lazy loaded sitemap page
-const Sitemap = lazy(() => import("./pages/Sitemap"));
+const Sitemap = lazyRetry(() => import("./pages/Sitemap"));
 
 // Lazy loaded seller pages
-const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
-const MySongs = lazy(() => import("./pages/seller/MySongs"));
-const UploadSong = lazy(() => import("./pages/seller/UploadSong"));
-const EditSong = lazy(() => import("./pages/seller/EditSong"));
-const SalesOrders = lazy(() => import("./pages/seller/SalesOrders"));
-const Wallet = lazy(() => import("./pages/seller/Wallet"));
-const Analytics = lazy(() => import("./pages/seller/Analytics"));
-const SellerSettings = lazy(() => import("./pages/seller/SellerSettings"));
-const PayoutSettings = lazy(() => import("./pages/seller/PayoutSettings"));
-const AccountHealth = lazy(() => import("./pages/seller/AccountHealth"));
+const SellerDashboard = lazyRetry(() => import("./pages/seller/SellerDashboard"));
+const MySongs = lazyRetry(() => import("./pages/seller/MySongs"));
+const UploadSong = lazyRetry(() => import("./pages/seller/UploadSong"));
+const EditSong = lazyRetry(() => import("./pages/seller/EditSong"));
+const SalesOrders = lazyRetry(() => import("./pages/seller/SalesOrders"));
+const Wallet = lazyRetry(() => import("./pages/seller/Wallet"));
+const Analytics = lazyRetry(() => import("./pages/seller/Analytics"));
+const SellerSettings = lazyRetry(() => import("./pages/seller/SellerSettings"));
+const PayoutSettings = lazyRetry(() => import("./pages/seller/PayoutSettings"));
+const AccountHealth = lazyRetry(() => import("./pages/seller/AccountHealth"));
 
 // Lazy loaded buyer pages
-const BuyerDashboard = lazy(() => import("./pages/buyer/BuyerDashboard"));
-const MyPurchases = lazy(() => import("./pages/buyer/MyPurchases"));
-const MyDownloads = lazy(() => import("./pages/buyer/MyDownloads"));
-const Cart = lazy(() => import("./pages/buyer/Cart"));
-const OrderConfirmation = lazy(() => import("./pages/buyer/OrderConfirmation"));
-const FreeCheckoutSuccess = lazy(() => import("./pages/buyer/FreeCheckoutSuccess"));
-const Favorites = lazy(() => import("./pages/buyer/Favorites"));
-const BuyerSettings = lazy(() => import("./pages/buyer/BuyerSettings"));
+const BuyerDashboard = lazyRetry(() => import("./pages/buyer/BuyerDashboard"));
+const MyPurchases = lazyRetry(() => import("./pages/buyer/MyPurchases"));
+const MyDownloads = lazyRetry(() => import("./pages/buyer/MyDownloads"));
+const Cart = lazyRetry(() => import("./pages/buyer/Cart"));
+const OrderConfirmation = lazyRetry(() => import("./pages/buyer/OrderConfirmation"));
+const FreeCheckoutSuccess = lazyRetry(() => import("./pages/buyer/FreeCheckoutSuccess"));
+const Favorites = lazyRetry(() => import("./pages/buyer/Favorites"));
+const BuyerSettings = lazyRetry(() => import("./pages/buyer/BuyerSettings"));
 
 // Lazy loaded admin pages
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const SongModeration = lazy(() => import("./pages/admin/SongModeration"));
-const SongReview = lazy(() => import("./pages/admin/SongReview"));
-const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
-const UserDetail = lazy(() => import("./pages/admin/UserDetail"));
-const TransactionManagement = lazy(() => import("./pages/admin/TransactionManagement"));
-const OrderManagement = lazy(() => import("./pages/admin/OrderManagement"));
-const LicenseManagement = lazy(() => import("./pages/admin/LicenseManagement"));
-const WithdrawalManagement = lazy(() => import("./pages/admin/WithdrawalManagement"));
-const DisputeManagement = lazy(() => import("./pages/admin/DisputeManagement"));
-const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
-const FeaturedContent = lazy(() => import("./pages/admin/FeaturedContent"));
-const PlatformSettings = lazy(() => import("./pages/admin/PlatformSettings"));
-const ActivityLogs = lazy(() => import("./pages/admin/ActivityLogs"));
-const BugReports = lazy(() => import("./pages/admin/BugReports"));
-const SystemMonitoring = lazy(() => import("./pages/admin/SystemMonitoring"));
-const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
-const ContentEditor = lazy(() => import("./pages/admin/ContentEditor"));
-const NewUploadsManagement = lazy(() => import("./pages/admin/NewUploadsManagement"));
-const RatingModeration = lazy(() => import("./pages/admin/RatingModeration"));
-const PayoutVerification = lazy(() => import("./pages/admin/PayoutVerification"));
-const ContentReviewQueue = lazy(() => import("./pages/admin/ContentReviewQueue"));
-const StrikeManagement = lazy(() => import("./pages/admin/StrikeManagement"));
+const AdminDashboard = lazyRetry(() => import("./pages/admin/AdminDashboard"));
+const SongModeration = lazyRetry(() => import("./pages/admin/SongModeration"));
+const SongReview = lazyRetry(() => import("./pages/admin/SongReview"));
+const UserManagement = lazyRetry(() => import("./pages/admin/UserManagement"));
+const UserDetail = lazyRetry(() => import("./pages/admin/UserDetail"));
+const TransactionManagement = lazyRetry(() => import("./pages/admin/TransactionManagement"));
+const OrderManagement = lazyRetry(() => import("./pages/admin/OrderManagement"));
+const LicenseManagement = lazyRetry(() => import("./pages/admin/LicenseManagement"));
+const WithdrawalManagement = lazyRetry(() => import("./pages/admin/WithdrawalManagement"));
+const DisputeManagement = lazyRetry(() => import("./pages/admin/DisputeManagement"));
+const AdminAnalytics = lazyRetry(() => import("./pages/admin/AdminAnalytics"));
+const FeaturedContent = lazyRetry(() => import("./pages/admin/FeaturedContent"));
+const PlatformSettings = lazyRetry(() => import("./pages/admin/PlatformSettings"));
+const ActivityLogs = lazyRetry(() => import("./pages/admin/ActivityLogs"));
+const BugReports = lazyRetry(() => import("./pages/admin/BugReports"));
+const SystemMonitoring = lazyRetry(() => import("./pages/admin/SystemMonitoring"));
+const ContentManagement = lazyRetry(() => import("./pages/admin/ContentManagement"));
+const ContentEditor = lazyRetry(() => import("./pages/admin/ContentEditor"));
+const NewUploadsManagement = lazyRetry(() => import("./pages/admin/NewUploadsManagement"));
+const RatingModeration = lazyRetry(() => import("./pages/admin/RatingModeration"));
+const PayoutVerification = lazyRetry(() => import("./pages/admin/PayoutVerification"));
+const ContentReviewQueue = lazyRetry(() => import("./pages/admin/ContentReviewQueue"));
+const StrikeManagement = lazyRetry(() => import("./pages/admin/StrikeManagement"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
