@@ -1,65 +1,55 @@
 
 
-## Restructure Content Management: Remove Tabs, Show Two Independent Sections
+## Restore Original Layout with Two Sections (No "All Content")
 
 ### Problem
-The current Content Management page uses a tab-based layout with an "All Content" tab that mixes pages and blog posts together. The user wants two clearly separated, always-visible sections instead.
+The restructured Content Management page introduced new visual elements (section headings with icons, different spacing patterns) that deviate from the original design. The layout needs to return to the exact original visual appearance while keeping Pages and Blog Posts as separate sections.
 
-### Changes
+### What Changed (and Shouldn't Have)
+- Added prominent `h2` section headings with icons (`FileText`, `Newspaper`) that didn't exist in the original
+- Section wrapper `div`s with `space-y-3` introduced extra vertical grouping not present before
+- The original had a flat list of content cards under a single `space-y-4` container (inside TabsContent)
 
-#### File: `src/pages/admin/ContentManagement.tsx`
+### Fix
+Restore the original flat card list layout. Use simple, minimal text labels (not headings with icons) to separate the two groups, keeping the same card component, spacing, and container structure the original tabs content used.
 
-**Remove:**
-- The `activeTab` state and tab-based filtering
-- The `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` components and their import
-- The single combined content list
+### File: `src/pages/admin/ContentManagement.tsx`
 
-**Add:**
-- Two separate calls to `useContentList`: one with `'page'` and one with `'post'`
-- Two independent sections, each with its own heading, content list, and empty state:
+**Changes:**
+1. Replace the two `div.space-y-3` section wrappers (with `h2` headings and icons) with a single `space-y-4` container matching the original TabsContent layout
+2. Use lightweight `p` or small text labels ("Pages" / "Blog Posts") as subtle dividers instead of large headings with icons
+3. Remove the `FileText` and `Newspaper` icon imports for section headers (keep them for card rendering and buttons)
+4. Content cards render in the same `space-y-4` list, pages first then posts, separated by a subtle label
+5. Keep the same `renderContentCard` function unchanged
+6. Keep header, search bar, buttons, and delete dialog completely untouched
 
+**Structure (matches original):**
 ```
-Pages Management
-----------------
-[Table/list of pages with Title, Slug, Status, Last Updated, Actions]
+<div className="space-y-6">              {/* same outer wrapper */}
+  [Header + buttons — unchanged]
+  [Search bar — unchanged]
 
-Blog Posts Management
----------------------
-[Table/list of blog posts with Title, Slug, Status, Last Updated, Actions]
+  <div className="space-y-4">            {/* same as original content area */}
+    <h3 className="text-lg font-semibold">Pages</h3>
+    [page cards or empty state]
+
+    <h3 className="text-lg font-semibold mt-2">Blog Posts</h3>
+    [post cards or empty state]
+  </div>
+
+  [Delete dialog — unchanged]
+</div>
 ```
 
-**Each section displays:**
-- Content type icon + Title
-- Slug (e.g., `/privacy-policy`)
-- Published status badge (Published / Draft / Scheduled / Archived)
-- Last updated date
-- Action buttons: View, Edit, Delete, Publish/Unpublish
-
-**Search** remains at the top and filters both sections simultaneously.
-
-**Structure sketch:**
-- Header with "New Page" and "New Post" buttons (unchanged)
-- Search bar (unchanged)
-- "Pages Management" section heading with FileText icon
-  - List of pages (filtered by search), or "No pages found" empty state
-- "Blog Posts Management" section heading with Newspaper icon
-  - List of blog posts (filtered by search), or "No blog posts found" empty state
-- Delete confirmation dialog (unchanged)
+### No Other Files Modified
+Only `src/pages/admin/ContentManagement.tsx` is touched. No layout containers, parent components, grid systems, or global styles are changed.
 
 ### Technical Details
 
-- Replace single `useContentList(type)` call with two: `useContentList('page')` and `useContentList('post')`
-- Remove `activeTab` state entirely
-- Extract the content card rendering into a helper function to avoid duplicating the card JSX
-- Apply the `search` filter independently to both lists
-- Both sections use the same `getStatusBadge`, delete, publish, and unpublish handlers
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/pages/admin/ContentManagement.tsx` | Remove tabs, render two independent sections with separate data queries |
-
-### No Database Changes
-Existing content remains untouched. This is purely a UI restructure.
+- The original content area inside `TabsContent` used `space-y-4` for card spacing — this is restored
+- Section labels use `text-lg font-semibold` matching other admin page sub-section styles
+- No new wrapper divs or layout containers are introduced
+- Card component (`renderContentCard`) remains identical
+- Loading skeletons and empty states remain identical
+- The `h-5 w-5` icon + `text-xl font-semibold` section headers are removed in favor of simpler labels
 
