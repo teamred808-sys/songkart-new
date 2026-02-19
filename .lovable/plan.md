@@ -1,27 +1,40 @@
 
-## Fix: Blog Posts Appearing in Resources Footer Section
 
-### Problem
-Two content items ("Blog" and "Both must use the same original card component") are stored in the database with `type = 'page'` instead of `type = 'post'`. The footer's Resources section correctly queries for pages only, but these blog posts were saved as pages by mistake, so they show up there instead of only on the /blog page.
+## Add Pagination to Blog Page
 
-### Fix
+### Overview
+Add client-side pagination to the blog page, showing 10 posts per page with navigation controls at the bottom.
 
-#### 1. Database Migration -- Fix existing mistyped records
-Run a migration to update the two blog posts that were incorrectly saved as `type = 'page'` to `type = 'post'`:
+### File Changes
 
-```sql
-UPDATE cms_content
-SET type = 'post'
-WHERE slug IN ('blog', 'both-must-use-the-same-original-card-component')
-  AND type = 'page';
+#### 1. `src/pages/Blog.tsx`
+- Import `useState` from React
+- Import pagination components from `@/components/ui/pagination`
+- Add `currentPage` state (default: 1)
+- Slice the `posts` array to show only 10 posts per page based on `currentPage`
+- Calculate total pages from posts length
+- Add pagination controls below the grid when there are more than 10 posts
+- Reset to page 1 is not needed since all posts are fetched at once
+
+The pagination UI will use the existing `Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, and `PaginationEllipsis` components already in the project.
+
+### Technical Details
+
+```text
+Posts Array (all fetched)
+    |
+    v
+Slice: posts.slice((currentPage - 1) * 10, currentPage * 10)
+    |
+    v
+Render 10 posts + Pagination controls
 ```
 
-This removes them from the footer's Resources section and makes them appear on the /blog page instead.
+- Posts per page: 10
+- Pagination shows: Previous, page numbers (with ellipsis for many pages), Next
+- Previous disabled on page 1, Next disabled on last page
+- Clicking a page number updates `currentPage` state and scrolls to top
+- No changes to the data fetching hook -- all posts are still fetched in one query
 
-#### 2. No code changes needed
-- The `usePublishedPages` hook already filters by `type = 'page'` -- correct behavior
-- The `usePublishedPosts` hook already filters by `type = 'post'` -- correct behavior
-- The footer Resources section only shows pages -- correct behavior
-- The /blog page only shows posts -- correct behavior
+### No other files changed
 
-The root cause was simply that these posts were created without the `?type=post` URL parameter, so they defaulted to `type = 'page'`.
