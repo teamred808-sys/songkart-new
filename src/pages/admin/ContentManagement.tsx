@@ -199,14 +199,18 @@ export default function ContentManagement() {
           <p className="text-muted-foreground">Manage pages and blog posts</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => navigate('/admin/content/new?type=page')}>
-            <FileText className="h-4 w-4 mr-2" />
-            New Page
-          </Button>
-          <Button onClick={() => navigate('/admin/content/new?type=post')} variant="outline">
-            <Newspaper className="h-4 w-4 mr-2" />
-            New Post
-          </Button>
+          {activeSection === 'pages' && (
+            <Button onClick={() => navigate('/admin/content/new?type=page')}>
+              <FileText className="h-4 w-4 mr-2" />
+              New Page
+            </Button>
+          )}
+          {activeSection === 'posts' && (
+            <Button onClick={() => navigate('/admin/content/new?type=post')} variant="outline">
+              <Newspaper className="h-4 w-4 mr-2" />
+              New Post
+            </Button>
+          )}
         </div>
       </div>
 
