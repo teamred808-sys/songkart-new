@@ -1,23 +1,21 @@
 
-
-## Fix: Display Categories on Published Blog Post Page
+## Soften Admin Panel Borders
 
 ### Problem
-The `BlogPost.tsx` page does not fetch or display categories for the published post. The categories are saved correctly in the database but the public-facing blog post page never queries `cms_content_categories` to retrieve them.
+The card borders across the admin dashboard are too harsh/prominent against the dark background, creating a visually jarring effect instead of a smooth, premium feel.
 
-### Change
+### Solution
+Reduce the border opacity/lightness in the global CSS variable so all cards, stat boxes, charts, and sections have subtler, more soothing borders.
 
-#### `src/pages/BlogPost.tsx`
-- Import `useContentCategories` and `useCategories` from `useCmsCategories`
-- Import `Badge` from UI components
-- Fetch the post's category IDs using `useContentCategories(post?.id)`
-- Fetch all categories using `useCategories()` to resolve IDs to names
-- Display matching category names as badges in the post header, between the author/date line and the excerpt
-- Show nothing extra if no categories are assigned
+### File Changes
 
-### What stays the same
-- No layout restructuring
-- No routing changes
+#### `src/index.css` (line 68)
+- Change `--border: 240 10% 15%;` to `--border: 240 10% 11%;`
+- This reduces the lightness from 15% to 11%, making borders blend more naturally with the dark background while still being visible
+- This single change affects all Card components, inputs, and bordered elements site-wide since they all reference this CSS variable
+
+### What Will NOT Change
+- No component files modified
+- No layout changes
 - No database changes
-- 1 file modified
-
+- Just 1 line in the CSS file
