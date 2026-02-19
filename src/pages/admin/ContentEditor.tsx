@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Eye, Globe, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Globe, Loader2, Upload, X, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RichTextEditor } from '@/components/cms/RichTextEditor';
 import { useContentById, useCreateContent, useUpdateContent, usePublishContent, slugify, type ContentType } from '@/hooks/useCmsContent';
+import { useUploadMedia } from '@/hooks/useCmsMedia';
 import type { Json } from '@/integrations/supabase/types';
 
 export default function ContentEditor() {
@@ -24,6 +25,8 @@ export default function ContentEditor() {
   const createContent = useCreateContent();
   const updateContent = useUpdateContent();
   const publishContent = usePublishContent();
+  const uploadMedia = useUploadMedia();
+  const featuredImageInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -37,6 +40,7 @@ export default function ContentEditor() {
   const [autoSlug, setAutoSlug] = useState(true);
   const [seoOpen, setSeoOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isFeaturedDragging, setIsFeaturedDragging] = useState(false);
 
   useEffect(() => {
     if (existingContent) {
@@ -64,6 +68,31 @@ export default function ContentEditor() {
     setContentHtml(html);
     setHasChanges(true);
   }, []);
+
+  const handleFeaturedImageUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    try {
+      const result = await uploadMedia.mutateAsync({ file, altText: title || file.name });
+      setFeaturedImage(result.public_url);
+      setHasChanges(true);
+    } catch {
+      // error toast handled by hook
+    }
+  }, [uploadMedia, title]);
+
+  const handleFeaturedImageDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFeaturedDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFeaturedImageUpload(file);
+  }, [handleFeaturedImageUpload]);
+
+  const handleFeaturedFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFeaturedImageUpload(file);
+    if (featuredImageInputRef.current) featuredImageInputRef.current.value = '';
+  }, [handleFeaturedImageUpload]);
 
   const handleSave = async () => {
     if (isNew) {
@@ -226,15 +255,63 @@ export default function ContentEditor() {
             <CardHeader>
               <CardTitle>Featured Image</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {featuredImage ? (
+                <div className="relative group">
+                  <img src={featuredImage} alt="Featured" className="rounded-lg w-full max-h-48 object-cover" />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => { setFeaturedImage(''); setHasChanges(true); }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsFeaturedDragging(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsFeaturedDragging(false); }}
+                  onDrop={handleFeaturedImageDrop}
+                  onClick={() => featuredImageInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    isFeaturedDragging
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  {uploadMedia.isPending ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Uploading...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Drag & drop or click to upload
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <input
+                ref={featuredImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFeaturedFileChange}
+              />
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Separator className="flex-1" />
+                <span>or enter URL</span>
+                <Separator className="flex-1" />
+              </div>
               <Input
                 value={featuredImage}
                 onChange={(e) => { setFeaturedImage(e.target.value); setHasChanges(true); }}
-                placeholder="Image URL..."
+                placeholder="https://example.com/image.jpg"
               />
-              {featuredImage && (
-                <img src={featuredImage} alt="Featured" className="mt-2 rounded-lg max-h-32 object-cover" />
-              )}
             </CardContent>
           </Card>
 
