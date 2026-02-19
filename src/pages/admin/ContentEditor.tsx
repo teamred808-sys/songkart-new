@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Eye, Globe, Loader2, Upload, X, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Globe, Loader2, Upload, X, ImageIcon, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RichTextEditor } from '@/components/cms/RichTextEditor';
 import { useContentById, useCreateContent, useUpdateContent, usePublishContent, slugify, type ContentType } from '@/hooks/useCmsContent';
 import { useUploadMedia } from '@/hooks/useCmsMedia';
+import { useCategories, useCreateCategory, useContentCategories, useSaveContentCategories } from '@/hooks/useCmsCategories';
 import type { Json } from '@/integrations/supabase/types';
 
 export default function ContentEditor() {
@@ -26,10 +28,16 @@ export default function ContentEditor() {
   const updateContent = useUpdateContent();
   const publishContent = usePublishContent();
   const uploadMedia = useUploadMedia();
+  const { data: allCategories } = useCategories();
+  const createCategory = useCreateCategory();
+  const { data: existingCategoryIds } = useContentCategories(id);
+  const saveContentCategories = useSaveContentCategories();
   const featuredImageInputRef = useRef<HTMLInputElement>(null);
   const excerptManuallyEdited = useRef(false);
   const seoTitleManuallyEdited = useRef(false);
   const seoDescManuallyEdited = useRef(false);
+
+  const contentType = existingContent?.type || defaultType;
 
   const stripHtml = (html: string): string =>
     html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -47,6 +55,8 @@ export default function ContentEditor() {
   const [seoOpen, setSeoOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isFeaturedDragging, setIsFeaturedDragging] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     if (existingContent) {
@@ -65,6 +75,12 @@ export default function ContentEditor() {
       seoDescManuallyEdited.current = true;
     }
   }, [existingContent]);
+
+  useEffect(() => {
+    if (existingCategoryIds) {
+      setSelectedCategoryIds(existingCategoryIds);
+    }
+  }, [existingCategoryIds]);
 
   useEffect(() => {
     if (autoSlug && title) {
@@ -91,6 +107,26 @@ export default function ContentEditor() {
     }
   }, []);
 
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
+    );
+    setHasChanges(true);
+  };
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    try {
+      const created = await createCategory.mutateAsync(name);
+      setSelectedCategoryIds((prev) => [...prev, created.id]);
+      setNewCategoryName('');
+      setHasChanges(true);
+    } catch {
+      // error handled by hook
+    }
+  };
+
   const handleFeaturedImageUpload = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return;
     try {
@@ -116,6 +152,12 @@ export default function ContentEditor() {
     if (featuredImageInputRef.current) featuredImageInputRef.current.value = '';
   }, [handleFeaturedImageUpload]);
 
+  const saveCategoriesForContent = async (contentId: string) => {
+    if (contentType === 'post') {
+      await saveContentCategories.mutateAsync({ contentId, categoryIds: selectedCategoryIds });
+    }
+  };
+
   const handleSave = async () => {
     if (isNew) {
       const result = await createContent.mutateAsync({
@@ -130,6 +172,7 @@ export default function ContentEditor() {
         seo_description: seoDescription || undefined,
         no_index: noIndex,
       });
+      await saveCategoriesForContent(result.id);
       navigate(`/admin/content/${result.id}/edit`, { replace: true });
     } else {
       await updateContent.mutateAsync({
@@ -144,6 +187,7 @@ export default function ContentEditor() {
         seo_description: seoDescription || undefined,
         no_index: noIndex,
       });
+      await saveCategoriesForContent(id!);
     }
     setHasChanges(false);
   };
@@ -162,6 +206,7 @@ export default function ContentEditor() {
         seo_description: seoDescription || undefined,
         no_index: noIndex,
       });
+      await saveCategoriesForContent(result.id);
       await publishContent.mutateAsync(result.id);
       navigate(`/admin/content/${result.id}/edit`, { replace: true });
     } else {
@@ -259,6 +304,49 @@ export default function ContentEditor() {
         </div>
 
         <div className="space-y-6">
+          {contentType === 'post' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Categories</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {allCategories && allCategories.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {allCategories.map((cat) => (
+                      <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={selectedCategoryIds.includes(cat.id)}
+                          onCheckedChange={() => toggleCategory(cat.id)}
+                        />
+                        <span className="text-sm">{cat.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No categories yet</p>
+                )}
+                <Separator />
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="New category"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(); } }}
+                    className="h-8 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleAddCategory}
+                    disabled={!newCategoryName.trim() || createCategory.isPending}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Excerpt</CardTitle>
