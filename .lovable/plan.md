@@ -1,48 +1,27 @@
 
-
-## Fix Center (and Justify) Text Alignment in Post Editor
+## Fix: Blog Posts Appearing in Resources Footer Section
 
 ### Problem
-The Tiptap `TextAlign` extension sets `text-align` via inline style attributes on paragraph/heading elements, but Tailwind's `prose` class applies its own `text-align` rules which can override them due to CSS specificity.
+Two content items ("Blog" and "Both must use the same original card component") are stored in the database with `type = 'page'` instead of `type = 'post'`. The footer's Resources section correctly queries for pages only, but these blog posts were saved as pages by mistake, so they show up there instead of only on the /blog page.
 
-### Solution
-Add CSS rules in `src/index.css` to ensure ProseMirror's text-align styles take priority inside the editor.
+### Fix
 
-### File: `src/index.css`
+#### 1. Database Migration -- Fix existing mistyped records
+Run a migration to update the two blog posts that were incorrectly saved as `type = 'page'` to `type = 'post'`:
 
-Add the following rules after the existing Tiptap image resizer styles (around line 476):
-
-```css
-/* Tiptap text alignment - ensure inline styles override prose defaults */
-.ProseMirror p[style*="text-align: center"],
-.ProseMirror h1[style*="text-align: center"],
-.ProseMirror h2[style*="text-align: center"],
-.ProseMirror h3[style*="text-align: center"],
-.ProseMirror h4[style*="text-align: center"] {
-  text-align: center !important;
-}
-
-.ProseMirror p[style*="text-align: right"],
-.ProseMirror h1[style*="text-align: right"],
-.ProseMirror h2[style*="text-align: right"],
-.ProseMirror h3[style*="text-align: right"],
-.ProseMirror h4[style*="text-align: right"] {
-  text-align: right !important;
-}
-
-.ProseMirror p[style*="text-align: justify"],
-.ProseMirror h1[style*="text-align: justify"],
-.ProseMirror h2[style*="text-align: justify"],
-.ProseMirror h3[style*="text-align: justify"],
-.ProseMirror h4[style*="text-align: justify"] {
-  text-align: justify !important;
-}
+```sql
+UPDATE cms_content
+SET type = 'post'
+WHERE slug IN ('blog', 'both-must-use-the-same-original-card-component')
+  AND type = 'page';
 ```
 
-### Why This Fixes It
-- Tailwind's `prose` class sets default text alignment rules on `p`, `h1`-`h4`, etc.
-- The Tiptap TextAlign extension applies `style="text-align: center"` as an HTML attribute, but `prose` rules have higher specificity
-- Adding `!important` scoped to `.ProseMirror` elements with the matching style attribute ensures the editor's alignment always wins
+This removes them from the footer's Resources section and makes them appear on the /blog page instead.
 
-### No other files changed
+#### 2. No code changes needed
+- The `usePublishedPages` hook already filters by `type = 'page'` -- correct behavior
+- The `usePublishedPosts` hook already filters by `type = 'post'` -- correct behavior
+- The footer Resources section only shows pages -- correct behavior
+- The /blog page only shows posts -- correct behavior
 
+The root cause was simply that these posts were created without the `?type=post` URL parameter, so they defaulted to `type = 'page'`.
