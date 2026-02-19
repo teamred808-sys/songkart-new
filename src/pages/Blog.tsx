@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Calendar, ArrowRight } from "lucide-react";
@@ -8,9 +9,48 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BlogSEOHead } from "@/components/seo/PageSEOHead";
 import { BreadcrumbSchema } from "@/components/seo/SchemaOrg";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+const POSTS_PER_PAGE = 10;
 
 const Blog = () => {
   const { data: posts, isLoading } = usePublishedPosts();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil((posts?.length || 0) / POSTS_PER_PAGE);
+  const displayedPosts = posts?.slice(
+    (currentPage - 1) * POSTS_PER_PAGE,
+    currentPage * POSTS_PER_PAGE
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("ellipsis");
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   if (isLoading) {
     return (
@@ -55,61 +95,101 @@ const Blog = () => {
             <p className="text-muted-foreground text-lg">No blog posts yet. Check back soon!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {posts.map((post) => (
-              <Link key={post.id} to={`/blog/${post.slug}`}>
-                <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow group">
-                  {post.featured_image && (
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={post.featured_image}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  )}
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
-                      {post.title}
-                    </h2>
-                    
-                    {post.excerpt && (
-                      <p className="text-muted-foreground mb-4 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        {post.author && (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={post.author.avatar_url || undefined} />
-                              <AvatarFallback>
-                                {post.author.full_name?.charAt(0) || 'A'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{post.author.full_name || 'Admin'}</span>
-                          </div>
-                        )}
-                        
-                        {post.published_at && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>{format(new Date(post.published_at), 'MMM d, yyyy')}</span>
-                          </div>
-                        )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {displayedPosts?.map((post) => (
+                <Link key={post.id} to={`/blog/${post.slug}`}>
+                  <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow group">
+                    {post.featured_image && (
+                      <div className="aspect-video overflow-hidden">
+                        <img
+                          src={post.featured_image}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
-                    </div>
+                    )}
+                    <CardContent className="p-6">
+                      <h2 className="text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
+                        {post.title}
+                      </h2>
+                      
+                      {post.excerpt && (
+                        <p className="text-muted-foreground mb-4 line-clamp-3">
+                          {post.excerpt}
+                        </p>
+                      )}
 
-                    <div className="mt-4 flex items-center gap-1 text-primary font-medium group-hover:gap-2 transition-all">
-                      Read more <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4">
+                          {post.author && (
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={post.author.avatar_url || undefined} />
+                                <AvatarFallback>
+                                  {post.author.full_name?.charAt(0) || 'A'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{post.author.full_name || 'Admin'}</span>
+                            </div>
+                          )}
+                          
+                          {post.published_at && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>{format(new Date(post.published_at), 'MMM d, yyyy')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-1 text-primary font-medium group-hover:gap-2 transition-all">
+                        Read more <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <Pagination className="mt-12">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+
+                  {getPageNumbers().map((page, idx) =>
+                    page === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          isActive={currentPage === page}
+                          onClick={() => handlePageChange(page)}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </MainLayout>
