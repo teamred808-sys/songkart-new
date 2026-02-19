@@ -1,40 +1,39 @@
 
 
-## Add Pagination to Blog Page
+## Add 15 Demo Blog Posts
 
 ### Overview
-Add client-side pagination to the blog page, showing 10 posts per page with navigation controls at the bottom.
+Insert 15 demo blog posts into the `cms_content` table with realistic music-industry-related content, all published and visible on the /blog page.
 
-### File Changes
+### Database Insert
+Run a single SQL insert to add 15 posts with:
+- `type = 'post'`, `status = 'published'`, `published_at` staggered over recent weeks
+- Music/songwriting-themed titles, excerpts, and HTML content
+- Unique slugs for each post
+- SEO fields populated
 
-#### 1. `src/pages/Blog.tsx`
-- Import `useState` from React
-- Import pagination components from `@/components/ui/pagination`
-- Add `currentPage` state (default: 1)
-- Slice the `posts` array to show only 10 posts per page based on `currentPage`
-- Calculate total pages from posts length
-- Add pagination controls below the grid when there are more than 10 posts
-- Reset to page 1 is not needed since all posts are fetched at once
+### Post Topics (15 posts)
+1. "How to Write Your First Song" 
+2. "Understanding Music Licensing: A Beginner's Guide"
+3. "Top 10 Tips for Independent Songwriters"
+4. "The Rise of Digital Music Marketplaces"
+5. "How to Price Your Songs for Maximum Revenue"
+6. "Protecting Your Music: Copyright Essentials"
+7. "Building Your Brand as a Music Creator"
+8. "The Art of Writing Catchy Hooks"
+9. "Music Production on a Budget"
+10. "How to Get Your Songs Featured on Playlists"
+11. "Understanding Royalties and Revenue Streams"
+12. "Collaborating with Other Artists Online"
+13. "The Future of AI in Music Creation"
+14. "From Bedroom Producer to Professional Songwriter"
+15. "Marketing Your Music in the Social Media Age"
 
-The pagination UI will use the existing `Pagination`, `PaginationContent`, `PaginationItem`, `PaginationLink`, `PaginationPrevious`, `PaginationNext`, and `PaginationEllipsis` components already in the project.
+Each post will have:
+- A relevant excerpt (1-2 sentences)
+- HTML content body (2-3 paragraphs)
+- SEO title and description
+- Published dates spread across the last 30 days
 
-### Technical Details
-
-```text
-Posts Array (all fetched)
-    |
-    v
-Slice: posts.slice((currentPage - 1) * 10, currentPage * 10)
-    |
-    v
-Render 10 posts + Pagination controls
-```
-
-- Posts per page: 10
-- Pagination shows: Previous, page numbers (with ellipsis for many pages), Next
-- Previous disabled on page 1, Next disabled on last page
-- Clicking a page number updates `currentPage` state and scrolls to top
-- No changes to the data fetching hook -- all posts are still fetched in one query
-
-### No other files changed
-
+### No code changes needed
+The blog page already fetches and displays all published posts with pagination (10 per page), so these 15 posts will automatically appear across 2 pages.
