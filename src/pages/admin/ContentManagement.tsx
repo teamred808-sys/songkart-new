@@ -165,12 +165,8 @@ export default function ContentManagement() {
         </div>
       </div>
 
-      {/* Pages Management Section */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Pages Management</h2>
-        </div>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Pages</h3>
         {isLoadingPages ? renderLoadingSkeleton() : filteredPages?.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">
@@ -178,18 +174,10 @@ export default function ContentManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {filteredPages?.map(renderContentCard)}
-          </div>
+          filteredPages?.map(renderContentCard)
         )}
-      </div>
 
-      {/* Blog Posts Management Section */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Newspaper className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Blog Posts Management</h2>
-        </div>
+        <h3 className="text-lg font-semibold mt-2">Blog Posts</h3>
         {isLoadingPosts ? renderLoadingSkeleton() : filteredPosts?.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">
@@ -197,9 +185,7 @@ export default function ContentManagement() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {filteredPosts?.map(renderContentCard)}
-          </div>
+          filteredPosts?.map(renderContentCard)
         )}
       </div>
 
