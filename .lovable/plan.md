@@ -1,33 +1,48 @@
 
 
-## Add Text Alignment Options to Post Editor
+## Fix Center (and Justify) Text Alignment in Post Editor
 
 ### Problem
-The Tiptap editor currently has no text alignment controls. The `TextAlign` extension is not installed and no alignment buttons exist in the toolbar.
+The Tiptap `TextAlign` extension sets `text-align` via inline style attributes on paragraph/heading elements, but Tailwind's `prose` class applies its own `text-align` rules which can override them due to CSS specificity.
 
 ### Solution
-Add the `@tiptap/extension-text-align` extension and add alignment buttons (Left, Center, Right, Justify) to the editor toolbar.
+Add CSS rules in `src/index.css` to ensure ProseMirror's text-align styles take priority inside the editor.
 
-### File Changes
+### File: `src/index.css`
 
-#### 1. `src/components/cms/RichTextEditor.tsx`
-- Import `TextAlign` from `@tiptap/extension-text-align`
-- Add it to the extensions array, configured for paragraph and heading nodes:
-  ```tsx
-  TextAlign.configure({ types: ['heading', 'paragraph'] })
-  ```
+Add the following rules after the existing Tiptap image resizer styles (around line 476):
 
-#### 2. `src/components/cms/EditorToolbar.tsx`
-- Import `AlignLeft`, `AlignCenter`, `AlignRight`, `AlignJustify` icons from `lucide-react`
-- Add a new alignment section in the toolbar (after the Lists section) with four buttons:
-  - Align Left (default)
-  - Align Center
-  - Align Right
-  - Justify
-- Each button calls `editor.chain().focus().setTextAlign('left'|'center'|'right'|'justify').run()`
-- Active state highlights the current alignment
+```css
+/* Tiptap text alignment - ensure inline styles override prose defaults */
+.ProseMirror p[style*="text-align: center"],
+.ProseMirror h1[style*="text-align: center"],
+.ProseMirror h2[style*="text-align: center"],
+.ProseMirror h3[style*="text-align: center"],
+.ProseMirror h4[style*="text-align: center"] {
+  text-align: center !important;
+}
 
-### New Dependency
-- `@tiptap/extension-text-align` — needs to be installed
+.ProseMirror p[style*="text-align: right"],
+.ProseMirror h1[style*="text-align: right"],
+.ProseMirror h2[style*="text-align: right"],
+.ProseMirror h3[style*="text-align: right"],
+.ProseMirror h4[style*="text-align: right"] {
+  text-align: right !important;
+}
 
-### No other files are changed
+.ProseMirror p[style*="text-align: justify"],
+.ProseMirror h1[style*="text-align: justify"],
+.ProseMirror h2[style*="text-align: justify"],
+.ProseMirror h3[style*="text-align: justify"],
+.ProseMirror h4[style*="text-align: justify"] {
+  text-align: justify !important;
+}
+```
+
+### Why This Fixes It
+- Tailwind's `prose` class sets default text alignment rules on `p`, `h1`-`h4`, etc.
+- The Tiptap TextAlign extension applies `style="text-align: center"` as an HTML attribute, but `prose` rules have higher specificity
+- Adding `!important` scoped to `.ProseMirror` elements with the matching style attribute ensures the editor's alignment always wins
+
+### No other files changed
+
