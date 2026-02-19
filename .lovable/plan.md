@@ -1,29 +1,38 @@
 
 
-## Fix: View Button URL for Blog Posts
+## Add Pagination to Content Management Section
 
-### Problem Found
-The **View (Eye)** button in the content management page always links to `/${item.slug}` regardless of content type. However, blog posts use the route `/blog/:slug`, not `/:slug`. This means clicking View on any blog post opens the wrong URL.
+### Overview
+Add client-side pagination to both the Pages and Blog Posts tabs in the content management admin section, showing 10 items per page with navigation controls.
 
-The other three buttons work correctly:
-- **Hide/Publish toggle (EyeOff/Globe)**: Correctly calls unpublish/publish mutations
-- **Edit (Pencil)**: Correctly links to `/admin/content/${item.id}/edit`
-- **Delete (Trash2)**: Correctly opens confirmation dialog and deletes
+### File Changes
 
-### Fix
+#### `src/pages/admin/ContentManagement.tsx`
+- Import pagination components from `@/components/ui/pagination`
+- Add `currentPage` state (default: 1), reset to 1 when switching between Pages/Posts tabs or when the search query changes
+- Define `ITEMS_PER_PAGE = 10`
+- Slice the active filtered list (`filteredPages` or `filteredPosts`) based on current page
+- Add pagination controls below the content list (only shown when total items exceed 10)
+- Reuse the same `getPageNumbers` helper pattern from the Blog page for ellipsis handling
 
-#### File: `src/pages/admin/ContentManagement.tsx`
-Update the View button link (line 102) to use the correct path based on content type:
-- For pages: `/${item.slug}` (current behavior, correct)
-- For posts: `/blog/${item.slug}` (new, correct behavior)
+### Technical Details
 
-Change:
-```tsx
-<Link to={`/${item.slug}`} target="_blank">
+```text
+filteredPages/filteredPosts (after search filter)
+    |
+    v
+Slice: items.slice((currentPage - 1) * 10, currentPage * 10)
+    |
+    v
+Render up to 10 cards + Pagination controls
 ```
-To:
-```tsx
-<Link to={item.type === 'post' ? `/blog/${item.slug}` : `/${item.slug}`} target="_blank">
-```
 
-This is a one-line change in the `renderContentCard` function.
+- Items per page: 10
+- `currentPage` resets to 1 when:
+  - User switches between Pages and Posts tabs
+  - User changes the search query
+- Pagination shows Previous, page numbers (with ellipsis for large counts), Next
+- Previous disabled on page 1, Next disabled on last page
+
+### No other files changed
+
