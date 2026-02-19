@@ -1,26 +1,37 @@
 
+## Fix: Show Context-Appropriate "New" Button per Tab
 
-## Fix: Show Categories When Creating a New Post
+### Problem
+Both "New Page" and "New Post" buttons are always visible regardless of which tab is active. The user wants each button to appear only in its respective tab.
 
-### Root Cause
-When creating new content, the content type is determined by the URL query parameter (`?type=post` or `?type=page`). If a user navigates to `/admin/content/new` without the `?type=post` parameter (or clicks "New Page" instead of "New Post"), the editor defaults to "page" mode, which hides the Categories card. There is no way to switch between Page and Post within the editor itself.
+### Change
 
-### Solution
-Add a content type toggle (Page / Post) to the new content editor so the user can switch types, which will dynamically show or hide the Categories card. This toggle only appears when creating new content (not when editing existing content, since the type is already set).
+#### `src/pages/admin/ContentManagement.tsx` (lines 201-210)
 
-### File Changes
+Replace the current static button group with a conditional render based on `activeSection`:
 
-#### `src/pages/admin/ContentEditor.tsx`
-- Add a `selectedType` state initialized from the URL query param (`defaultType`)
-- Add a simple toggle (two buttons or a Select dropdown) below the page title, visible only when `isNew` is true
-- Update `contentType` derivation to use `selectedType` for new content:
-  - `const contentType = existingContent?.type || selectedType;`
-- When user switches type, the Categories card will automatically show/hide based on the existing `contentType === 'post'` condition
-- Update the `handleSave` and `handlePublish` calls to use the selected type
+- When `activeSection === 'pages'`: show only "New Page" button
+- When `activeSection === 'posts'`: show only "New Post" button
+
+```tsx
+<div className="flex gap-2">
+  {activeSection === 'pages' && (
+    <Button onClick={() => navigate('/admin/content/new?type=page')}>
+      <FileText className="h-4 w-4 mr-2" />
+      New Page
+    </Button>
+  )}
+  {activeSection === 'posts' && (
+    <Button onClick={() => navigate('/admin/content/new?type=post')} variant="outline">
+      <Newspaper className="h-4 w-4 mr-2" />
+      New Post
+    </Button>
+  )}
+</div>
+```
 
 ### What Will NOT Change
 - No layout restructuring
 - No routing changes
 - No database changes
-- No changes to the categories UI itself
-- Existing edit flow remains unchanged
+- Only 1 file modified, ~8 lines changed
