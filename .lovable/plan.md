@@ -1,38 +1,60 @@
 
 
-## Add Pagination to Content Management Section
+## Add Categories Feature to Blog Post Editor
 
 ### Overview
-Add client-side pagination to both the Pages and Blog Posts tabs in the content management admin section, showing 10 items per page with navigation controls.
+Add a "Categories" card to the post editor sidebar (similar to the reference image) that lets admins select existing categories via checkboxes and create new ones inline with a text input + add button.
 
-### File Changes
+### Database Changes
 
-#### `src/pages/admin/ContentManagement.tsx`
-- Import pagination components from `@/components/ui/pagination`
-- Add `currentPage` state (default: 1), reset to 1 when switching between Pages/Posts tabs or when the search query changes
-- Define `ITEMS_PER_PAGE = 10`
-- Slice the active filtered list (`filteredPages` or `filteredPosts`) based on current page
-- Add pagination controls below the content list (only shown when total items exceed 10)
-- Reuse the same `getPageNumbers` helper pattern from the Blog page for ellipsis handling
+#### 1. New table: `cms_categories`
+Stores available categories.
 
-### Technical Details
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK, default gen_random_uuid() |
+| name | text | NOT NULL, UNIQUE |
+| slug | text | NOT NULL, UNIQUE |
+| created_at | timestamptz | default now() |
 
-```text
-filteredPages/filteredPosts (after search filter)
-    |
-    v
-Slice: items.slice((currentPage - 1) * 10, currentPage * 10)
-    |
-    v
-Render up to 10 cards + Pagination controls
-```
+RLS policies:
+- SELECT: anyone (true)
+- ALL: admins only
 
-- Items per page: 10
-- `currentPage` resets to 1 when:
-  - User switches between Pages and Posts tabs
-  - User changes the search query
-- Pagination shows Previous, page numbers (with ellipsis for large counts), Next
-- Previous disabled on page 1, Next disabled on last page
+#### 2. New junction table: `cms_content_categories`
+Links posts to categories (many-to-many).
 
-### No other files changed
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| content_id | uuid | NOT NULL, FK to cms_content(id) ON DELETE CASCADE |
+| category_id | uuid | NOT NULL, FK to cms_categories(id) ON DELETE CASCADE |
+| created_at | timestamptz | default now() |
+| UNIQUE(content_id, category_id) | | |
+
+RLS policies:
+- SELECT: anyone (true)
+- ALL: admins only
+
+### Code Changes
+
+#### 1. New hook: `src/hooks/useCmsCategories.ts`
+- `useCategories()` -- fetches all categories
+- `useCreateCategory()` -- inserts a new category
+- `useContentCategories(contentId)` -- fetches category IDs for a post
+- `useSaveContentCategories()` -- replaces categories for a post (delete all + insert selected)
+
+#### 2. Update: `src/pages/admin/ContentEditor.tsx`
+- Add a "Categories" card in the right sidebar (between Excerpt and Featured Image), shown only when content type is `post`
+- Lists all categories as checkboxes
+- Shows a separator, then a text input + purple "+" button to add a new category inline
+- On save/publish, also saves selected categories via `useSaveContentCategories`
+- Load existing categories on edit via `useContentCategories`
+
+### UI Design (matching reference image)
+- Card with title "Categories"
+- Checkbox list of all existing categories
+- Separator line
+- Row with text input (placeholder "New category") and a purple "+" icon button
+- Adding a new category immediately creates it in the database and checks it
 
