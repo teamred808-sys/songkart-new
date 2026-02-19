@@ -1,37 +1,23 @@
 
-## Fix: Show Context-Appropriate "New" Button per Tab
+
+## Fix: Display Categories on Published Blog Post Page
 
 ### Problem
-Both "New Page" and "New Post" buttons are always visible regardless of which tab is active. The user wants each button to appear only in its respective tab.
+The `BlogPost.tsx` page does not fetch or display categories for the published post. The categories are saved correctly in the database but the public-facing blog post page never queries `cms_content_categories` to retrieve them.
 
 ### Change
 
-#### `src/pages/admin/ContentManagement.tsx` (lines 201-210)
+#### `src/pages/BlogPost.tsx`
+- Import `useContentCategories` and `useCategories` from `useCmsCategories`
+- Import `Badge` from UI components
+- Fetch the post's category IDs using `useContentCategories(post?.id)`
+- Fetch all categories using `useCategories()` to resolve IDs to names
+- Display matching category names as badges in the post header, between the author/date line and the excerpt
+- Show nothing extra if no categories are assigned
 
-Replace the current static button group with a conditional render based on `activeSection`:
-
-- When `activeSection === 'pages'`: show only "New Page" button
-- When `activeSection === 'posts'`: show only "New Post" button
-
-```tsx
-<div className="flex gap-2">
-  {activeSection === 'pages' && (
-    <Button onClick={() => navigate('/admin/content/new?type=page')}>
-      <FileText className="h-4 w-4 mr-2" />
-      New Page
-    </Button>
-  )}
-  {activeSection === 'posts' && (
-    <Button onClick={() => navigate('/admin/content/new?type=post')} variant="outline">
-      <Newspaper className="h-4 w-4 mr-2" />
-      New Post
-    </Button>
-  )}
-</div>
-```
-
-### What Will NOT Change
+### What stays the same
 - No layout restructuring
 - No routing changes
 - No database changes
-- Only 1 file modified, ~8 lines changed
+- 1 file modified
+
