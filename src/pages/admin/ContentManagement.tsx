@@ -22,7 +22,7 @@ import { format } from 'date-fns';
 export default function ContentManagement() {
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'pages' | 'posts'>('pages');
+  const [activeSection, setActiveSection] = useState<'pages' | 'posts'>('posts');
   const navigate = useNavigate();
 
   const { data: pages, isLoading: isLoadingPages } = useContentList('page');
