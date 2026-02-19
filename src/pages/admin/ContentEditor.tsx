@@ -27,6 +27,12 @@ export default function ContentEditor() {
   const publishContent = usePublishContent();
   const uploadMedia = useUploadMedia();
   const featuredImageInputRef = useRef<HTMLInputElement>(null);
+  const excerptManuallyEdited = useRef(false);
+  const seoTitleManuallyEdited = useRef(false);
+  const seoDescManuallyEdited = useRef(false);
+
+  const stripHtml = (html: string): string =>
+    html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -54,6 +60,9 @@ export default function ContentEditor() {
       setSeoDescription(existingContent.seo_description || '');
       setNoIndex(existingContent.no_index);
       setAutoSlug(false);
+      excerptManuallyEdited.current = true;
+      seoTitleManuallyEdited.current = true;
+      seoDescManuallyEdited.current = true;
     }
   }, [existingContent]);
 
@@ -63,10 +72,23 @@ export default function ContentEditor() {
     }
   }, [title, autoSlug]);
 
+  useEffect(() => {
+    if (!seoTitleManuallyEdited.current && title) {
+      setSeoTitle(title.substring(0, 60));
+    }
+  }, [title]);
+
   const handleEditorChange = useCallback((json: Record<string, unknown>, html: string) => {
     setContentJson(json as Json);
     setContentHtml(html);
     setHasChanges(true);
+    const plainText = stripHtml(html);
+    if (!excerptManuallyEdited.current) {
+      setExcerpt(plainText.substring(0, 200));
+    }
+    if (!seoDescManuallyEdited.current) {
+      setSeoDescription(plainText.substring(0, 155));
+    }
   }, []);
 
   const handleFeaturedImageUpload = useCallback(async (file: File) => {
@@ -244,7 +266,7 @@ export default function ContentEditor() {
             <CardContent>
               <Textarea
                 value={excerpt}
-                onChange={(e) => { setExcerpt(e.target.value); setHasChanges(true); }}
+                onChange={(e) => { setExcerpt(e.target.value); setHasChanges(true); excerptManuallyEdited.current = true; }}
                 placeholder="Brief description..."
                 rows={3}
               />
@@ -328,7 +350,7 @@ export default function ContentEditor() {
                     <Label>SEO Title ({seoTitle.length}/60)</Label>
                     <Input
                       value={seoTitle}
-                      onChange={(e) => { setSeoTitle(e.target.value); setHasChanges(true); }}
+                      onChange={(e) => { setSeoTitle(e.target.value); setHasChanges(true); seoTitleManuallyEdited.current = true; }}
                       placeholder={title || 'Page title...'}
                       maxLength={60}
                     />
@@ -337,7 +359,7 @@ export default function ContentEditor() {
                     <Label>Meta Description ({seoDescription.length}/160)</Label>
                     <Textarea
                       value={seoDescription}
-                      onChange={(e) => { setSeoDescription(e.target.value); setHasChanges(true); }}
+                      onChange={(e) => { setSeoDescription(e.target.value); setHasChanges(true); seoDescManuallyEdited.current = true; }}
                       placeholder="Brief description for search engines..."
                       rows={3}
                       maxLength={160}
