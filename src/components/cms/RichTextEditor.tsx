@@ -1,6 +1,6 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
+import ImageResize from 'tiptap-extension-resize-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Youtube from '@tiptap/extension-youtube';
@@ -37,10 +37,9 @@ export function RichTextEditor({
           levels: [1, 2, 3, 4],
         },
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'rounded-lg max-w-full',
-        },
+      ImageResize.configure({
+        inline: false,
+        minWidth: 100,
       }),
       Link.configure({
         openOnClick: false,
@@ -80,6 +79,7 @@ export function RichTextEditor({
 
   const addImage = useCallback((url: string, alt?: string) => {
     if (editor) {
+      // @ts-ignore - setImage provided by tiptap-extension-resize-image
       editor.chain().focus().setImage({ src: url, alt: alt || '' }).run();
     }
   }, [editor]);
@@ -125,6 +125,7 @@ export function RichTextEditor({
     for (const file of files) {
       try {
         const result = await uploadMedia.mutateAsync({ file, altText: file.name });
+        // @ts-ignore - setImage is provided by tiptap-extension-resize-image
         editor.chain().focus().setImage({ src: result.public_url, alt: result.alt_text || '' }).run();
       } catch {
         // error toast is handled by the hook
