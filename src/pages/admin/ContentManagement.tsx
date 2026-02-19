@@ -99,7 +99,7 @@ export default function ContentManagement() {
               </Button>
             )}
             <Button variant="ghost" size="sm" asChild>
-              <Link to={`/${item.slug}`} target="_blank">
+              <Link to={item.type === 'post' ? `/blog/${item.slug}` : `/${item.slug}`} target="_blank">
                 <Eye className="h-4 w-4" />
               </Link>
             </Button>
