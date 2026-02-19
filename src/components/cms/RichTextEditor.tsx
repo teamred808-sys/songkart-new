@@ -5,6 +5,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Youtube from '@tiptap/extension-youtube';
 import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 import { useEffect, useCallback, useState } from 'react';
 import { EditorToolbar } from './EditorToolbar';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,7 @@ export function RichTextEditor({
         },
       }),
       Underline,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: content || { type: 'doc', content: [] },
     editable,
