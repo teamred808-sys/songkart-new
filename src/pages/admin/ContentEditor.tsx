@@ -132,7 +132,7 @@ export default function ContentEditor() {
     if (!file.type.startsWith('image/')) return;
     try {
       const result = await uploadMedia.mutateAsync({ file, altText: title || file.name });
-      setFeaturedImage(result.public_url);
+      setFeaturedImage(result.avif_url || result.public_url);
       setHasChanges(true);
     } catch {
       // error toast handled by hook

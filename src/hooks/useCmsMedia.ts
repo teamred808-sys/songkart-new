@@ -9,6 +9,7 @@ export interface CmsMedia {
   file_size: number;
   storage_path: string;
   public_url: string;
+  avif_url: string | null;
   alt_text: string | null;
   caption: string | null;
   uploaded_by: string | null;
@@ -86,7 +87,30 @@ export function useUploadMedia() {
         .single();
       
       if (error) throw error;
-      return data as CmsMedia;
+      const mediaRecord = data as CmsMedia;
+
+      // Attempt AVIF compression (non-blocking — original is already saved)
+      try {
+        const fileType = file.type.toLowerCase();
+        if (fileType !== 'image/svg+xml' && fileType !== 'image/gif') {
+          const { data: compressData } = await supabase.functions.invoke('compress-image', {
+            body: { storagePath },
+          });
+          if (compressData?.avifUrl) {
+            const { data: updated } = await supabase
+              .from('cms_media')
+              .update({ avif_url: compressData.avifUrl } as any)
+              .eq('id', mediaRecord.id)
+              .select()
+              .single();
+            if (updated) return updated as CmsMedia;
+          }
+        }
+      } catch (avifErr) {
+        console.warn('AVIF compression skipped:', avifErr);
+      }
+
+      return mediaRecord;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cms-media'] });
