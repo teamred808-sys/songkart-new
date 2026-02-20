@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.cashfree-payout-webhook]
 verify_jwt = false
+
+[functions.compress-image]
+verify_jwt = false

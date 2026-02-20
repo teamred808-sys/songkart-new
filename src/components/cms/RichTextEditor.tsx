@@ -128,7 +128,7 @@ export function RichTextEditor({
       try {
         const result = await uploadMedia.mutateAsync({ file, altText: file.name });
         // @ts-ignore - setImage is provided by tiptap-extension-resize-image
-        editor.chain().focus().setImage({ src: result.public_url, alt: result.alt_text || '' }).run();
+        editor.chain().focus().setImage({ src: result.avif_url || result.public_url, alt: result.alt_text || '' }).run();
       } catch {
         // error toast is handled by the hook
       }

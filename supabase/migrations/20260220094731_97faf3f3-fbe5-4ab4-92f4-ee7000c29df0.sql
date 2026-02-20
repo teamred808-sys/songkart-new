@@ -1,0 +1,1 @@
+ALTER TABLE public.cms_media ADD COLUMN avif_url text;

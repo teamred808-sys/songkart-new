@@ -611,6 +611,7 @@ export type Database = {
       cms_media: {
         Row: {
           alt_text: string | null
+          avif_url: string | null
           caption: string | null
           created_at: string | null
           file_name: string
@@ -623,6 +624,7 @@ export type Database = {
         }
         Insert: {
           alt_text?: string | null
+          avif_url?: string | null
           caption?: string | null
           created_at?: string | null
           file_name: string
@@ -635,6 +637,7 @@ export type Database = {
         }
         Update: {
           alt_text?: string | null
+          avif_url?: string | null
           caption?: string | null
           created_at?: string | null
           file_name?: string
