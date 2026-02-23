@@ -1,26 +1,23 @@
 
 
-## Fix Song Detail Hero Image to Display in 1:1 Ratio
+## Reduce Song Detail Hero Artwork Size
 
 ### Problem
-The Song Detail page hero image container uses `aspect-video` (16:9 ratio) instead of `aspect-square` (1:1 ratio). Even though the image has `style={{ aspectRatio: '1/1' }}`, the parent container stretches it to 16:9, showing the artwork in its original non-square proportions.
+The artwork container currently spans the full width of the 2-column area (`lg:col-span-2`) with `aspect-square`, resulting in a very large square image that dominates the page.
 
 ### Fix
 
 **File: `src/pages/SongDetail.tsx`**
 
-1. **Line 215** -- Change the hero image container from `aspect-video` to `aspect-square`:
-   - Replace `aspect-video` with `aspect-square` in the container's className
-   - Remove the inline `style={{ aspectRatio: '1/1', objectFit: 'cover' }}` from the `<img>` tag (redundant once the container is square)
+1. **Line 215** -- Wrap the artwork in a constrained container:
+   - Add `max-w-md mx-auto` to the artwork `div` so it caps at ~448px wide and centers within the column
+   - This keeps the 1:1 square ratio but at a reasonable size
 
-2. **Line 104** -- Update the loading skeleton to match:
-   - Replace `aspect-video` with `aspect-square` in the Skeleton className
+2. **Line 101** -- Update the loading skeleton to match:
+   - Add `max-w-md mx-auto` to the skeleton's className
 
-These two changes ensure the hero image container is 1:1, matching the 512x512 cropped artwork.
-
-### What stays unchanged
-- Upload logic, crop modal, storage mechanism
-- All other components (SongCard, Cart, Browse, etc.)
-- Image source logic (`artwork_cropped_url || cover_image_url`)
-- Page layout structure
+### Result
+- Artwork displays as a centered 1:1 square, capped at ~448px
+- No stretching, no layout breakage
+- Responsive: on small screens it still shrinks naturally below 448px
 
