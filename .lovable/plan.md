@@ -1,23 +1,31 @@
 
 
-## Reduce Song Detail Hero Artwork Size
+## Remove "Lyrics Only" Pricing and Make Audio Compulsory
 
-### Problem
-The artwork container currently spans the full width of the 2-column area (`lg:col-span-2`) with `aspect-square`, resulting in a very large square image that dominates the page.
+### Summary
+Audio (composition) upload is already required in the upload flow. This change removes the "Lyrics Only" pricing category from the seller-facing UI and always applies "With Audio" pricing limits.
 
-### Fix
+### Changes
 
-**File: `src/pages/SongDetail.tsx`**
+**1. `src/components/seller/SellerTierCard.tsx` (lines 112-129)**
+- Remove the "Lyrics Only" column from the Pricing Limits grid
+- Show only "Max Price" using `max_price_with_audio` value
+- Change from 2-column grid to a single display
 
-1. **Line 215** -- Wrap the artwork in a constrained container:
-   - Add `max-w-md mx-auto` to the artwork `div` so it caps at ~448px wide and centers within the column
-   - This keeps the 1:1 square ratio but at a reasonable size
+**2. `src/components/seller/PricingLimitBanner.tsx` (lines 7-11, 24-26, 76)**
+- Remove `hasAudio` prop entirely
+- Always use `tierInfo.max_price_with_audio` for `maxAllowed`
+- Update label from "Max with audio price" to just "Max price"
 
-2. **Line 101** -- Update the loading skeleton to match:
-   - Add `max-w-md mx-auto` to the skeleton's className
+**3. `src/pages/seller/UploadSong.tsx`**
+- Update any references passing `hasAudio` to `PricingLimitBanner` (if any)
+- The upload form already requires audio (`Full Audio File *` is mandatory in step 2 validation at line 409)
 
-### Result
-- Artwork displays as a centered 1:1 square, capped at ~448px
-- No stretching, no layout breakage
-- Responsive: on small screens it still shrinks naturally below 448px
+**4. `src/pages/seller/EditSong.tsx`**
+- Update any references passing `hasAudio` to `PricingLimitBanner` (if any)
 
+### What stays unchanged
+- Database schema (columns remain, no migration needed)
+- Upload validation (audio is already required)
+- Backend tier RPC functions
+- `useSellerTier` hook interface
