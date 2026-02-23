@@ -221,6 +221,16 @@ serve(async (req) => {
     // Total amount buyer pays = subtotal (song prices) + buyer's portion of platform fees - promo discount
     const totalAmount = Math.max(0, subtotal + totalBuyerFee - validatedPromoDiscount);
 
+    // Cashfree cannot process ₹0 orders — use free-checkout flow instead
+    if (totalAmount <= 0) {
+      return new Response(JSON.stringify({ 
+        error: "Order total is ₹0 after discount. Please use the free checkout flow." 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Generate order ID
     const orderId = `order_${Date.now()}_${user.id.substring(0, 8)}`;
 

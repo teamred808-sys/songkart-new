@@ -73,7 +73,7 @@ export function useFreeCheckoutFromCart() {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: async ({ acknowledgmentAccepted }: { acknowledgmentAccepted: boolean }): Promise<FreeCheckoutResponse> => {
+    mutationFn: async ({ acknowledgmentAccepted, promoCodeId, promoDiscount }: { acknowledgmentAccepted: boolean; promoCodeId?: string; promoDiscount?: number }): Promise<FreeCheckoutResponse> => {
       if (!user) throw new Error('Not authenticated');
 
       // Get cart items first
@@ -97,8 +97,9 @@ export function useFreeCheckoutFromCart() {
 
       const item = cartItems[0];
       
-      // Verify it's a free item
-      if (Number(item.license_tiers?.price) !== 0) {
+      // Allow free checkout if price is 0 OR if promo discount brings total to 0
+      const isPromoFree = promoCodeId && promoDiscount && promoDiscount > 0;
+      if (Number(item.license_tiers?.price) !== 0 && !isPromoFree) {
         throw new Error('This is not a free license');
       }
 
