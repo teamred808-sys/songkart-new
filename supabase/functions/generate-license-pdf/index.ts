@@ -235,7 +235,7 @@ function generateLicensePDFContent(data: {
 </head>
 <body>
   <div class="header">
-    <div class="logo">SONGMARKET</div>
+    <div class="logo">SONGKART</div>
     <div class="license-type">${templateName}</div>
     <div class="license-number">License No: ${licenseNumber}</div>
   </div>
@@ -347,13 +347,13 @@ function generateLicensePDFContent(data: {
   </div>
 
   <div class="footer">
-    <p>This license was generated automatically by SongMarket on ${purchaseDate}.</p>
+    <p>This license was generated automatically by SongKart on ${purchaseDate}.</p>
     <p>This document is legally binding upon purchase completion.</p>
-    <p>For verification, contact support@songmarket.com with License No: ${licenseNumber}</p>
+    <p>For verification, contact support@songkart.com with License No: ${licenseNumber}</p>
   </div>
 
   <div class="watermark">
-    SongMarket License Agreement | ${licenseNumber} | Generated: ${purchaseDate}
+    SongKart License Agreement | ${licenseNumber} | Generated: ${purchaseDate}
   </div>
 </body>
 </html>
