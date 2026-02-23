@@ -42,6 +42,7 @@ export interface SongFiltersState {
   priceRange: [number, number];
   bpmRange: [number, number];
   sortBy: string;
+  isFree?: boolean;
 }
 
 interface SongFiltersProps {

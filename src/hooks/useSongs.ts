@@ -106,6 +106,9 @@ export function useSongs(filters?: SongFiltersState) {
         .eq("status", "approved");
 
       if (filters) {
+        if (filters.isFree) {
+          query = query.eq("is_free", true);
+        }
         if (filters.search) {
           query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
         }
