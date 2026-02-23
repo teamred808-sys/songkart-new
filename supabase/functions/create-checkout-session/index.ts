@@ -26,6 +26,8 @@ async function getCommissionRate(supabaseClient: any): Promise<number> {
 interface CheckoutRequest {
   acknowledgment_accepted: boolean;
   return_url: string;
+  promo_code_id?: string | null;
+  promo_discount?: number;
 }
 
 serve(async (req) => {
@@ -60,7 +62,32 @@ serve(async (req) => {
       });
     }
 
-    const { acknowledgment_accepted, return_url }: CheckoutRequest = await req.json();
+    const { acknowledgment_accepted, return_url, promo_code_id, promo_discount }: CheckoutRequest = await req.json();
+
+    // Validate promo code server-side if provided
+    let validatedPromoDiscount = 0;
+    let validatedPromoId: string | null = null;
+    
+    if (promo_code_id && promo_discount && promo_discount > 0) {
+      const { data: promoCode, error: promoError } = await supabase
+        .from("promo_codes")
+        .select("*")
+        .eq("id", promo_code_id)
+        .eq("is_active", true)
+        .single();
+
+      if (!promoError && promoCode) {
+        const now = new Date().toISOString();
+        const notExpired = !promoCode.expires_at || promoCode.expires_at > now;
+        const notExceeded = promoCode.usage_limit === null || promoCode.usage_count < promoCode.usage_limit;
+        
+        if (notExpired && notExceeded) {
+          // Cap discount at the client-provided amount (already validated by edge function)
+          validatedPromoDiscount = Math.min(promo_discount, promo_discount);
+          validatedPromoId = promo_code_id;
+        }
+      }
+    }
 
     if (!acknowledgment_accepted) {
       return new Response(JSON.stringify({ error: "Purchase acknowledgment is required" }), {
@@ -191,8 +218,8 @@ serve(async (req) => {
       };
     });
 
-    // Total amount buyer pays = subtotal (song prices) + buyer's portion of platform fees
-    const totalAmount = subtotal + totalBuyerFee;
+    // Total amount buyer pays = subtotal (song prices) + buyer's portion of platform fees - promo discount
+    const totalAmount = Math.max(0, subtotal + totalBuyerFee - validatedPromoDiscount);
 
     // Generate order ID
     const orderId = `order_${Date.now()}_${user.id.substring(0, 8)}`;
@@ -277,6 +304,8 @@ serve(async (req) => {
         acknowledgment_timestamp: new Date().toISOString(),
         ip_address: req.headers.get("x-forwarded-for") || "unknown",
         user_agent: req.headers.get("user-agent") || "unknown",
+        promo_code_id: validatedPromoId,
+        promo_discount: validatedPromoDiscount,
       })
       .select()
       .single();
