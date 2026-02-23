@@ -104,9 +104,9 @@ export default function MyDownloads() {
   ];
 
   // Dedupe by song id
-  const uniqueItems = downloadableItems.filter((item, index, self) =>
-    index === self.findIndex(t => t.song?.id === item.song?.id)
-  );
+const uniqueItems = downloadableItems.filter((item, index, self) =>
+      index === self.findIndex(t => t.song?.id === item.song?.id && t.license_type === item.license_type)
+    );
 
   const handleDownload = async (url: string, filename: string) => {
     try {
