@@ -152,12 +152,6 @@ Deno.serve(async (req) => {
           priority: '0.7',
         });
         entries.push({
-          loc: getCanonicalUrl(baseUrl, '/licenses/personal'),
-          lastmod: formatDate(null),
-          changefreq: 'monthly',
-          priority: '0.6',
-        });
-        entries.push({
           loc: getCanonicalUrl(baseUrl, '/licenses/commercial'),
           lastmod: formatDate(null),
           changefreq: 'monthly',
@@ -407,12 +401,6 @@ Deno.serve(async (req) => {
         lastmod: formatDate(null),
         changefreq: 'monthly',
         priority: '0.7',
-      });
-      entries.push({
-        loc: getCanonicalUrl(baseUrl, '/licenses/personal'),
-        lastmod: formatDate(null),
-        changefreq: 'monthly',
-        priority: '0.6',
       });
       entries.push({
         loc: getCanonicalUrl(baseUrl, '/licenses/commercial'),

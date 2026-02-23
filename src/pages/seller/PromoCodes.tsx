@@ -135,7 +135,6 @@ export default function PromoCodes() {
                   <SelectTrigger><SelectValue placeholder="All tiers" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Tiers</SelectItem>
-                    <SelectItem value="personal">Personal Use</SelectItem>
                     <SelectItem value="commercial">Commercial</SelectItem>
                     <SelectItem value="exclusive">Exclusive</SelectItem>
                   </SelectContent>

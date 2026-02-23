@@ -21,7 +21,6 @@ import { SongSEOFields } from '@/components/seller/SongSEOFields';
 import { useSellerTier } from '@/hooks/useSellerTier';
 
 const LICENSE_TYPES = [
-  { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
   { value: 'commercial', label: 'Commercial', description: 'For commercial projects' },
   { value: 'exclusive', label: 'Exclusive', description: 'Full rights transfer' },
 ] as const;
@@ -44,7 +43,7 @@ const contentSchema = z.object({
 });
 
 const licenseTierSchema = z.object({
-  license_type: z.enum(['personal', 'commercial', 'exclusive']),
+  license_type: z.enum(['commercial', 'exclusive']),
   price: z.number().min(0.01, 'Price must be at least ₹0.01'),
   max_sales: z.number().optional(),
   terms: z.string().optional(),
@@ -200,8 +199,8 @@ export default function UploadSong() {
     setPricing(prev => {
       let filteredTiers = [...prev.license_tiers];
       if (type === 'exclusive') {
-        filteredTiers = filteredTiers.filter(t => t.license_type !== 'personal' && t.license_type !== 'commercial');
-      } else if (type === 'personal' || type === 'commercial') {
+        filteredTiers = filteredTiers.filter(t => t.license_type !== 'commercial');
+      } else if (type === 'commercial') {
         filteredTiers = filteredTiers.filter(t => t.license_type !== 'exclusive');
       }
       return {
@@ -727,11 +726,11 @@ export default function UploadSong() {
               <div className="flex flex-wrap gap-2">
                 {(() => {
                   const hasExclusive = pricing.license_tiers.some(t => t.license_type === 'exclusive');
-                  const hasNonExclusive = pricing.license_tiers.some(t => t.license_type === 'personal' || t.license_type === 'commercial');
+                  const hasNonExclusive = pricing.license_tiers.some(t => t.license_type === 'commercial');
                   return LICENSE_TYPES.map((type) => {
                     const isAdded = pricing.license_tiers.some(t => t.license_type === type.value);
                     const isDisabled = (type.value === 'exclusive' && hasNonExclusive) || 
-                                       ((type.value === 'personal' || type.value === 'commercial') && hasExclusive);
+                                       (type.value === 'commercial' && hasExclusive);
                     return (
                       <Button
                         key={type.value}
@@ -777,13 +776,13 @@ export default function UploadSong() {
                             type="number"
                             step="0.01"
                             min="0"
-                            max={tier.license_type === 'personal' ? (sellerTier?.max_price_lyrics_only ?? undefined) : tier.license_type === 'commercial' ? (sellerTier?.max_price_with_audio ?? undefined) : undefined}
+                            max={tier.license_type === 'commercial' ? (sellerTier?.max_price_with_audio ?? undefined) : undefined}
                             value={tier.price || ''}
                             placeholder="Enter price"
                             onChange={(e) => {
                               let val = parseFloat(e.target.value) || 0;
-                              if (tier.license_type === 'personal' && sellerTier?.max_price_lyrics_only && val > sellerTier.max_price_lyrics_only) val = sellerTier.max_price_lyrics_only;
                               if (tier.license_type === 'commercial' && sellerTier?.max_price_with_audio && val > sellerTier.max_price_with_audio) val = sellerTier.max_price_with_audio;
+                              updateLicenseTier(tier.license_type, 'price', val);
                               updateLicenseTier(tier.license_type, 'price', val);
                             }}
                           />
