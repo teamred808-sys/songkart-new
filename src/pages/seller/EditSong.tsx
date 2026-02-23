@@ -203,7 +203,8 @@ export default function EditSong() {
   };
 
   const handleUpdateTierPrice = async (tierId: string) => {
-    const newPrice = tierPrices[tierId];
+    const tier = licenseTiers?.find(t => t.id === tierId);
+    let newPrice = tierPrices[tierId];
     // Allow 0 for free tiers, but prevent negative or undefined prices
     if (newPrice === undefined || newPrice === null || newPrice < 0 || isNaN(newPrice)) {
       toast({ 
@@ -214,11 +215,29 @@ export default function EditSong() {
       return;
     }
 
+    // Enforce minimum ₹1 for exclusive tiers
+    if (tier?.license_type === 'exclusive' && newPrice < 1) {
+      newPrice = 1;
+      setTierPrices(prev => ({ ...prev, [tierId]: 1 }));
+      toast({ title: 'Exclusive license price must be at least ₹1', variant: 'destructive' });
+    }
+
     updateLicenseTier.mutate({
       tier_id: tierId,
       price: newPrice,
     }, {
-      onSuccess: () => refetchTiers(),
+      onSuccess: async () => {
+        refetchTiers();
+        // Update is_free based on commercial tier pricing
+        if (id) {
+          const { data: allTiers } = await supabase
+            .from('license_tiers')
+            .select('license_type, price')
+            .eq('song_id', id);
+          const isFree = allTiers?.some(t => t.license_type === 'commercial' && Number(t.price) === 0) || false;
+          await supabase.from('songs').update({ is_free: isFree }).eq('id', id);
+        }
+      },
     });
   };
 

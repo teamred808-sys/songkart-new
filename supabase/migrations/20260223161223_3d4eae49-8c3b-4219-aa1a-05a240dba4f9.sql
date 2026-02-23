@@ -1,0 +1,1 @@
+ALTER TABLE public.songs ADD COLUMN is_free boolean NOT NULL DEFAULT false;
