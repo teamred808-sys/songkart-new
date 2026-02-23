@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, User, LogOut, LayoutDashboard, Shield, ShoppingCart } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, LayoutDashboard, Shield, ShoppingCart, Gift } from 'lucide-react';
 import songkartLogo from '@/assets/songkart-logo.png';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,13 @@ export function Navbar() {
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Sellers
+            </Link>
+            <Link 
+              to="/browse?free=true" 
+              className="flex items-center gap-1.5 text-green-500 hover:text-green-400 transition-colors font-medium"
+            >
+              <Gift className="h-4 w-4" />
+              Free
             </Link>
           </div>
 
@@ -187,6 +194,14 @@ export function Navbar() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Sellers
+            </Link>
+            <Link 
+              to="/browse?free=true" 
+              className="px-4 py-3 min-h-[48px] flex items-center gap-2 text-green-500 hover:text-green-400 hover:bg-muted rounded-lg transition-colors font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Gift className="h-4 w-4" />
+              Free
             </Link>
 
             <div className="border-t border-border my-2" />
