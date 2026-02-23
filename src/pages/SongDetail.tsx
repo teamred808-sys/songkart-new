@@ -66,10 +66,17 @@ export default function SongDetail() {
     checkAndRecordView();
   }, [checkAndRecordView]);
 
+  const isOwnSong = user?.id === song?.seller_id;
+
   const handleAddToCart = () => {
     if (!user) {
       toast.error("Please sign in to add items to cart");
       navigate("/auth");
+      return;
+    }
+
+    if (isOwnSong) {
+      toast.error("You cannot purchase your own song");
       return;
     }
 
@@ -413,19 +420,25 @@ export default function SongDetail() {
                     </p>
                   )}
 
-                  <Button 
-                    className="w-full mt-4" 
-                    size="lg"
-                    onClick={handleAddToCart}
-                    disabled={!selectedLicense || addToCart.isPending}
-                  >
-                    {addToCart.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                    )}
-                    {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
-                  </Button>
+                  {isOwnSong ? (
+                    <p className="text-sm text-muted-foreground text-center mt-4 py-2">
+                      This is your song — you cannot purchase it.
+                    </p>
+                  ) : (
+                    <Button 
+                      className="w-full mt-4" 
+                      size="lg"
+                      onClick={handleAddToCart}
+                      disabled={!selectedLicense || addToCart.isPending}
+                    >
+                      {addToCart.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                      )}
+                      {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -585,19 +598,25 @@ export default function SongDetail() {
                     </p>
                   )}
 
-                  <Button 
-                    className="w-full mt-4" 
-                    size="lg"
-                    onClick={handleAddToCart}
-                    disabled={!selectedLicense || addToCart.isPending}
-                  >
-                    {addToCart.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                    )}
-                    {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
-                  </Button>
+                  {isOwnSong ? (
+                    <p className="text-sm text-muted-foreground text-center mt-4 py-2">
+                      This is your song — you cannot purchase it.
+                    </p>
+                  ) : (
+                    <Button 
+                      className="w-full mt-4" 
+                      size="lg"
+                      onClick={handleAddToCart}
+                      disabled={!selectedLicense || addToCart.isPending}
+                    >
+                      {addToCart.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                      )}
+                      {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
