@@ -14,7 +14,8 @@ import {
   Home,
   ArrowLeftRight,
   Banknote,
-  Shield
+  Shield,
+  Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ const navSections = [
       { icon: ShoppingCart, label: 'Sales & Orders', path: '/seller/sales' },
       { icon: Wallet, label: 'Wallet', path: '/seller/wallet' },
       { icon: BarChart3, label: 'Analytics', path: '/seller/analytics' },
+      { icon: Tag, label: 'Promo Codes', path: '/seller/promo-codes' },
     ],
   },
   {

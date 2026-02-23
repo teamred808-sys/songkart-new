@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShoppingBag, CreditCard, AlertTriangle, ShoppingCart, CheckCircle, Lock, Gift } from 'lucide-react';
+import { ShoppingBag, CreditCard, AlertTriangle, ShoppingCart, CheckCircle, Lock, Gift, Tag, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartWithTotals, useRemoveFromCartWithReservation, useCreateCheckoutSession } from '@/hooks/useCheckout';
 import { useFreeCheckoutFromCart } from '@/hooks/useFreeCheckout';
+import { useValidatePromoCode } from '@/hooks/usePromoCodes';
 import { CartItemCard } from '@/components/cart/CartItemCard';
 import { AcknowledgmentCheckbox } from '@/components/cart/AcknowledgmentCheckbox';
 import { PriceBreakdown } from '@/components/cart/PriceBreakdown';
@@ -36,9 +38,17 @@ export default function Cart() {
   const removeFromCart = useRemoveFromCartWithReservation();
   const createCheckout = useCreateCheckoutSession();
   const freeCheckout = useFreeCheckoutFromCart();
+  const validatePromo = useValidatePromoCode();
   const isMobile = useIsMobile();
   const [acknowledged, setAcknowledged] = useState(false);
   const [showOwnSongAlert, setShowOwnSongAlert] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<{
+    code: string;
+    promo_code_id: string;
+    discount_amount: number;
+  } | null>(null);
+  const [promoError, setPromoError] = useState('');
 
   const handleRemove = (cartItemId: string, songId: string, isExclusive: boolean) => {
     removeFromCart.mutate({ cartItemId, songId, isExclusive });
@@ -47,8 +57,44 @@ export default function Cart() {
   // Determine if this is a free checkout (total = 0)
   const isFreeCheckout = cart?.total === 0 && (cart?.itemCount || 0) > 0;
 
+  const handleApplyPromo = () => {
+    if (!promoInput.trim() || !cart?.items?.length) return;
+    setPromoError('');
+    
+    const cartItemsForValidation = cart.items.map(item => ({
+      song_id: item.song_id,
+      license_type: item.license_tiers?.license_type || 'personal',
+      license_price: item.songPrice || 0,
+    }));
+
+    validatePromo.mutate({ code: promoInput, cart_items: cartItemsForValidation }, {
+      onSuccess: (result) => {
+        if (result.valid && result.promo_code_id && result.discount_amount) {
+          setAppliedPromo({
+            code: promoInput.trim().toUpperCase(),
+            promo_code_id: result.promo_code_id,
+            discount_amount: result.discount_amount,
+          });
+          setPromoError('');
+        } else {
+          setPromoError(result.message || 'Invalid promo code');
+          setAppliedPromo(null);
+        }
+      },
+      onError: (error) => {
+        setPromoError(error.message);
+        setAppliedPromo(null);
+      },
+    });
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput('');
+    setPromoError('');
+  };
+
   const handleCheckout = () => {
-    // Check if user is trying to buy their own song
     if (cart?.hasOwnSongs) {
       setShowOwnSongAlert(true);
       return;
@@ -57,7 +103,11 @@ export default function Cart() {
     if (isFreeCheckout) {
       freeCheckout.mutate({ acknowledgmentAccepted: acknowledged });
     } else {
-      createCheckout.mutate({ acknowledgmentAccepted: acknowledged });
+      createCheckout.mutate({ 
+        acknowledgmentAccepted: acknowledged,
+        promoCodeId: appliedPromo?.promo_code_id,
+        promoDiscount: appliedPromo?.discount_amount,
+      });
     }
   };
 
@@ -162,12 +212,49 @@ export default function Cart() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Promo Code Input */}
+              <div className="space-y-2">
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between p-2 rounded-md bg-green-500/10 border border-green-500/30">
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <Tag className="h-4 w-4" />
+                      <span className="font-mono font-bold">{appliedPromo.code}</span>
+                      <span>applied!</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemovePromo}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Promo code"
+                      value={promoInput}
+                      onChange={e => setPromoInput(e.target.value.toUpperCase())}
+                      className="font-mono"
+                      maxLength={20}
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={handleApplyPromo}
+                      disabled={!promoInput.trim() || validatePromo.isPending}
+                      size="sm"
+                    >
+                      {validatePromo.isPending ? '...' : 'Apply'}
+                    </Button>
+                  </div>
+                )}
+                {promoError && <p className="text-xs text-destructive">{promoError}</p>}
+              </div>
+
               <PriceBreakdown
                 subtotal={cart?.subtotal || 0}
                 platformFee={cart?.buyerPlatformFee || 0}
                 total={cart?.total || 0}
                 itemCount={cart?.itemCount || 0}
+                discount={appliedPromo?.discount_amount}
+                promoCode={appliedPromo?.code}
               />
             </CardContent>
             <CardFooter className="flex-col gap-3">

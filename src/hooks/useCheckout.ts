@@ -237,13 +237,19 @@ export function useCreateCheckoutSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ acknowledgmentAccepted }: { acknowledgmentAccepted: boolean }) => {
+    mutationFn: async ({ acknowledgmentAccepted, promoCodeId, promoDiscount }: { 
+      acknowledgmentAccepted: boolean;
+      promoCodeId?: string;
+      promoDiscount?: number;
+    }) => {
       const returnUrl = `${window.location.origin}/buyer/order-confirmation`;
 
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: { 
           acknowledgment_accepted: acknowledgmentAccepted,
           return_url: returnUrl,
+          promo_code_id: promoCodeId || null,
+          promo_discount: promoDiscount || 0,
         },
       });
 

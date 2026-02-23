@@ -60,6 +60,7 @@ const Analytics = lazyRetry(() => import("./pages/seller/Analytics"));
 const SellerSettings = lazyRetry(() => import("./pages/seller/SellerSettings"));
 const PayoutSettings = lazyRetry(() => import("./pages/seller/PayoutSettings"));
 const AccountHealth = lazyRetry(() => import("./pages/seller/AccountHealth"));
+const SellerPromoCodes = lazyRetry(() => import("./pages/seller/PromoCodes"));
 
 // Lazy loaded buyer pages
 const BuyerDashboard = lazyRetry(() => import("./pages/buyer/BuyerDashboard"));
@@ -95,6 +96,7 @@ const RatingModeration = lazyRetry(() => import("./pages/admin/RatingModeration"
 const PayoutVerification = lazyRetry(() => import("./pages/admin/PayoutVerification"));
 const ContentReviewQueue = lazyRetry(() => import("./pages/admin/ContentReviewQueue"));
 const StrikeManagement = lazyRetry(() => import("./pages/admin/StrikeManagement"));
+const PromoManagement = lazyRetry(() => import("./pages/admin/PromoManagement"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -173,6 +175,7 @@ const App = () => (
               <Route path="payout" element={<Suspense fallback={<PageLoader />}><PayoutSettings /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><SellerSettings /></Suspense>} />
               <Route path="account-health" element={<Suspense fallback={<PageLoader />}><AccountHealth /></Suspense>} />
+              <Route path="promo-codes" element={<Suspense fallback={<PageLoader />}><SellerPromoCodes /></Suspense>} />
             </Route>
             
             {/* Admin Dashboard Routes */}
@@ -198,6 +201,7 @@ const App = () => (
               <Route path="ratings" element={<Suspense fallback={<PageLoader />}><RatingModeration /></Suspense>} />
               <Route path="content-review" element={<Suspense fallback={<PageLoader />}><ContentReviewQueue /></Suspense>} />
               <Route path="strikes" element={<Suspense fallback={<PageLoader />}><StrikeManagement /></Suspense>} />
+              <Route path="promo-codes" element={<Suspense fallback={<PageLoader />}><PromoManagement /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><PlatformSettings /></Suspense>} />
               <Route path="logs" element={<Suspense fallback={<PageLoader />}><ActivityLogs /></Suspense>} />
               <Route path="bugs" element={<Suspense fallback={<PageLoader />}><BugReports /></Suspense>} />

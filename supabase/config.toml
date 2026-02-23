@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.compress-image]
 verify_jwt = false
+
+[functions.validate-promo-code]
+verify_jwt = false

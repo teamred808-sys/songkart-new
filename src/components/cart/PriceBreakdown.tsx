@@ -1,5 +1,5 @@
 import { Separator } from '@/components/ui/separator';
-import { Shield, HelpCircle } from 'lucide-react';
+import { Shield, HelpCircle, Tag } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -13,9 +13,12 @@ interface PriceBreakdownProps {
   platformFee: number;
   total: number;
   itemCount: number;
+  discount?: number;
+  promoCode?: string;
 }
 
-export function PriceBreakdown({ subtotal, platformFee, total, itemCount }: PriceBreakdownProps) {
+export function PriceBreakdown({ subtotal, platformFee, total, itemCount, discount = 0, promoCode }: PriceBreakdownProps) {
+  const finalTotal = Math.max(0, total - discount);
   return (
     <TooltipProvider>
       <div className="space-y-3">
@@ -42,12 +45,22 @@ export function PriceBreakdown({ subtotal, platformFee, total, itemCount }: Pric
             <span><Price amount={platformFee} /></span>
           </div>
         )}
+
+        {discount > 0 && promoCode && (
+          <div className="flex justify-between text-sm text-green-600">
+            <span className="flex items-center gap-1">
+              <Tag className="h-3 w-3" />
+              Promo Discount ({promoCode})
+            </span>
+            <span>-<Price amount={discount} /></span>
+          </div>
+        )}
         
         <Separator />
         
         <div className="flex justify-between font-bold text-lg">
           <span>Total</span>
-          <span className="text-primary"><Price amount={total} /></span>
+          <span className="text-primary"><Price amount={finalTotal} /></span>
         </div>
         
         {/* Trust message */}

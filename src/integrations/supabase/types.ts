@@ -390,6 +390,8 @@ export type Database = {
           platform_fee_buyer: number | null
           platform_fee_seller: number | null
           pricing_zone_id: string | null
+          promo_code_id: string | null
+          promo_discount: number | null
           status: string | null
           subtotal: number
           tax_amount: number | null
@@ -416,6 +418,8 @@ export type Database = {
           platform_fee_buyer?: number | null
           platform_fee_seller?: number | null
           pricing_zone_id?: string | null
+          promo_code_id?: string | null
+          promo_discount?: number | null
           status?: string | null
           subtotal: number
           tax_amount?: number | null
@@ -442,6 +446,8 @@ export type Database = {
           platform_fee_buyer?: number | null
           platform_fee_seller?: number | null
           pricing_zone_id?: string | null
+          promo_code_id?: string | null
+          promo_discount?: number | null
           status?: string | null
           subtotal?: number
           tax_amount?: number | null
@@ -454,6 +460,13 @@ export type Database = {
             columns: ["pricing_zone_id"]
             isOneToOne: false
             referencedRelation: "pricing_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_sessions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -1932,6 +1945,110 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      promo_code_usages: {
+        Row: {
+          discount_amount: number
+          id: string
+          order_id: string | null
+          promo_code_id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          discount_amount: number
+          id?: string
+          order_id?: string | null
+          promo_code_id: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          discount_amount?: number
+          id?: string
+          order_id?: string | null
+          promo_code_id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_code_usages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_code_usages_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string
+          creator_role: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          license_type: string | null
+          min_purchase_amount: number | null
+          song_id: string | null
+          updated_at: string | null
+          usage_count: number | null
+          usage_limit: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by: string
+          creator_role: string
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          license_type?: string | null
+          min_purchase_amount?: number | null
+          song_id?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string
+          creator_role?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          license_type?: string | null
+          min_purchase_amount?: number | null
+          song_id?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rating_abuse_flags: {
         Row: {
