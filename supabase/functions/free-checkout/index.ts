@@ -24,6 +24,8 @@ interface FreeCheckoutRequest {
   song_id: string;
   license_tier_id: string;
   acknowledgment_accepted: boolean;
+  promo_code_id?: string;
+  promo_discount?: number;
 }
 
 // Generate a unique license number
@@ -71,7 +73,7 @@ serve(async (req) => {
       });
     }
 
-    const { song_id, license_tier_id, acknowledgment_accepted }: FreeCheckoutRequest = await req.json();
+    const { song_id, license_tier_id, acknowledgment_accepted, promo_code_id, promo_discount }: FreeCheckoutRequest = await req.json();
 
     if (!acknowledgment_accepted) {
       return new Response(JSON.stringify({ error: "You must accept the license terms" }), {
@@ -135,8 +137,9 @@ serve(async (req) => {
       });
     }
 
-    // CRITICAL: Verify this is a FREE tier
-    if (Number(licenseTier.price) !== 0) {
+    // Allow if price is 0 OR if a promo code brings the total to 0
+    const isPromoFree = promo_code_id && promo_discount && promo_discount > 0;
+    if (Number(licenseTier.price) !== 0 && !isPromoFree) {
       return new Response(JSON.stringify({ error: "This is not a free license. Use regular checkout." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
