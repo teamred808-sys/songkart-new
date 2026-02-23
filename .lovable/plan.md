@@ -1,62 +1,74 @@
 
 
-## Remove Personal Use License Tier from SongKart
+## Add Artwork Crop Flow to Song Upload
 
 ### Summary
-Deprecate the Personal Use license tier across the platform while preserving all existing order data. New uploads and purchases will only support Commercial and Exclusive licenses.
+When a seller uploads cover artwork, the system will check the aspect ratio. If it's already 1:1, it resizes to 512x512 and accepts it. If not, a crop modal opens with a fixed 1:1 ratio. Confirming saves the cropped result at 512x512. Cancelling auto-performs a center crop and resizes to 512x512. No raw non-square image is ever stored.
 
-### Database Change
+### New Dependency
+- `react-easy-crop` -- lightweight React cropping component with fixed aspect ratio support
 
-**Migration: Deactivate Personal tier in `license_tier_definitions`**
-- Set `is_active = false` for the Personal tier (`tier_key = 'personal'`) in `license_tier_definitions`
-- This automatically hides it from the `LicenseComparisonTable` component (which filters by `is_active = true`)
-- Existing `license_tiers` rows with `license_type = 'personal'` remain untouched for past orders
+### New File: `src/components/seller/ImageCropModal.tsx`
+A modal dialog containing:
+- `react-easy-crop` component with `aspect={1}` (locked 1:1 ratio)
+- "Confirm Crop" and "Cancel" buttons
+- On confirm: crops to user selection, resizes to 512x512 via canvas, returns the resulting `File`
+- On cancel: auto center-crops (shortest side), resizes to 512x512 via canvas, returns the resulting `File`
+- Helper function `getCroppedImage(imageSrc, cropArea)` using an offscreen canvas to extract and resize
 
-### Frontend Changes
+### Changes to: `src/pages/seller/UploadSong.tsx`
 
-**1. `src/lib/constants.ts`**
-- Remove `personal` entry from `LICENSE_INFO` and `LICENSE_TYPES` objects
+**New state variables:**
+- `cropImageSrc: string | null` -- the raw image data URL for the crop modal
+- `showCropModal: boolean` -- controls modal visibility
+- `rawCoverFile: File | null` -- temporary hold of the original file
 
-**2. `src/pages/seller/UploadSong.tsx`**
-- Remove `personal` from `LICENSE_TYPES` array (line 24)
-- Remove `personal` from `licenseTierSchema` enum (line 47)
-- Clean up exclusivity logic in `addLicenseTier` -- no longer needs to filter personal
-- Clean up `hasNonExclusive` check (line 730) -- only checks for commercial
+**Updated `handleFileChange` for `cover_image`:**
+1. Read the selected file as a data URL
+2. Load it into an `Image` to check dimensions
+3. If width === height (1:1): resize to 512x512 via canvas, set as `cover_image`, show preview
+4. If not 1:1: set `cropImageSrc` and open the crop modal
 
-**3. `src/pages/seller/EditSong.tsx`**
-- Remove `personal` entry from local `LICENSE_TYPES` array (line 35)
-- Remove `personal` references in exclusivity conflict logic (lines 186-188, 242-246)
+**New `handleCropComplete(croppedFile: File)` callback:**
+- Receives the 512x512 cropped `File` from the modal
+- Sets it as `content.cover_image`
+- Generates preview URL
+- Closes modal
 
-**4. `src/pages/LicensesPage.tsx`**
-- Remove `personal` entry from `licenseData` object (lines 33-58)
-- Update SEO title/description to mention only Commercial and Exclusive
-- Update the guidance text at the bottom (line 327) to remove Personal reference
+**New `handleCropCancel()` callback:**
+- Triggers the auto center-crop logic inside the modal (or inline):
+  - `cropSize = min(width, height)`
+  - `x = (width - cropSize) / 2`, `y = (height - cropSize) / 2`
+  - Draw to 512x512 canvas
+- Sets result as `cover_image`, shows preview, closes modal
 
-**5. `src/pages/seller/PromoCodes.tsx`**
-- Remove `<SelectItem value="personal">Personal Use</SelectItem>` from license tier dropdown (line 138)
+**UI addition:**
+- Render `<ImageCropModal>` component conditionally when `showCropModal` is true
 
-**6. `src/pages/admin/PromoManagement.tsx`**
-- Remove `<SelectItem value="personal">Personal Use</SelectItem>` from license tier dropdown (line 94)
+### Technical Details
 
-**7. `src/components/seo/InternalLinks.tsx`**
-- Remove `personal` from the `licenseType` union type and labels map
+**Canvas-based resize/crop utility (inside `ImageCropModal.tsx`):**
+```text
+function cropAndResize(image, cropArea, targetSize=512):
+  canvas = new OffscreenCanvas(targetSize, targetSize)
+  ctx = canvas.getContext('2d')
+  ctx.drawImage(image, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, targetSize, targetSize)
+  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 })
+```
 
-**8. `src/components/seo/SongSEOHead.tsx`**
-- Update SEO description text to remove "Personal Use" mention (line 137)
-
-**9. `supabase/functions/sitemap/index.ts`**
-- Remove the `/licenses/personal` sitemap entries (lines 154-158, 410-414)
-
-**10. `src/hooks/useSellerData.ts`**
-- Remove `'personal'` from `license_type` union types (lines 40, 441)
-
-**11. `src/pages/buyer/BuyerDashboard.tsx`**
-- Change fallback license type from `'personal'` to `'commercial'` (line 161)
+**Center crop fallback (on cancel):**
+```text
+cropSize = min(naturalWidth, naturalHeight)
+x = (naturalWidth - cropSize) / 2
+y = (naturalHeight - cropSize) / 2
+cropArea = { x, y, width: cropSize, height: cropSize }
+→ pass to cropAndResize()
+```
 
 ### What stays unchanged
-- Database tables: `license_tiers`, `order_items`, `transactions` -- no schema changes
-- Checkout flow layout, payment gateway, order history structure
-- `LicenseComparisonTable` component -- automatically excludes Personal via `is_active = false` in DB
-- `CartItemCard` -- displays whatever `license_type` string is stored (works for legacy personal orders)
-- `generate-license-pdf` edge function -- already has no personal-specific logic
-- All existing orders and license documents remain accessible and downloadable
+- Upload UI layout (file input, preview thumbnail, remove button)
+- Storage bucket and path logic
+- Publishing flow and submission handler
+- Cover image preview display (still shows the 132x132 thumbnail)
+- Artwork help text (will update "Recommended" to say "Output: 512x512px")
+
