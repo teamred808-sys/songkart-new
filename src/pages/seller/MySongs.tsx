@@ -337,7 +337,7 @@ export default function MySongs() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-12 w-12 rounded-lg">
                             <AvatarImage 
-                              src={song.cover_image_url || ''} 
+                              src={(song as any).artwork_cropped_url || song.cover_image_url || ''} 
                               alt={song.title}
                               className="object-cover"
                             />

@@ -15,6 +15,7 @@ export interface Song {
   duration: number | null;
   base_price: number;
   cover_image_url: string | null;
+  artwork_cropped_url: string | null;
   preview_audio_url: string | null;
   preview_lyrics: string | null;
   has_audio: boolean | null;

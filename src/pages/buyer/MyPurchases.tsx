@@ -217,7 +217,7 @@ export default function MyPurchases() {
                                 {item.songs?.cover_image_url ? (
                                   <img
                                     src={item.songs.cover_image_url}
-                                    alt={item.songs.title}
+                                    alt={item.songs.title || ''}
                                     className="h-full w-full object-cover"
                                   />
                                 ) : (
@@ -367,7 +367,7 @@ export default function MyPurchases() {
                                 {purchase.songs?.cover_image_url ? (
                                   <img
                                     src={purchase.songs.cover_image_url}
-                                    alt={purchase.songs.title}
+                                    alt={purchase.songs.title || ''}
                                     className="h-full w-full object-cover"
                                   />
                                 ) : (

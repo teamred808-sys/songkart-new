@@ -85,6 +85,7 @@ export function MiniCartDropdown() {
                             src={item.songs.cover_image_url} 
                             alt={item.songs?.title || 'Song'}
                             className="h-12 w-12 rounded-md object-cover flex-shrink-0"
+                            style={{ aspectRatio: '1/1' }}
                           />
                         ) : (
                           <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center flex-shrink-0">

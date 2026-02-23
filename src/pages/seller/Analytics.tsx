@@ -232,7 +232,7 @@ export default function Analytics() {
                     {index + 1}
                   </div>
                   <Avatar className="h-10 w-10 rounded-md">
-                    <AvatarImage src={song.cover_image_url || ''} className="object-cover" />
+                    <AvatarImage src={(song as any).artwork_cropped_url || song.cover_image_url || ''} className="object-cover" />
                     <AvatarFallback className="rounded-md bg-muted">{song.title.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">

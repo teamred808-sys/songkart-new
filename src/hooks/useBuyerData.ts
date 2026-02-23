@@ -62,6 +62,7 @@ export function useBuyerPurchases() {
             id,
             title,
             cover_image_url,
+            artwork_cropped_url,
             audio_url,
             full_lyrics,
             seller_id,
@@ -98,7 +99,8 @@ export function useRecentPurchases(limit = 5) {
           songs (
             id,
             title,
-            cover_image_url
+            cover_image_url,
+            artwork_cropped_url
           ),
           license_tiers (
             license_type
@@ -132,6 +134,7 @@ export function useCart() {
             id,
             title,
             cover_image_url,
+            artwork_cropped_url,
             seller_id,
             profiles:seller_id (full_name)
           ),
@@ -240,6 +243,7 @@ export function useFavorites() {
             id,
             title,
             cover_image_url,
+            artwork_cropped_url,
             base_price,
             seller_id,
             genre_id,

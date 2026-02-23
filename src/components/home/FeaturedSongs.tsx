@@ -47,7 +47,7 @@ const FeaturedSongs = () => {
                 id={song.id}
                 title={song.title}
                 sellerName={song.seller?.full_name || "Unknown Artist"}
-                coverUrl={song.cover_image_url}
+                coverUrl={song.artwork_cropped_url || song.cover_image_url}
                 previewUrl={song.preview_audio_url}
                 basePrice={song.base_price}
                 genre={song.genres?.name}

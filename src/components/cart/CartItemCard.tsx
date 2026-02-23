@@ -66,7 +66,7 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
         isExpired ? 'border-destructive/50 bg-destructive/5' : ''
       } ${item.isOwnSong ? 'border-amber-500/50 bg-amber-500/5' : ''}`}
     >
-      <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0" style={{ aspectRatio: '1/1' }}>
         {item.songs?.cover_image_url ? (
           <img
             src={item.songs.cover_image_url}
