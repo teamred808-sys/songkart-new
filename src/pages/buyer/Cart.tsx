@@ -213,41 +213,6 @@ export default function Cart() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Promo Code Input */}
-              <div className="space-y-2">
-                {appliedPromo ? (
-                  <div className="flex items-center justify-between p-2 rounded-md bg-green-500/10 border border-green-500/30">
-                    <div className="flex items-center gap-2 text-sm text-green-600">
-                      <Tag className="h-4 w-4" />
-                      <span className="font-mono font-bold">{appliedPromo.code}</span>
-                      <span>applied!</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemovePromo}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Promo code"
-                      value={promoInput}
-                      onChange={e => setPromoInput(e.target.value.toUpperCase())}
-                      className="font-mono"
-                      maxLength={20}
-                    />
-                    <Button 
-                      variant="outline" 
-                      onClick={handleApplyPromo}
-                      disabled={!promoInput.trim() || validatePromo.isPending}
-                      size="sm"
-                    >
-                      {validatePromo.isPending ? '...' : 'Apply'}
-                    </Button>
-                  </div>
-                )}
-                {promoError && <p className="text-xs text-destructive">{promoError}</p>}
-              </div>
-
               <PriceBreakdown
                 subtotal={cart?.subtotal || 0}
                 platformFee={cart?.buyerPlatformFee || 0}
@@ -255,6 +220,12 @@ export default function Cart() {
                 itemCount={cart?.itemCount || 0}
                 discount={appliedPromo?.discount_amount}
                 promoCode={appliedPromo?.code}
+                promoInput={promoInput}
+                onPromoInputChange={setPromoInput}
+                onApplyPromo={handleApplyPromo}
+                onRemovePromo={handleRemovePromo}
+                promoError={promoError}
+                isValidating={validatePromo.isPending}
               />
             </CardContent>
             <CardFooter className="flex-col gap-3">
