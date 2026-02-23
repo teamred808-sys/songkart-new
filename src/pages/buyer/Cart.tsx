@@ -54,8 +54,11 @@ export default function Cart() {
     removeFromCart.mutate({ cartItemId, songId, isExclusive });
   };
 
-  // Determine if this is a free checkout (total = 0)
-  const isFreeCheckout = cart?.total === 0 && (cart?.itemCount || 0) > 0;
+  // Determine if this is a free checkout (total = 0, or promo reduces total to 0)
+  const finalPayable = appliedPromo 
+    ? Math.max(0, (cart?.total || 0) - appliedPromo.discount_amount) 
+    : (cart?.total || 0);
+  const isFreeCheckout = finalPayable === 0 && (cart?.itemCount || 0) > 0;
 
   const handleApplyPromo = () => {
     if (!promoInput.trim() || !cart?.items?.length) return;
@@ -101,7 +104,11 @@ export default function Cart() {
     }
     
     if (isFreeCheckout) {
-      freeCheckout.mutate({ acknowledgmentAccepted: acknowledged });
+      freeCheckout.mutate({ 
+        acknowledgmentAccepted: acknowledged,
+        promoCodeId: appliedPromo?.promo_code_id,
+        promoDiscount: appliedPromo?.discount_amount,
+      });
     } else {
       createCheckout.mutate({ 
         acknowledgmentAccepted: acknowledged,
