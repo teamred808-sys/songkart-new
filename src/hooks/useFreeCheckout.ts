@@ -108,6 +108,8 @@ export function useFreeCheckoutFromCart() {
           song_id: item.song_id,
           license_tier_id: item.license_tier_id,
           acknowledgment_accepted: acknowledgmentAccepted,
+          promo_code_id: promoCodeId,
+          promo_discount: promoDiscount,
         },
       });
 
