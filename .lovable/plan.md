@@ -1,22 +1,41 @@
 
-
-## Add "Free" Link to Navbar
+## Filter Browse Page by Free Songs
 
 ### Summary
-Add a "Free" navigation link in the header between "Browse" and "Sellers" (or after "Sellers") that links to `/browse?free=true`, matching the existing Free Downloads section filter.
+When the user clicks the "Free" link in the navbar (`/browse?free=true`), the Browse page should only display songs where `is_free = true`. Currently, the `free` query parameter is ignored.
 
 ### Changes
 
-**File: `src/components/layout/Navbar.tsx`**
+**1. `src/components/songs/SongFilters.tsx`**
+- Add `isFree?: boolean` to the `SongFiltersState` interface (optional, so existing usage is unaffected)
 
-1. **Desktop nav (after "Sellers" link, ~line 63)** -- Add a new `<Link>` to `/browse?free=true` with a green-tinted style and a Gift icon to make it stand out:
-   ```
-   Browse  |  Sellers  |  Free
-   ```
+**2. `src/pages/Browse.tsx`**
+- Read the `free` query parameter from the URL (`searchParams.get("free")`)
+- When `free=true`, set `isFree: true` in the initial filters
+- Update the page header to show "Free Music" title, a green "Free Downloads" badge, and adjusted description when in free mode
+- Hide the "Prices from ₹29" chip in free mode
 
-2. **Mobile nav (after "Sellers" link, ~line 190)** -- Add the same "Free" link in the mobile menu with consistent styling.
+**3. `src/hooks/useSongs.ts`**
+- In the `useSongs` function, when `filters.isFree` is `true`, add `.eq("is_free", true)` to the query so only free songs are returned from the database
 
-3. **Import** -- Add `Gift` from `lucide-react` for the icon next to the "Free" label.
+### Technical Details
 
-The link will use a subtle green color (`text-green-500`) to visually distinguish it from other nav items, similar to the "Free Downloads" homepage section styling.
+**Browse.tsx -- read param and set filter:**
+```typescript
+const freeParam = searchParams.get("free");
 
+const initialFilters = useMemo(() => ({
+  ...existingDefaults,
+  isFree: freeParam === "true",
+}), [freeParam]);
+```
+
+**useSongs.ts -- apply filter:**
+```typescript
+if (filters.isFree) {
+  query = query.eq("is_free", true);
+}
+```
+
+**Browse.tsx -- conditional header:**
+Show "Free Music" title and green badge when in free mode; otherwise show the existing "Browse Music" header.
