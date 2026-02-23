@@ -112,19 +112,11 @@ export function SellerTierCard({ className }: SellerTierCardProps) {
         {/* Pricing Limits */}
         <div className="border-t pt-4 mt-4">
           <p className="text-sm font-medium mb-3">Your Pricing Limits</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Lyrics Only</p>
-              <p className="font-semibold text-sm">
-                {formatCurrencyLimit(tierInfo.max_price_lyrics_only)}
-              </p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">With Audio</p>
-              <p className="font-semibold text-sm">
-                {formatCurrencyLimit(tierInfo.max_price_with_audio)}
-              </p>
-            </div>
+          <div className="bg-muted/30 rounded-lg p-3">
+            <p className="text-xs text-muted-foreground mb-1">Max Price</p>
+            <p className="font-semibold text-sm">
+              {formatCurrencyLimit(tierInfo.max_price_with_audio)}
+            </p>
           </div>
         </div>
 

@@ -5,12 +5,11 @@ import { Info, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PricingLimitBannerProps {
-  hasAudio: boolean;
   currentPrice?: number;
   className?: string;
 }
 
-export function PricingLimitBanner({ hasAudio, currentPrice, className }: PricingLimitBannerProps) {
+export function PricingLimitBanner({ currentPrice, className }: PricingLimitBannerProps) {
   const { data: tierInfo, isLoading } = useSellerTier();
 
   if (isLoading) {
@@ -21,9 +20,7 @@ export function PricingLimitBanner({ hasAudio, currentPrice, className }: Pricin
     return null;
   }
 
-  const maxAllowed = hasAudio 
-    ? tierInfo.max_price_with_audio 
-    : tierInfo.max_price_lyrics_only;
+  const maxAllowed = tierInfo.max_price_with_audio;
 
   const isOverLimit = currentPrice !== undefined && maxAllowed !== null && currentPrice > maxAllowed;
   const isLegend = tierInfo.tier_level === 5;
@@ -73,7 +70,7 @@ export function PricingLimitBanner({ hasAudio, currentPrice, className }: Pricin
             showTooltip={false}
           />
           <span>
-            Max {hasAudio ? 'with audio' : 'lyrics only'} price:{' '}
+            Max price:{' '}
             <strong>{formatCurrency(maxAllowed)}</strong>
           </span>
         </div>
