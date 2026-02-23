@@ -201,13 +201,21 @@ export default function UploadSong() {
       exclusive: 499.99,
     };
     
-    setPricing(prev => ({
-      ...prev,
-      license_tiers: [
-        ...prev.license_tiers,
-        { license_type: type, price: defaultPrices[type], terms: '' },
-      ],
-    }));
+    setPricing(prev => {
+      let filteredTiers = [...prev.license_tiers];
+      if (type === 'exclusive') {
+        filteredTiers = filteredTiers.filter(t => t.license_type !== 'personal' && t.license_type !== 'commercial');
+      } else if (type === 'personal' || type === 'commercial') {
+        filteredTiers = filteredTiers.filter(t => t.license_type !== 'exclusive');
+      }
+      return {
+        ...prev,
+        license_tiers: [
+          ...filteredTiers,
+          { license_type: type, price: defaultPrices[type], terms: '' },
+        ],
+      };
+    });
   };
 
   const removeLicenseTier = (type: string) => {
@@ -732,21 +740,29 @@ export default function UploadSong() {
             <div className="space-y-4">
               <Label>License Tiers</Label>
               <div className="flex flex-wrap gap-2">
-                {LICENSE_TYPES.map((type) => {
-                  const isAdded = pricing.license_tiers.some(t => t.license_type === type.value);
-                  return (
-                    <Button
-                      key={type.value}
-                      type="button"
-                      variant={isAdded ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => isAdded ? removeLicenseTier(type.value) : addLicenseTier(type.value)}
-                    >
-                      {isAdded && <CheckCircle className="mr-1 h-3 w-3" />}
-                      {type.label}
-                    </Button>
-                  );
-                })}
+                {(() => {
+                  const hasExclusive = pricing.license_tiers.some(t => t.license_type === 'exclusive');
+                  const hasNonExclusive = pricing.license_tiers.some(t => t.license_type === 'personal' || t.license_type === 'commercial');
+                  return LICENSE_TYPES.map((type) => {
+                    const isAdded = pricing.license_tiers.some(t => t.license_type === type.value);
+                    const isDisabled = (type.value === 'exclusive' && hasNonExclusive) || 
+                                       ((type.value === 'personal' || type.value === 'commercial') && hasExclusive);
+                    return (
+                      <Button
+                        key={type.value}
+                        type="button"
+                        variant={isAdded ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => isAdded ? removeLicenseTier(type.value) : addLicenseTier(type.value)}
+                        disabled={isDisabled && !isAdded}
+                        className={cn(isDisabled && !isAdded && "opacity-50 cursor-not-allowed")}
+                      >
+                        {isAdded && <CheckCircle className="mr-1 h-3 w-3" />}
+                        {type.label}
+                      </Button>
+                    );
+                  });
+                })()}
               </div>
 
               {/* License tier details */}

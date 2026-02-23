@@ -181,6 +181,19 @@ export default function EditSong() {
     const licenseInfo = LICENSE_TYPES.find(l => l.value === type);
     if (!licenseInfo) return;
 
+    // Remove conflicting tiers first
+    const conflictingTiers = licenseTiers?.filter(t => {
+      if (type === 'exclusive') return t.license_type === 'personal' || t.license_type === 'commercial';
+      if (type === 'personal' || type === 'commercial') return t.license_type === 'exclusive';
+      return false;
+    }) || [];
+
+    for (const tier of conflictingTiers) {
+      await new Promise<void>((resolve, reject) => {
+        removeLicenseTier.mutate(tier.id, { onSuccess: () => resolve(), onError: () => reject() });
+      });
+    }
+
     addLicenseTier.mutate({
       song_id: id,
       license_type: type,
@@ -225,7 +238,14 @@ export default function EditSong() {
   };
 
   const existingLicenseTypes = licenseTiers?.map(t => t.license_type) || [];
-  const availableLicenseTypes = LICENSE_TYPES.filter(l => !existingLicenseTypes.includes(l.value));
+  const hasExclusive = existingLicenseTypes.includes('exclusive');
+  const hasNonExclusive = existingLicenseTypes.includes('personal') || existingLicenseTypes.includes('commercial');
+  const availableLicenseTypes = LICENSE_TYPES.filter(l => {
+    if (existingLicenseTypes.includes(l.value)) return false;
+    if (l.value === 'exclusive' && hasNonExclusive) return false;
+    if ((l.value === 'personal' || l.value === 'commercial') && hasExclusive) return false;
+    return true;
+  });
 
   if (isLoading) {
     return (
