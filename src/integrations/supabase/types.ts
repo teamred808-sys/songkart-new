@@ -2785,6 +2785,7 @@ export type Database = {
           has_lyrics: boolean | null
           id: string
           is_featured: boolean | null
+          is_free: boolean
           language: string | null
           lyrics_intro: string | null
           mood_id: string | null
@@ -2837,6 +2838,7 @@ export type Database = {
           has_lyrics?: boolean | null
           id?: string
           is_featured?: boolean | null
+          is_free?: boolean
           language?: string | null
           lyrics_intro?: string | null
           mood_id?: string | null
@@ -2889,6 +2891,7 @@ export type Database = {
           has_lyrics?: boolean | null
           id?: string
           is_featured?: boolean | null
+          is_free?: boolean
           language?: string | null
           lyrics_intro?: string | null
           mood_id?: string | null

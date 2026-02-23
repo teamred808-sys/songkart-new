@@ -10,6 +10,11 @@ interface PriceProps {
 }
 
 export function Price({ amount, className, showLoading = false, size = 'md' }: PriceProps) {
+  // Show "Free" for zero-price items
+  if (amount === 0) {
+    return <span className={cn("text-green-500 font-semibold", className)}>Free</span>;
+  }
+
   const currency = useCurrencyOptional();
 
   // Fallback to INR if no currency context

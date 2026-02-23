@@ -45,10 +45,13 @@ const contentSchema = z.object({
 
 const licenseTierSchema = z.object({
   license_type: z.enum(['commercial', 'exclusive']),
-  price: z.number().min(0.01, 'Price must be at least ₹0.01'),
+  price: z.number().min(0, 'Price cannot be negative'),
   max_sales: z.number().optional(),
   terms: z.string().optional(),
-});
+}).refine(
+  (data) => data.license_type !== 'exclusive' || data.price >= 1,
+  { message: 'Exclusive license price must be at least ₹1', path: ['price'] }
+);
 
 const pricingSchema = z.object({
   base_price: z.number().optional(),
@@ -346,6 +349,7 @@ export default function UploadSong() {
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
           base_price: pricing.license_tiers.length > 0 ? Math.min(...pricing.license_tiers.map(t => t.price)) : 0,
+          is_free: pricing.license_tiers.some(t => t.license_type === 'commercial' && t.price === 0),
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
@@ -828,7 +832,8 @@ export default function UploadSong() {
                             onChange={(e) => {
                               let val = parseFloat(e.target.value) || 0;
                               if (tier.license_type === 'commercial' && sellerTier?.max_price_with_audio && val > sellerTier.max_price_with_audio) val = sellerTier.max_price_with_audio;
-                              updateLicenseTier(tier.license_type, 'price', val);
+                              if (tier.license_type === 'exclusive' && val < 1 && val !== 0) val = 1;
+                              if (tier.license_type === 'exclusive' && e.target.value === '0') val = 1;
                               updateLicenseTier(tier.license_type, 'price', val);
                             }}
                           />
