@@ -255,7 +255,7 @@ export default function UploadSong() {
         ...prev,
         license_tiers: [
           ...filteredTiers,
-          { license_type: type, price: 0, terms: '' },
+          { license_type: type, price: undefined as any, terms: '' },
         ],
       };
     });
@@ -827,7 +827,7 @@ export default function UploadSong() {
                             step="0.01"
                             min="0"
                             max={tier.license_type === 'commercial' ? (sellerTier?.max_price_with_audio ?? undefined) : undefined}
-                            value={tier.price === 0 ? '0' : (tier.price || '')}
+                            value={tier.price ?? ''}
                             placeholder="Enter price"
                             onChange={(e) => {
                               let val = parseFloat(e.target.value) || 0;
