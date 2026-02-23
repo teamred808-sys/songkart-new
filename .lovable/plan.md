@@ -1,21 +1,25 @@
 
+## Dynamic Seller Tier Pricing Limits in Song Upload
 
-## Fix: Dashboard Link for Admin Users
+### Summary
+Replace the hardcoded pricing caps (Personal: 500, Commercial: 3000) in the Upload Song pricing section with dynamic values from the seller's tier (`max_price_lyrics_only` and `max_price_with_audio`), fetched via the existing `useSellerTier` hook.
 
-### Problem
-In `src/components/layout/Navbar.tsx`, the `getDashboardLink()` function (line 31-35) returns `/admin` when the user's role is `admin`. Since there's already a separate "Admin Panel" link pointing to `/admin`, the "Dashboard" link becomes redundant.
+### Changes
 
-### Fix
-**File: `src/components/layout/Navbar.tsx` (line 32)**
+**File: `src/pages/seller/UploadSong.tsx`**
 
-Change:
-```typescript
-if (role === 'admin') return '/admin';
-```
-To:
-```typescript
-if (role === 'admin') return '/seller';
-```
+1. **Import `useSellerTier`** hook at the top of the file.
 
-This makes the "Dashboard" link take admin users to their seller dashboard, while "Admin Panel" continues to provide access to admin functionality. One line change, no other files affected.
+2. **Call the hook** inside the `UploadSong` component:
+   ```typescript
+   const { data: sellerTier } = useSellerTier();
+   ```
 
+3. **Replace hardcoded limits** (lines 795-800) with dynamic values:
+   - `max` attribute on Personal input: `sellerTier?.max_price_lyrics_only ?? undefined`
+   - `max` attribute on Commercial input: `sellerTier?.max_price_with_audio ?? undefined`
+   - Clamping logic for Personal: clamp to `sellerTier?.max_price_lyrics_only`
+   - Clamping logic for Commercial: clamp to `sellerTier?.max_price_with_audio`
+   - Exclusive: no restriction (unchanged)
+
+No other files, UI layout, tier selection logic, or form structure will be modified.
