@@ -118,12 +118,6 @@ export function useSongs(filters?: SongFiltersState) {
         if (filters.language && filters.language !== "all") {
           query = query.eq("language", filters.language);
         }
-        if (filters.hasAudio) {
-          query = query.eq("has_audio", true);
-        }
-        if (filters.hasLyrics) {
-          query = query.eq("has_lyrics", true);
-        }
         if (filters.priceRange) {
           query = query.gte("base_price", filters.priceRange[0]).lte("base_price", filters.priceRange[1]);
         }
