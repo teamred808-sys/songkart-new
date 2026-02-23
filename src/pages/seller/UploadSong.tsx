@@ -51,7 +51,7 @@ const licenseTierSchema = z.object({
 });
 
 const pricingSchema = z.object({
-  base_price: z.number().min(0.01, 'Base price required'),
+  base_price: z.number().optional(),
   license_tiers: z.array(licenseTierSchema).min(1, 'At least one license tier required'),
 });
 
@@ -124,7 +124,7 @@ export default function UploadSong() {
   // Form data state
   const [metadata, setMetadata] = useState<MetadataForm | null>(null);
   const [content, setContent] = useState<ContentForm>({});
-  const [pricing, setPricing] = useState<PricingForm>({ base_price: 29.99, license_tiers: [] });
+  const [pricing, setPricing] = useState<PricingForm>({ base_price: 0, license_tiers: [] });
   const [ownershipConfirmed, setOwnershipConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
@@ -306,7 +306,7 @@ export default function UploadSong() {
           preview_duration_seconds: previewDuration ? Math.round(previewDuration) : null,
           full_lyrics: content.full_lyrics || null,
           preview_lyrics: content.preview_lyrics || null,
-          base_price: pricing.base_price,
+          base_price: pricing.license_tiers.length > 0 ? Math.min(...pricing.license_tiers.map(t => t.price)) : 0,
           has_audio: !!audio_url,
           has_lyrics: !!content.full_lyrics,
           status: 'pending',
@@ -728,17 +728,6 @@ export default function UploadSong() {
             <CardDescription>Set your pricing and license options.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="base_price">Base Price (₹)</Label>
-              <Input
-                id="base_price"
-                type="number"
-                step="0.01"
-                value={pricing.base_price}
-                onChange={(e) => setPricing(prev => ({ ...prev, base_price: parseFloat(e.target.value) || 0 }))}
-              />
-            </div>
-
             <div className="space-y-4">
               <Label>License Tiers</Label>
               <div className="flex flex-wrap gap-2">
