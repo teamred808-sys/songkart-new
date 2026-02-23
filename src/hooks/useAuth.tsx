@@ -100,31 +100,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let isMounted = true;
+
+    // Listener for ONGOING auth changes (does NOT control isLoading)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Migrate session storage based on Remember Me preference after sign in
         if (event === 'SIGNED_IN' && session) {
-          setTimeout(() => {
-            migrateSessionStorage();
-          }, 0);
+          setTimeout(() => migrateSessionStorage(), 0);
         }
 
-        // Defer Supabase calls with setTimeout to prevent deadlocks
         if (session?.user) {
           setTimeout(() => {
-            fetchUserData(session.user.id);
+            if (isMounted) fetchUserData(session.user.id);
           }, 0);
         } else {
-          setProfile(null);
-          setRole(null);
-          setRoles([]);
-        }
-
-        if (event === 'SIGNED_OUT') {
           setProfile(null);
           setRole(null);
           setRoles([]);
@@ -132,26 +125,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserData(session.user.id).finally(() => {
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
+    // INITIAL load (controls isLoading)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-    // Handle visibility change for mobile app backgrounding/foregrounding
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await fetchUserData(session.user.id);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Safety timeout -- never hang longer than 10 seconds
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 10000);
+
+    // Visibility change handler (no stale closure)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Refresh session when app returns to foreground
         supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session?.user && !user) {
+          if (!isMounted) return;
+          if (session?.user) {
             setSession(session);
             setUser(session.user);
             fetchUserData(session.user.id);
@@ -162,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
