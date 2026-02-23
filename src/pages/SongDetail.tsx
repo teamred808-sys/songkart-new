@@ -101,7 +101,7 @@ export default function SongDetail() {
         <div className="container py-8 px-4">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <Skeleton className="aspect-square rounded-xl" />
+              <Skeleton className="aspect-square rounded-xl max-w-md mx-auto" />
               <Skeleton className="h-8 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
             </div>
@@ -212,7 +212,7 @@ export default function SongDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Cover & Audio */}
-            <div className="relative aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
+            <div className="relative aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 max-w-md mx-auto">
               {((song as any).artwork_cropped_url || song.cover_image_url) ? (
                 <img
                   src={(song as any).artwork_cropped_url || song.cover_image_url}
