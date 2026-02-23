@@ -30,6 +30,7 @@ interface SongCardProps {
   hasExclusive?: boolean;
   averageRating?: number | null;
   totalRatings?: number | null;
+  licenseTiers?: Array<{ license_type: string; price: number }>;
   sellerTier?: {
     level: number;
     name: string;
@@ -55,6 +56,7 @@ export const SongCard = memo(function SongCard({
   hasExclusive,
   averageRating,
   totalRatings,
+  licenseTiers,
   sellerTier,
 }: SongCardProps) {
   // Use slug-based URL if available
@@ -256,10 +258,41 @@ export const SongCard = memo(function SongCard({
           {/* Price section - compact on mobile */}
           <div className="flex items-center justify-between pt-1.5 md:pt-2 border-t border-border/50">
             <div>
-              <span className="text-[10px] md:text-xs text-muted-foreground">Starting from</span>
-              <p className="text-base md:text-lg font-bold text-primary">
-                <Price amount={basePrice} />
-              </p>
+              {(() => {
+                if (licenseTiers && licenseTiers.length > 0) {
+                  const exclusive = licenseTiers.find(t => t.license_type === 'exclusive');
+                  if (exclusive) {
+                    return (
+                      <p className="text-base md:text-lg font-bold text-primary">
+                        <Price amount={exclusive.price} />
+                      </p>
+                    );
+                  }
+                  const prices = licenseTiers.map(t => t.price);
+                  const min = Math.min(...prices);
+                  const max = Math.max(...prices);
+                  if (min !== max) {
+                    return (
+                      <p className="text-base md:text-lg font-bold text-primary">
+                        <Price amount={min} /> – <Price amount={max} />
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-base md:text-lg font-bold text-primary">
+                      <Price amount={min} />
+                    </p>
+                  );
+                }
+                return (
+                  <>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">Starting from</span>
+                    <p className="text-base md:text-lg font-bold text-primary">
+                      <Price amount={basePrice} />
+                    </p>
+                  </>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-1.5 md:gap-2">
               {/* Rating Badge */}

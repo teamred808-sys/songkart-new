@@ -74,6 +74,7 @@ export default function NewUploads() {
                 hasAudio={song.has_audio}
                 hasLyrics={song.has_lyrics}
                 playCount={song.play_count}
+                licenseTiers={(song as any).license_tiers}
               />
             ))}
           </div>
