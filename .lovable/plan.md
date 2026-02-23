@@ -1,74 +1,100 @@
 
 
-## Add Artwork Crop Flow to Song Upload
+## Update Artwork Rendering to Use Cropped 512x512 Image
 
 ### Summary
-When a seller uploads cover artwork, the system will check the aspect ratio. If it's already 1:1, it resizes to 512x512 and accepts it. If not, a crop modal opens with a fixed 1:1 ratio. Confirming saves the cropped result at 512x512. Cancelling auto-performs a center crop and resizes to 512x512. No raw non-square image is ever stored.
+Add a new `artwork_cropped_url` column to the `songs` table. During upload, populate it with the cropped 512x512 image URL (same as `cover_image_url` since the crop flow already produces 512x512). Update all display components to prefer `artwork_cropped_url` with fallback to `cover_image_url` using `object-fit: cover` and `aspect-ratio: 1/1` where applicable.
 
-### New Dependency
-- `react-easy-crop` -- lightweight React cropping component with fixed aspect ratio support
-
-### New File: `src/components/seller/ImageCropModal.tsx`
-A modal dialog containing:
-- `react-easy-crop` component with `aspect={1}` (locked 1:1 ratio)
-- "Confirm Crop" and "Cancel" buttons
-- On confirm: crops to user selection, resizes to 512x512 via canvas, returns the resulting `File`
-- On cancel: auto center-crops (shortest side), resizes to 512x512 via canvas, returns the resulting `File`
-- Helper function `getCroppedImage(imageSrc, cropArea)` using an offscreen canvas to extract and resize
-
-### Changes to: `src/pages/seller/UploadSong.tsx`
-
-**New state variables:**
-- `cropImageSrc: string | null` -- the raw image data URL for the crop modal
-- `showCropModal: boolean` -- controls modal visibility
-- `rawCoverFile: File | null` -- temporary hold of the original file
-
-**Updated `handleFileChange` for `cover_image`:**
-1. Read the selected file as a data URL
-2. Load it into an `Image` to check dimensions
-3. If width === height (1:1): resize to 512x512 via canvas, set as `cover_image`, show preview
-4. If not 1:1: set `cropImageSrc` and open the crop modal
-
-**New `handleCropComplete(croppedFile: File)` callback:**
-- Receives the 512x512 cropped `File` from the modal
-- Sets it as `content.cover_image`
-- Generates preview URL
-- Closes modal
-
-**New `handleCropCancel()` callback:**
-- Triggers the auto center-crop logic inside the modal (or inline):
-  - `cropSize = min(width, height)`
-  - `x = (width - cropSize) / 2`, `y = (height - cropSize) / 2`
-  - Draw to 512x512 canvas
-- Sets result as `cover_image`, shows preview, closes modal
-
-**UI addition:**
-- Render `<ImageCropModal>` component conditionally when `showCropModal` is true
-
-### Technical Details
-
-**Canvas-based resize/crop utility (inside `ImageCropModal.tsx`):**
-```text
-function cropAndResize(image, cropArea, targetSize=512):
-  canvas = new OffscreenCanvas(targetSize, targetSize)
-  ctx = canvas.getContext('2d')
-  ctx.drawImage(image, cropArea.x, cropArea.y, cropArea.width, cropArea.height, 0, 0, targetSize, targetSize)
-  return canvas.convertToBlob({ type: 'image/jpeg', quality: 0.9 })
+### Database Change
+**Migration: Add `artwork_cropped_url` column to `songs` table**
+```sql
+ALTER TABLE songs ADD COLUMN artwork_cropped_url text DEFAULT NULL;
+-- Backfill existing songs: set artwork_cropped_url = cover_image_url for all songs
+UPDATE songs SET artwork_cropped_url = cover_image_url WHERE cover_image_url IS NOT NULL;
 ```
 
-**Center crop fallback (on cancel):**
-```text
-cropSize = min(naturalWidth, naturalHeight)
-x = (naturalWidth - cropSize) / 2
-y = (naturalHeight - cropSize) / 2
-cropArea = { x, y, width: cropSize, height: cropSize }
-→ pass to cropAndResize()
+### Upload Change (minimal -- DB field only)
+**File: `src/pages/seller/UploadSong.tsx` (line ~340)**
+- Add `artwork_cropped_url: cover_image_url` to the insert object (the image is already 512x512 from the crop flow)
+
+### Song Interface Update
+**File: `src/hooks/useSongs.ts` (line 17)**
+- Add `artwork_cropped_url: string | null` to the `Song` interface
+
+### Display Component Updates
+Create a helper or use inline pattern across all components:
+```typescript
+const artworkUrl = song.artwork_cropped_url || song.cover_image_url;
 ```
+
+**Files to update (rendering `cover_image_url` to prefer `artwork_cropped_url`):**
+
+1. **`src/components/songs/SongCard.tsx` (line 130)**
+   - Accept new prop `croppedCoverUrl?: string | null`
+   - Use `croppedCoverUrl || coverUrl` as the image source
+   - Add `style={{ aspectRatio: '1/1', objectFit: 'cover' }}` on desktop view
+
+2. **`src/components/home/FeaturedSongs.tsx` (line 55)**
+   - Pass `croppedCoverUrl={song.artwork_cropped_url}` to SongCard
+
+3. **`src/pages/Browse.tsx` (line 150)**
+   - Pass `croppedCoverUrl` to SongCard
+
+4. **`src/pages/SongDetail.tsx` (lines 137, 159, 171, 209-211)**
+   - Use `artwork_cropped_url || cover_image_url` for hero image and schema data
+   - Apply `object-fit: cover; aspect-ratio: 1/1` on the hero image container
+
+5. **`src/pages/SellerProfile.tsx` (line 35)**
+   - Add `artwork_cropped_url` to Song interface and query select
+   - Pass to SongCard
+
+6. **`src/components/cart/CartItemCard.tsx` (line 70-73)**
+   - Use `artwork_cropped_url || cover_image_url` for thumbnail
+   - Add `object-fit: cover` (already present) and `aspect-ratio: 1/1` styles
+
+7. **`src/pages/buyer/Favorites.tsx` (lines 85-88)**
+   - Use `artwork_cropped_url || cover_image_url` for favorite song image
+
+8. **`src/pages/seller/MySongs.tsx` (line 340)**
+   - Use `artwork_cropped_url || cover_image_url` for song avatar
+
+9. **`src/pages/seller/SalesOrders.tsx` (line 214)**
+   - Use `artwork_cropped_url || cover_image_url` for order thumbnail
+
+10. **`src/pages/seller/Analytics.tsx` (line 235)**
+    - Use `artwork_cropped_url || cover_image_url` for analytics thumbnail
+
+11. **`src/pages/buyer/BuyerDashboard.tsx`**
+    - Update song thumbnail references to prefer cropped URL
+
+12. **`src/pages/buyer/MyPurchases.tsx` / `src/pages/buyer/MyDownloads.tsx`**
+    - Update song image references to prefer cropped URL
+
+13. **`src/components/cart/MiniCartDropdown.tsx`**
+    - Update thumbnail to prefer cropped URL
+
+### Query Updates
+All hooks that select song data need to include `artwork_cropped_url` in their select statements:
+
+- **`src/hooks/useSongs.ts`** -- all query functions (useSongs, useFeaturedSongs, useSong, etc.)
+- **`src/hooks/useBuyerData.ts`** -- cart, purchases, downloads, favorites queries
+- **`src/hooks/useSellerData.ts`** -- seller songs queries
+- **`src/hooks/useNewUploads.ts`** -- new uploads query
+- **`src/pages/SellerProfile.tsx`** -- seller profile songs query
+
+### Fallback CSS Pattern
+For all image containers, apply:
+```css
+object-fit: cover;
+aspect-ratio: 1 / 1;
+```
+This prevents stretching when an old non-square `cover_image_url` is used as fallback.
 
 ### What stays unchanged
-- Upload UI layout (file input, preview thumbnail, remove button)
-- Storage bucket and path logic
-- Publishing flow and submission handler
-- Cover image preview display (still shows the 132x132 thumbnail)
-- Artwork help text (will update "Recommended" to say "Output: 512x512px")
+- Upload UI layout, crop modal, storage mechanism
+- Publishing flow
+- Original `cover_image_url` column (kept, not deleted)
+- Original images in storage (not deleted)
+- Order history structure
+- Existing order thumbnails (backfill ensures they work)
 
