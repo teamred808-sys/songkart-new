@@ -19,6 +19,7 @@ import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, A
 import { cn } from '@/lib/utils';
 import { SongSEOFields } from '@/components/seller/SongSEOFields';
 import { useSellerTier } from '@/hooks/useSellerTier';
+import { ImageCropModal } from '@/components/seller/ImageCropModal';
 
 const LICENSE_TYPES = [
   { value: 'commercial', label: 'Commercial', description: 'For commercial projects' },
@@ -142,6 +143,10 @@ export default function UploadSong() {
   const [previewDuration, setPreviewDuration] = useState<number | null>(null);
   const [isValidatingPreview, setIsValidatingPreview] = useState(false);
 
+  // Crop modal state
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+
   const metadataForm = useForm<MetadataForm>({
     resolver: zodResolver(metadataSchema),
     defaultValues: { language: 'English' },
@@ -152,14 +157,54 @@ export default function UploadSong() {
     setStep(2);
   };
 
+  const resizeTo512 = (imageSrc: string): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, 512, 512);
+        canvas.toBlob((blob) => {
+          resolve(new File([blob!], 'cover.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.9);
+      };
+      img.src = imageSrc;
+    });
+  };
+
   const handleFileChange = (field: keyof ContentForm, file: File | null) => {
-    setContent(prev => ({ ...prev, [field]: file }));
-    
     if (field === 'cover_image' && file) {
       const reader = new FileReader();
-      reader.onload = (e) => setCoverPreview(e.target?.result as string);
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        const img = new Image();
+        img.onload = async () => {
+          if (img.naturalWidth === img.naturalHeight) {
+            // Already 1:1 — resize to 512x512 directly
+            const resized = await resizeTo512(dataUrl);
+            setContent(prev => ({ ...prev, cover_image: resized }));
+            setCoverPreview(URL.createObjectURL(resized));
+          } else {
+            // Not 1:1 — open crop modal
+            setCropImageSrc(dataUrl);
+            setShowCropModal(true);
+          }
+        };
+        img.src = dataUrl;
+      };
       reader.readAsDataURL(file);
+      return;
     }
+    setContent(prev => ({ ...prev, [field]: file }));
+  };
+
+  const handleCropComplete = (croppedFile: File) => {
+    setContent(prev => ({ ...prev, cover_image: croppedFile }));
+    setCoverPreview(URL.createObjectURL(croppedFile));
+    setShowCropModal(false);
+    setCropImageSrc(null);
   };
 
   const handlePreviewFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -583,7 +628,7 @@ export default function UploadSong() {
                   </label>
                 )}
                 <div className="text-sm text-muted-foreground">
-                  <p>Recommended: 500x500px</p>
+                  <p>Output: 512×512px</p>
                   <p>Max size: 5MB</p>
                   <p>Formats: JPG, PNG, WebP</p>
                 </div>
@@ -957,6 +1002,15 @@ export default function UploadSong() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Crop Modal */}
+      {showCropModal && cropImageSrc && (
+        <ImageCropModal
+          open={showCropModal}
+          imageSrc={cropImageSrc}
+          onComplete={handleCropComplete}
+        />
       )}
     </div>
   );
