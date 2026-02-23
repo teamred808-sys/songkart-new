@@ -1,22 +1,32 @@
 
 
-## Fix Branding: Replace "SongMarket" with "SongKart" in License Template
+## Fix: Show All License Types Per Song in License Vault
 
 ### Problem
-The license agreement HTML template in the `generate-license-pdf` edge function uses "SongMarket" in multiple places instead of the correct brand name "SongKart".
+Line 107-109 in `src/pages/buyer/MyDownloads.tsx` deduplicates items by `song.id` alone:
+```typescript
+const uniqueItems = downloadableItems.filter((item, index, self) =>
+  index === self.findIndex(t => t.song?.id === item.song?.id)
+);
+```
+This means if a user purchases both a "personal" and "commercial" license for the same song, only the first one appears.
 
-### Changes
+### Fix
+Change the dedup key to a composite of `song.id` + `license_type`, so each unique license per song is shown:
 
-**File: `supabase/functions/generate-license-pdf/index.ts`**
+**File: `src/pages/buyer/MyDownloads.tsx` (lines 107-109)**
 
-Replace all 4 occurrences of "SongMarket" with "SongKart":
+Replace:
+```typescript
+const uniqueItems = downloadableItems.filter((item, index, self) =>
+  index === self.findIndex(t => t.song?.id === item.song?.id)
+);
+```
+With:
+```typescript
+const uniqueItems = downloadableItems.filter((item, index, self) =>
+  index === self.findIndex(t => t.song?.id === item.song?.id && t.license_type === item.license_type)
+);
+```
 
-| Line | Current | Updated |
-|------|---------|---------|
-| 238 | `SONGMARKET` | `SONGKART` |
-| 350 | `SongMarket` | `SongKart` |
-| 352 | `support@songmarket.com` | `support@songkart.com` |
-| 356 | `SongMarket License Agreement` | `SongKart License Agreement` |
-
-After editing, the edge function will be redeployed. Existing licenses are unaffected; only newly generated or regenerated licenses will reflect the updated branding.
-
+This is a one-line change. No other files need modification. The stats counters and card rendering already work per-item, so they will correctly reflect the additional entries.
