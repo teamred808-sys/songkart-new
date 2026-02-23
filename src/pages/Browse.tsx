@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Music, Shield, Sparkles } from "lucide-react";
+import { Gift, Music, Shield, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SongCard } from "@/components/songs/SongCard";
 import { SongFilters, type SongFiltersState } from "@/components/songs/SongFilters";
@@ -16,6 +16,8 @@ export default function Browse() {
   const typeParam = searchParams.get("type");
   const genreParam = searchParams.get("genre");
   const moodParam = searchParams.get("mood");
+  const freeParam = searchParams.get("free");
+  const isFreeMode = freeParam === "true";
 
   // Initialize filters based on URL params
   const initialFilters: SongFiltersState = useMemo(() => ({
@@ -26,7 +28,8 @@ export default function Browse() {
     priceRange: [0, 50000],
     bpmRange: [60, 200],
     sortBy: "newest",
-  }), []);
+    isFree: isFreeMode || undefined,
+  }), [isFreeMode]);
 
   const [filters, setFilters] = useState<SongFiltersState>(initialFilters);
   
@@ -51,23 +54,38 @@ export default function Browse() {
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <h1 className="text-3xl md:text-4xl font-bold">
-              Browse <span className="text-gradient">Music</span>
+              {isFreeMode ? (
+                <>Free <span className="text-gradient">Music</span></>
+              ) : (
+                <>Browse <span className="text-gradient">Music</span></>
+              )}
             </h1>
-            <Badge variant="outline" className="gap-1 bg-primary/5">
-              <Music className="h-3 w-3" />
-              Licensed Content
-            </Badge>
+            {isFreeMode ? (
+              <Badge className="gap-1 bg-green-500/10 text-green-500 border-green-500/20">
+                <Gift className="h-3 w-3" />
+                Free Downloads
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 bg-primary/5">
+                <Music className="h-3 w-3" />
+                Licensed Content
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground mb-4">
-            Find legally licensed songs for your projects — preview free, buy instantly
+            {isFreeMode
+              ? "Download these songs for free — no purchase required"
+              : "Find legally licensed songs for your projects — preview free, buy instantly"}
           </p>
           
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/30 text-sm text-muted-foreground">
-              <Sparkles className="h-3 w-3" />
-              Prices from <Price amount={29} />
+          {!isFreeMode && (
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/30 text-sm text-muted-foreground">
+                <Sparkles className="h-3 w-3" />
+                Prices from <Price amount={29} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Filters */}
