@@ -1,204 +1,139 @@
 
 
-## Promo Code System -- Full Integration Plan
+## Restructure Promo Code UI in Order Summary
 
 ### Overview
-Build a complete promo code system with a new `promo_codes` database table, a validation edge function, seller/admin management UIs, and checkout integration. Admin promos take priority over seller promos; only one code applies per checkout.
+Move the promo code interaction from above the price breakdown to inside the `PriceBreakdown` component, positioned below Platform Service Fee. Replace the always-visible input with a collapsed "Have a Discount Code? + Add" row that expands inline.
 
 ---
 
-### Part 1: Database Migration
+### Change 1: `src/pages/buyer/Cart.tsx`
 
-Create a `promo_codes` table:
+**Remove the promo code UI block from the desktop Order Summary (lines 216-249).**
 
-```sql
-CREATE TABLE public.promo_codes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  code text NOT NULL,
-  created_by uuid NOT NULL,
-  creator_role text NOT NULL CHECK (creator_role IN ('admin', 'seller')),
-  discount_type text NOT NULL CHECK (discount_type IN ('percentage', 'flat')),
-  discount_value numeric NOT NULL CHECK (discount_value > 0),
-  song_id uuid REFERENCES public.songs(id) ON DELETE CASCADE,
-  license_type text,  -- 'personal', 'commercial', 'exclusive', or NULL for all
-  min_purchase_amount numeric DEFAULT 0,
-  usage_limit integer,
-  usage_count integer DEFAULT 0,
-  expires_at timestamptz,
-  is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  UNIQUE(code)
-);
+Instead, pass the promo interaction state/handlers down to `PriceBreakdown`:
 
-ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+```tsx
+<PriceBreakdown
+  subtotal={cart?.subtotal || 0}
+  platformFee={cart?.buyerPlatformFee || 0}
+  total={cart?.total || 0}
+  itemCount={cart?.itemCount || 0}
+  discount={appliedPromo?.discount_amount}
+  promoCode={appliedPromo?.code}
+  promoInput={promoInput}
+  onPromoInputChange={setPromoInput}
+  onApplyPromo={handleApplyPromo}
+  onRemovePromo={handleRemovePromo}
+  promoError={promoError}
+  isValidating={validatePromo.isPending}
+/>
 ```
 
-**RLS Policies:**
-- Admins can manage all promo codes (ALL)
-- Sellers can manage their own promo codes (INSERT/UPDATE/SELECT where `created_by = auth.uid()` and `creator_role = 'seller'`)
-- Authenticated users can SELECT active, non-expired promo codes (for validation at checkout)
-
-Also create a `promo_code_usages` table to track per-user usage:
-
-```sql
-CREATE TABLE public.promo_code_usages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  promo_code_id uuid REFERENCES public.promo_codes(id) ON DELETE CASCADE NOT NULL,
-  user_id uuid NOT NULL,
-  order_id uuid,
-  discount_amount numeric NOT NULL,
-  used_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.promo_code_usages ENABLE ROW LEVEL SECURITY;
-```
-
-**RLS:** Admins can manage all; users can SELECT their own usages; system (admin role) can INSERT.
+Remove the `<div className="space-y-2">` block containing the promo input/applied badge (lines 217-249) from Cart.tsx entirely.
 
 ---
 
-### Part 2: Promo Code Validation Edge Function
+### Change 2: `src/components/cart/PriceBreakdown.tsx`
 
-Create `supabase/functions/validate-promo-code/index.ts`:
+**Extend props** to accept promo interaction state:
 
-**Input:** `{ code, song_id, license_type, license_price }`
-
-**Logic:**
-1. Look up the code in `promo_codes` where `is_active = true`, not expired, and usage not exceeded
-2. Check admin codes first (`creator_role = 'admin'`), then seller codes
-3. Validate song_id match (if promo is song-specific)
-4. Validate license_type match (if promo is tier-specific)
-5. Validate min_purchase_amount (if set)
-6. Calculate discount amount (cap percentage at 100%, cap flat at license price)
-7. Return `{ valid, discount_amount, promo_code_id, discount_type, discount_value, message }`
-
----
-
-### Part 3: Checkout Page -- Promo Code Input
-
-**File: `src/pages/buyer/Cart.tsx`**
-
-Add a promo code input section in the Order Summary card (desktop) and mobile bar:
-- Text input + "Apply" button
-- State: `promoCode`, `appliedPromo` (result from validation), `promoError`
-- On "Apply": call the `validate-promo-code` edge function for each cart item's song/tier, pick the best valid match
-- Show green badge with discount amount when valid
-- Show "Remove" button to clear applied promo
-- Only one promo code at a time
-
-**File: `src/components/cart/PriceBreakdown.tsx`**
-
-Add optional `discount` prop:
 ```typescript
 interface PriceBreakdownProps {
   subtotal: number;
   platformFee: number;
   total: number;
   itemCount: number;
-  discount?: number;       // new
-  promoCode?: string;      // new
+  discount?: number;
+  promoCode?: string;
+  // New props for inline promo UI
+  promoInput?: string;
+  onPromoInputChange?: (val: string) => void;
+  onApplyPromo?: () => void;
+  onRemovePromo?: () => void;
+  promoError?: string;
+  isValidating?: boolean;
 }
 ```
 
-Show discount line between subtotal and separator when `discount > 0`:
-```
-Promo Discount (CODE)     -₹XXX
-```
+**Add local state** for expand/collapse:
 
-Adjust total display to reflect `total - discount`.
-
----
-
-### Part 4: Pass Promo to Checkout Session
-
-**File: `src/hooks/useCheckout.ts`**
-
-Update `useCreateCheckoutSession` mutation to accept and pass `promo_code_id` and `discount_amount` in the body.
-
-**File: `supabase/functions/create-checkout-session/index.ts`**
-
-- Accept optional `promo_code_id` and `discount_amount` from request body
-- Re-validate the promo code server-side (security check)
-- Subtract discount from `totalAmount` before creating Cashfree order
-- Store `promo_code_id` and `discount_amount` in `checkout_sessions` record
-- After successful payment, increment `usage_count` on the promo code and insert into `promo_code_usages`
-
-This requires adding two columns to `checkout_sessions`:
-```sql
-ALTER TABLE checkout_sessions ADD COLUMN promo_code_id uuid REFERENCES promo_codes(id);
-ALTER TABLE checkout_sessions ADD COLUMN promo_discount numeric DEFAULT 0;
+```typescript
+const [promoExpanded, setPromoExpanded] = useState(false);
 ```
 
+**Restructure the render order** to:
+
+1. Song Price row (unchanged)
+2. Platform Service Fee row (unchanged)
+3. **New: Promo Code section** (below Platform Fee, above Separator):
+   - If promo is applied (`discount > 0 && promoCode`): show applied badge with discount amount and remove button
+   - Else if collapsed: show `"Have a Discount Code?"` text + `"+ Add"` button
+   - Else if expanded: show inline Input + Apply button
+   - Show promoError if any
+4. Separator (unchanged)
+5. Total row showing `finalTotal` (unchanged)
+6. Trust message (unchanged)
+
+The collapsed row:
+```tsx
+<div className="flex items-center justify-between text-sm">
+  <span className="text-muted-foreground">Have a Discount Code?</span>
+  <Button variant="ghost" size="sm" onClick={() => setPromoExpanded(true)}>
+    + Add
+  </Button>
+</div>
+```
+
+The expanded row:
+```tsx
+<div className="flex gap-2">
+  <Input
+    placeholder="Enter code"
+    value={promoInput}
+    onChange={e => onPromoInputChange?.(e.target.value.toUpperCase())}
+    className="font-mono h-8 text-sm"
+    maxLength={20}
+  />
+  <Button variant="outline" size="sm" onClick={onApplyPromo} disabled={!promoInput?.trim() || isValidating}>
+    {isValidating ? '...' : 'Apply'}
+  </Button>
+</div>
+```
+
+The applied state:
+```tsx
+<div className="flex items-center justify-between text-sm text-green-600">
+  <span className="flex items-center gap-1">
+    <Tag className="h-3 w-3" />
+    Promo Applied ({promoCode})
+  </span>
+  <div className="flex items-center gap-2">
+    <span>-<Price amount={discount} /></span>
+    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onRemovePromo}>
+      <X className="h-3 w-3" />
+    </Button>
+  </div>
+</div>
+```
+
+When promo is removed, collapse back to default state.
+
 ---
 
-### Part 5: Seller Promo Management Page
-
-**New file: `src/pages/seller/PromoCodes.tsx`**
-
-A simple CRUD page within the seller layout:
-- List seller's promo codes with status, usage stats
-- Create new promo: code name, discount type/value, song selector, tier selector, usage limit, expiry
-- Toggle active/inactive
-- Song selector limited to seller's own approved songs
-
-**Route:** Add `/seller/promo-codes` in `App.tsx` under seller routes.
-
-**Sidebar:** Add "Promo Codes" link in `src/components/seller/SellerSidebar.tsx`.
-
----
-
-### Part 6: Admin Promo Management Page
-
-**New file: `src/pages/admin/PromoManagement.tsx`**
-
-Admin CRUD page:
-- List all promo codes (admin + seller created)
-- Create global or song/tier-specific promos
-- Set min purchase amount, usage limit, expiry
-- View usage stats
-- Deactivate codes
-
-**Route:** Add `/admin/promo-codes` in `App.tsx` under admin routes.
-
-**Sidebar:** Add "Promo Codes" link in `src/components/admin/AdminSidebar.tsx`.
-
----
-
-### Part 7: Hook for Promo Code Operations
-
-**New file: `src/hooks/usePromoCodes.ts`**
-
-- `usePromoCodes()` -- fetch seller's or admin's promo codes
-- `useCreatePromoCode()` -- mutation to insert
-- `useUpdatePromoCode()` -- mutation to update
-- `useValidatePromoCode()` -- calls edge function
-
----
-
-### Files Changed Summary
+### Files Changed
 
 | File | Change |
 |------|--------|
-| Migration SQL | Create `promo_codes` and `promo_code_usages` tables with RLS |
-| Migration SQL | Add `promo_code_id`, `promo_discount` columns to `checkout_sessions` |
-| `supabase/functions/validate-promo-code/index.ts` | New edge function |
-| `supabase/functions/create-checkout-session/index.ts` | Accept and validate promo, adjust total |
-| `src/hooks/usePromoCodes.ts` | New hook file |
-| `src/hooks/useCheckout.ts` | Pass promo data to checkout |
-| `src/pages/buyer/Cart.tsx` | Add promo code input UI |
-| `src/components/cart/PriceBreakdown.tsx` | Add discount line |
-| `src/pages/seller/PromoCodes.tsx` | New seller promo management page |
-| `src/pages/admin/PromoManagement.tsx` | New admin promo management page |
-| `src/App.tsx` | Add routes for promo pages |
-| `src/components/seller/SellerSidebar.tsx` | Add promo codes nav link |
-| `src/components/admin/AdminSidebar.tsx` | Add promo codes nav link |
+| `src/pages/buyer/Cart.tsx` | Remove promo input block from desktop Order Summary; pass promo state as props to PriceBreakdown |
+| `src/components/cart/PriceBreakdown.tsx` | Add collapsed/expanded promo code UI below Platform Fee row; accept new interaction props |
 
 ### What stays the same
-- Cart schema (`cart_items` table)
-- Payment gateway integration (Cashfree SDK)
-- Checkout UI layout (only adds input field)
-- Song upload/edit flow
-- Existing pricing calculation (promo discount applied on top)
-- Purchase flow and order confirmation
+- Pricing logic and total calculation
+- Payment gateway integration (Cashfree)
+- Checkout button behavior
+- Mobile action bar
+- Card styling and spacing system
+- All promo validation logic (edge function calls)
+- Cart structure
 
