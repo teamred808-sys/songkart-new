@@ -63,7 +63,7 @@ export function Navbar() {
             </Link>
             <Link 
               to="/browse?free=true" 
-              className="flex items-center gap-1.5 text-green-500 hover:text-green-400 transition-colors font-medium"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               <Gift className="h-4 w-4" />
               Free
@@ -197,7 +197,7 @@ export function Navbar() {
             </Link>
             <Link 
               to="/browse?free=true" 
-              className="px-4 py-3 min-h-[48px] flex items-center gap-2 text-green-500 hover:text-green-400 hover:bg-muted rounded-lg transition-colors font-medium"
+              className="px-4 py-3 min-h-[48px] flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors font-medium"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Gift className="h-4 w-4" />
