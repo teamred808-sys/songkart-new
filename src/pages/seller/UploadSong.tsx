@@ -791,8 +791,15 @@ export default function UploadSong() {
                           <Input
                             type="number"
                             step="0.01"
+                            min="0"
+                            max={tier.license_type === 'personal' ? 500 : tier.license_type === 'commercial' ? 3000 : undefined}
                             value={tier.price}
-                            onChange={(e) => updateLicenseTier(tier.license_type, 'price', parseFloat(e.target.value) || 0)}
+                            onChange={(e) => {
+                              let val = parseFloat(e.target.value) || 0;
+                              if (tier.license_type === 'personal' && val > 500) val = 500;
+                              if (tier.license_type === 'commercial' && val > 3000) val = 3000;
+                              updateLicenseTier(tier.license_type, 'price', val);
+                            }}
                           />
                         </div>
                         {tier.license_type !== 'exclusive' && (
