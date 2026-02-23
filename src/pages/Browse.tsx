@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Music, Shield, Sparkles, FileText, Headphones } from "lucide-react";
+import { Music, Shield, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SongCard } from "@/components/songs/SongCard";
 import { SongFilters, type SongFiltersState } from "@/components/songs/SongFilters";
@@ -10,11 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/Price";
 import { BrowseSEOHead } from "@/components/seo/PageSEOHead";
 import { BreadcrumbSchema } from "@/components/seo/SchemaOrg";
-
-const quickFilters = [
-  { label: "Audio Only", key: "hasAudio" },
-  { label: "Lyrics Only", key: "hasLyrics" },
-];
 
 export default function Browse() {
   const [searchParams] = useSearchParams();
@@ -30,38 +25,14 @@ export default function Browse() {
     language: "",
     priceRange: [0, 50000],
     bpmRange: [60, 200],
-    hasAudio: typeParam === "audio",
-    hasLyrics: typeParam === "lyrics",
     sortBy: "newest",
-  }), [typeParam]);
+  }), []);
 
   const [filters, setFilters] = useState<SongFiltersState>(initialFilters);
-
-  // Update filters when URL params change
-  useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      hasAudio: typeParam === "audio",
-      hasLyrics: typeParam === "lyrics",
-    }));
-  }, [typeParam]);
-
-  // Determine page title based on type
-  const pageTitle = useMemo(() => {
-    if (typeParam === "audio") return { main: "Audio", sub: "Songs" };
-    if (typeParam === "lyrics") return { main: "Lyrics", sub: "Only" };
-    return { main: "Browse", sub: "Music" };
-  }, [typeParam]);
-
-  const PageIcon = typeParam === "audio" ? Headphones : typeParam === "lyrics" ? FileText : Music;
   
   const { data: songs, isLoading: songsLoading } = useSongs(filters);
   const { data: genres = [] } = useGenres();
   const { data: moods = [] } = useMoods();
-
-  const toggleQuickFilter = (key: string) => {
-    setFilters(prev => ({ ...prev, [key]: !prev[key as keyof SongFiltersState] }));
-  };
 
   // Get genre/mood names for SEO
   const currentGenreName = genreParam ? genres.find(g => g.id === genreParam)?.name : undefined;
@@ -73,39 +44,25 @@ export default function Browse() {
       <BrowseSEOHead genre={currentGenreName} mood={currentMoodName} />
       <BreadcrumbSchema items={[
         { name: 'Home', url: baseUrl },
-        { name: typeParam === 'audio' ? 'Audio Tracks' : typeParam === 'lyrics' ? 'Lyrics Only' : 'Browse Songs', url: `${baseUrl}/browse${typeParam ? `?type=${typeParam}` : ''}` }
+        { name: 'Browse Songs', url: `${baseUrl}/browse` }
       ]} />
       <div className="container py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <h1 className="text-3xl md:text-4xl font-bold">
-              {pageTitle.main} <span className="text-gradient">{pageTitle.sub}</span>
+              Browse <span className="text-gradient">Music</span>
             </h1>
             <Badge variant="outline" className="gap-1 bg-primary/5">
-              <PageIcon className="h-3 w-3" />
-              {typeParam === "audio" ? "Audio Files" : typeParam === "lyrics" ? "Lyrics Available" : "Licensed Content"}
+              <Music className="h-3 w-3" />
+              Licensed Content
             </Badge>
           </div>
           <p className="text-muted-foreground mb-4">
             Find legally licensed songs for your projects — preview free, buy instantly
           </p>
           
-          {/* Quick filter chips */}
           <div className="flex flex-wrap gap-2">
-            {quickFilters.map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => toggleQuickFilter(filter.key)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  filters[filter.key as keyof SongFiltersState]
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/30 text-sm text-muted-foreground">
               <Sparkles className="h-3 w-3" />
               Prices from <Price amount={29} />

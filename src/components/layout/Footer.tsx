@@ -50,16 +50,6 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/browse?type=lyrics" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Lyrics Only
-                </Link>
-              </li>
-              <li>
-                <Link to="/browse?type=audio" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
-                  Audio Tracks
-                </Link>
-              </li>
-              <li>
                 <Link to="/sellers" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
                   Top Sellers
                 </Link>

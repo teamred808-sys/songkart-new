@@ -41,8 +41,6 @@ export interface SongFiltersState {
   language: string;
   priceRange: [number, number];
   bpmRange: [number, number];
-  hasAudio: boolean;
-  hasLyrics: boolean;
   sortBy: string;
 }
 
@@ -98,8 +96,6 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
       language: "",
       priceRange: [0, 50000],
       bpmRange: [60, 200],
-      hasAudio: false,
-      hasLyrics: false,
       sortBy: "newest",
     });
   }, [onFiltersChange]);
@@ -108,8 +104,6 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
     filters.genre,
     filters.mood,
     filters.language,
-    filters.hasAudio,
-    filters.hasLyrics,
     filters.priceRange[0] > 0 || filters.priceRange[1] < 50000,
     filters.bpmRange[0] > 60 || filters.bpmRange[1] < 200,
   ].filter(Boolean).length, [filters]);
@@ -231,24 +225,6 @@ export function SongFilters({ filters, onFiltersChange, genres, moods }: SongFil
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="hasAudio"
-            checked={filters.hasAudio}
-            onCheckedChange={(checked) => updateFilter("hasAudio", !!checked)}
-          />
-          <Label htmlFor="hasAudio" className="text-sm cursor-pointer">Audio</Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="hasLyrics"
-            checked={filters.hasLyrics}
-            onCheckedChange={(checked) => updateFilter("hasLyrics", !!checked)}
-          />
-          <Label htmlFor="hasLyrics" className="text-sm cursor-pointer">Lyrics</Label>
-        </div>
-
         {activeFiltersCount > 0 && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground">
             <X className="h-4 w-4 mr-1" />
@@ -354,27 +330,6 @@ function FilterContent({
         />
       </div>
 
-      <div className="space-y-3">
-        <Label>Content Type</Label>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="hasAudioMobile"
-              checked={filters.hasAudio}
-              onCheckedChange={(checked) => updateFilter("hasAudio", !!checked)}
-            />
-            <Label htmlFor="hasAudioMobile" className="cursor-pointer">Has Audio</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="hasLyricsMobile"
-              checked={filters.hasLyrics}
-              onCheckedChange={(checked) => updateFilter("hasLyrics", !!checked)}
-            />
-            <Label htmlFor="hasLyricsMobile" className="cursor-pointer">Has Lyrics</Label>
-          </div>
-        </div>
-      </div>
     </>
   );
 }
