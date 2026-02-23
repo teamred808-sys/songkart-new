@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Upload, Music, FileText, DollarSign, CheckCircle, ArrowLeft, ArrowRight, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SongSEOFields } from '@/components/seller/SongSEOFields';
+import { useSellerTier } from '@/hooks/useSellerTier';
 
 const LICENSE_TYPES = [
   { value: 'personal', label: 'Personal Use', description: 'For personal projects only' },
@@ -114,6 +115,7 @@ export default function UploadSong() {
   const { user } = useAuth();
   const { data: genres } = useGenres();
   const { data: moods } = useMoods();
+  const { data: sellerTier } = useSellerTier();
   
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -792,12 +794,12 @@ export default function UploadSong() {
                             type="number"
                             step="0.01"
                             min="0"
-                            max={tier.license_type === 'personal' ? 500 : tier.license_type === 'commercial' ? 3000 : undefined}
+                            max={tier.license_type === 'personal' ? (sellerTier?.max_price_lyrics_only ?? undefined) : tier.license_type === 'commercial' ? (sellerTier?.max_price_with_audio ?? undefined) : undefined}
                             value={tier.price}
                             onChange={(e) => {
                               let val = parseFloat(e.target.value) || 0;
-                              if (tier.license_type === 'personal' && val > 500) val = 500;
-                              if (tier.license_type === 'commercial' && val > 3000) val = 3000;
+                              if (tier.license_type === 'personal' && sellerTier?.max_price_lyrics_only && val > sellerTier.max_price_lyrics_only) val = sellerTier.max_price_lyrics_only;
+                              if (tier.license_type === 'commercial' && sellerTier?.max_price_with_audio && val > sellerTier.max_price_with_audio) val = sellerTier.max_price_with_audio;
                               updateLicenseTier(tier.license_type, 'price', val);
                             }}
                           />
