@@ -9,6 +9,7 @@ export interface SellerSong {
   title: string;
   description: string | null;
   cover_image_url: string | null;
+  artwork_cropped_url: string | null;
   audio_url: string | null;
   preview_audio_url: string | null;
   full_lyrics: string | null;
@@ -56,7 +57,7 @@ export interface SellerTransaction {
   payment_method: string | null;
   license_pdf_url: string | null;
   created_at: string;
-  song: { id: string; title: string; cover_image_url: string | null } | null;
+  song: { id: string; title: string; cover_image_url: string | null; artwork_cropped_url: string | null } | null;
   license_tier: { license_type: string; price: number } | null;
 }
 
@@ -209,7 +210,7 @@ export function useSellerTransactions() {
         .from('transactions')
         .select(`
           *,
-          song:songs(id, title, cover_image_url),
+          song:songs(id, title, cover_image_url, artwork_cropped_url),
           license_tier:license_tiers(license_type, price)
         `)
         .eq('seller_id', user.id)

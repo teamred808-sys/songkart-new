@@ -82,10 +82,10 @@ export default function Favorites() {
               {filteredFavorites.map((favorite) => (
                 <Card key={favorite.id} className="overflow-hidden group">
                   <div className="aspect-square relative bg-muted">
-                    {favorite.songs?.cover_image_url ? (
+                    {((favorite.songs as any)?.artwork_cropped_url || favorite.songs?.cover_image_url) ? (
                       <img
-                        src={favorite.songs.cover_image_url}
-                        alt={favorite.songs.title}
+                        src={(favorite.songs as any)?.artwork_cropped_url || favorite.songs?.cover_image_url}
+                        alt={favorite.songs?.title || ''}
                         className="h-full w-full object-cover"
                       />
                     ) : (

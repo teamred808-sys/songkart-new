@@ -254,7 +254,7 @@ const uniqueItems = downloadableItems.filter((item, index, self) =>
                   {item.song?.cover_image_url ? (
                     <img
                       src={item.song.cover_image_url}
-                      alt={item.song.title}
+                      alt={item.song.title || ''}
                       className="h-full w-full object-cover"
                     />
                   ) : (

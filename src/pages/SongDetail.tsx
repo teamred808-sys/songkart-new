@@ -134,7 +134,7 @@ export default function SongDetail() {
         description: song.description,
         seo_title: (song as any).seo_title,
         seo_description: (song as any).seo_description,
-        cover_art_url: song.cover_image_url,
+        cover_art_url: (song as any).artwork_cropped_url || song.cover_image_url,
         genre: song.genres ? { name: song.genres.name } : undefined,
         mood: song.moods ? { name: song.moods.name } : undefined,
         language: song.language,
@@ -156,7 +156,7 @@ export default function SongDetail() {
         genre={song.genres?.name}
         duration={song.duration || undefined}
         description={song.description}
-        image={song.cover_image_url}
+        image={(song as any).artwork_cropped_url || song.cover_image_url}
         datePublished={song.created_at}
         offers={licenseTiers?.map(tier => ({
           price: tier.price,
@@ -168,7 +168,7 @@ export default function SongDetail() {
         <ProductSchema
           name={`${song.title} - Music License`}
           description={`License "${song.title}" for commercial use. Available in Personal, Commercial, and Exclusive license options.`}
-          image={song.cover_image_url}
+          image={(song as any).artwork_cropped_url || song.cover_image_url}
           offers={licenseTiers.map(tier => ({
             name: `${LICENSE_TYPES[tier.license_type as keyof typeof LICENSE_TYPES]?.label || tier.license_type} License`,
             price: tier.price,
@@ -206,11 +206,12 @@ export default function SongDetail() {
           <div className="lg:col-span-2 space-y-6">
             {/* Cover & Audio */}
             <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
-              {song.cover_image_url ? (
+              {((song as any).artwork_cropped_url || song.cover_image_url) ? (
                 <img
-                  src={song.cover_image_url}
+                  src={(song as any).artwork_cropped_url || song.cover_image_url}
                   alt={`${song.title} - Licensed ${genreName} track cover art`}
                   className="w-full h-full object-cover"
+                  style={{ aspectRatio: '1/1', objectFit: 'cover' }}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">

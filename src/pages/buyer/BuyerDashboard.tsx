@@ -164,11 +164,11 @@ export default function BuyerDashboard() {
                     key={purchase.id}
                     className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {purchase.songs?.cover_image_url ? (
+                     <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0" style={{ aspectRatio: '1/1' }}>
+                      {((purchase.songs as any)?.artwork_cropped_url || purchase.songs?.cover_image_url) ? (
                         <img
-                          src={purchase.songs.cover_image_url}
-                          alt={purchase.songs.title}
+                          src={(purchase.songs as any)?.artwork_cropped_url || purchase.songs?.cover_image_url}
+                          alt={purchase.songs?.title || ''}
                           className="h-full w-full object-cover"
                         />
                       ) : (

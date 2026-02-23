@@ -211,7 +211,7 @@ export default function SalesOrders() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 rounded-lg">
                               <AvatarImage 
-                                src={tx.song?.cover_image_url || ''} 
+                                src={(tx.song as any)?.artwork_cropped_url || tx.song?.cover_image_url || ''} 
                                 className="object-cover"
                               />
                               <AvatarFallback className="rounded-lg bg-muted text-xs">

@@ -33,6 +33,7 @@ interface Song {
   title: string;
   description: string | null;
   cover_image_url: string | null;
+  artwork_cropped_url: string | null;
   preview_audio_url: string | null;
   base_price: number;
   play_count: number | null;
@@ -94,7 +95,7 @@ const SellerProfile = () => {
 
       const { data, error } = await supabase
         .from("songs")
-        .select("id, title, description, cover_image_url, preview_audio_url, base_price, play_count, view_count, has_lyrics, has_audio, seller_id, slug, genres(name), moods(name)")
+        .select("id, title, description, cover_image_url, artwork_cropped_url, preview_audio_url, base_price, play_count, view_count, has_lyrics, has_audio, seller_id, slug, genres(name), moods(name)")
         .eq("seller_id", seller.id)
         .eq("status", "approved")
         .order("created_at", { ascending: false });
@@ -300,7 +301,7 @@ const SellerProfile = () => {
                   sellerName={seller.full_name || "Unknown Artist"}
                   genre={song.genres?.name}
                   mood={song.moods?.name}
-                  coverUrl={song.cover_image_url}
+                  coverUrl={song.artwork_cropped_url || song.cover_image_url}
                   basePrice={song.base_price}
                   hasLyrics={song.has_lyrics || false}
                   hasAudio={song.has_audio || false}

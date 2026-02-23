@@ -338,6 +338,7 @@ export default function UploadSong() {
           bpm: metadata.bpm ? Number(metadata.bpm) : null,
           language: metadata.language,
           cover_image_url,
+          artwork_cropped_url: cover_image_url,
           audio_url,
           preview_audio_url,
           preview_status: preview_audio_url ? 'ready' : null,

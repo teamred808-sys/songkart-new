@@ -2765,6 +2765,7 @@ export type Database = {
       songs: {
         Row: {
           approved_at: string | null
+          artwork_cropped_url: string | null
           audio_url: string | null
           average_rating: number | null
           base_price: number
@@ -2816,6 +2817,7 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          artwork_cropped_url?: string | null
           audio_url?: string | null
           average_rating?: number | null
           base_price?: number
@@ -2867,6 +2869,7 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          artwork_cropped_url?: string | null
           audio_url?: string | null
           average_rating?: number | null
           base_price?: number
