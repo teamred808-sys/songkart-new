@@ -58,6 +58,7 @@ const LatestReleases = () => {
                 playCount={song.play_count ?? 0}
                 averageRating={song.average_rating}
                 totalRatings={song.total_ratings}
+                licenseTiers={(song as any).license_tiers}
               />
             ))}
           </div>

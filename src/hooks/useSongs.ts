@@ -66,21 +66,28 @@ async function fetchSongsWithSellers(songs: any[]) {
   
   // Filter out invalid seller IDs to prevent UUID errors
   const sellerIds = [...new Set(songs.map(s => s.seller_id).filter(isValidUUID))];
+  const songIds = songs.map(s => s.id);
   
-  if (sellerIds.length === 0) {
-    return songs.map(song => ({ ...song, seller: null }));
-  }
+  // Batch-fetch profiles and license tiers in parallel
+  const [profilesResult, tiersResult] = await Promise.all([
+    sellerIds.length > 0
+      ? supabase.from("profiles").select("id, full_name, avatar_url, bio, is_verified").in("id", sellerIds)
+      : Promise.resolve({ data: [] }),
+    supabase.from("license_tiers").select("song_id, license_type, price").in("song_id", songIds).eq("is_available", true),
+  ]);
   
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, bio, is_verified")
-    .in("id", sellerIds);
+  const profileMap = new Map<string, any>(profilesResult.data?.map(p => [p.id, p] as [string, any]) || []);
   
-  const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+  const tierMap = new Map<string, Array<{ license_type: string; price: number }>>();
+  tiersResult.data?.forEach(t => {
+    if (!tierMap.has(t.song_id)) tierMap.set(t.song_id, []);
+    tierMap.get(t.song_id)!.push({ license_type: t.license_type, price: t.price });
+  });
   
   return songs.map(song => ({
     ...song,
-    seller: isValidUUID(song.seller_id) ? profileMap.get(song.seller_id) || null : null
+    seller: isValidUUID(song.seller_id) ? profileMap.get(song.seller_id) || null : null,
+    license_tiers: tierMap.get(song.id) || [],
   }));
 }
 

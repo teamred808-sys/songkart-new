@@ -42,7 +42,7 @@ export interface NewUploadsSettings {
 export function useNewUploads(limit: number = 8) {
   return useQuery({
     queryKey: ['new-uploads', limit],
-    queryFn: async (): Promise<NewUploadSong[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase.rpc('get_new_uploads', {
         p_limit: limit
       });
@@ -52,10 +52,33 @@ export function useNewUploads(limit: number = 8) {
         throw error;
       }
 
-      return (data || []) as NewUploadSong[];
+      const songs = (data || []) as NewUploadSong[];
+      
+      // Batch-fetch license tiers for all songs
+      if (songs.length > 0) {
+        const songIds = songs.map(s => s.id);
+        const { data: tiers } = await supabase
+          .from('license_tiers')
+          .select('song_id, license_type, price')
+          .in('song_id', songIds)
+          .eq('is_available', true);
+        
+        const tierMap = new Map<string, Array<{ license_type: string; price: number }>>();
+        tiers?.forEach(t => {
+          if (!tierMap.has(t.song_id)) tierMap.set(t.song_id, []);
+          tierMap.get(t.song_id)!.push({ license_type: t.license_type, price: t.price });
+        });
+        
+        return songs.map(song => ({
+          ...song,
+          license_tiers: tierMap.get(song.id) || [],
+        }));
+      }
+      
+      return songs.map(song => ({ ...song, license_tiers: [] as Array<{ license_type: string; price: number }> }));
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60 * 5, // Auto-refresh every 5 minutes
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 60 * 5,
   });
 }
 
