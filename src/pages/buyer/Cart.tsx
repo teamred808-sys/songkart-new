@@ -64,7 +64,7 @@ export default function Cart() {
     const cartItemsForValidation = cart.items.map(item => ({
       song_id: item.song_id,
       license_type: item.license_tiers?.license_type || 'personal',
-      license_price: item.songPrice || 0,
+      license_price: item.buyerTotalPaid || ((item.songPrice || 0) + (item.platformFeeBuyer || 0)),
     }));
 
     validatePromo.mutate({ code: promoInput, cart_items: cartItemsForValidation }, {
