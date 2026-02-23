@@ -1,34 +1,37 @@
 
-## Remove Base Price Field from Song Upload
 
-### Summary
-Remove the "Base Price" input from the upload form since sellers set prices per license tier, making the standalone base price redundant.
+## Remove Default Prices from License Tier Selection
 
-### Changes
+### Problem
+When a seller selects a license tier (Personal, Commercial, Exclusive), the price field is pre-filled with hardcoded default values (29.99, 99.99, 499.99). The seller should enter their own price -- the field should start empty.
 
-**File: `src/pages/seller/UploadSong.tsx`**
+### Fix
 
-1. **Remove the Base Price input** (lines 731-740): Delete the entire `<div>` containing the "Base Price" label and input field.
+**File: `src/pages/seller/UploadSong.tsx` (lines 200-204, 217)**
 
-2. **Update the pricing schema** (line 54): Remove `base_price` validation or make it optional since it won't be user-facing:
-   ```typescript
-   const pricingSchema = z.object({
-     base_price: z.number().optional(),
-     license_tiers: z.array(licenseTierSchema).min(1, 'At least one license tier required'),
-   });
-   ```
+Replace the `defaultPrices` map and the tier creation logic so new tiers start with a price of `0` (empty input):
 
-3. **Auto-derive base_price on submit** (around line 309): Instead of using the user-entered value, automatically set `base_price` to the lowest license tier price:
-   ```typescript
-   base_price: Math.min(...pricing.license_tiers.map(t => t.price)) || 0,
-   ```
+```typescript
+// Before
+const defaultPrices: Record<string, number> = {
+  personal: 29.99,
+  commercial: 99.99,
+  exclusive: 499.99,
+};
+// ...
+{ license_type: type, price: defaultPrices[type], terms: '' }
 
-4. **Update initial state** (line 127): Change default from `29.99` to `0`:
-   ```typescript
-   const [pricing, setPricing] = useState<PricingForm>({ base_price: 0, license_tiers: [] });
-   ```
+// After
+{ license_type: type, price: 0, terms: '' }
+```
 
-### What stays the same
-- The `base_price` column in the database (it has a default of 0, so no migration needed)
-- UI layout, license tier selection, and pricing inputs per tier
-- All other form steps and submission logic
+Then update the price input to show an empty field when the value is `0` by using a placeholder instead:
+
+```typescript
+// Price input: show empty string when 0
+value={tier.price || ''}
+placeholder="Enter price"
+```
+
+This ensures sellers see an empty price field and must enter their own price. No layout or validation changes needed -- the existing schema already requires price > 0.
+
