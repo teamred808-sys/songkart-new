@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useCheckout';
 import { useBuyerPurchases } from '@/hooks/useBuyerData';
-import { useDownloadLicense } from '@/hooks/useLicenses';
+import { useDownloadLicense, useRegenerateLicense } from '@/hooks/useLicenses';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Music, Search, Download, FileText, ExternalLink, Package, CreditCard, FileAudio, ScrollText, Loader2 } from 'lucide-react';
+import { Music, Search, Download, FileText, ExternalLink, Package, CreditCard, FileAudio, ScrollText, Loader2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ export default function MyPurchases() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   const { data: purchases, isLoading: purchasesLoading } = useBuyerPurchases();
   const { mutate: downloadLicense, isPending: isDownloadingLicense } = useDownloadLicense();
+  const { mutate: regenerateLicense, isPending: isRegenerating, cooldown: regenerateCooldown } = useRegenerateLicense();
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingAudio, setDownloadingAudio] = useState<string | null>(null);
   const [downloadingLyrics, setDownloadingLyrics] = useState<string | null>(null);
@@ -281,7 +282,7 @@ export default function MyPurchases() {
                                   <span className="ml-1 hidden sm:inline">Lyrics</span>
                                 </Button>
                                 
-                                {/* License PDF download */}
+                                {/* License download */}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -295,6 +296,21 @@ export default function MyPurchases() {
                                     <ScrollText className="h-4 w-4" />
                                   )}
                                   <span className="ml-1 hidden sm:inline">License</span>
+                                </Button>
+                                
+                                {/* Regenerate License */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => regenerateLicense({ orderItemId: item.id })}
+                                  disabled={isRegenerating || regenerateCooldown}
+                                  title={regenerateCooldown ? 'Please wait...' : 'Regenerate License'}
+                                >
+                                  {isRegenerating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </div>
                             )}

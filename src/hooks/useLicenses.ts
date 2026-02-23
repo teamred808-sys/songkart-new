@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -66,6 +67,21 @@ export function useLicenseByOrderItem(orderItemId: string | undefined) {
   });
 }
 
+// Retry fetch with exponential backoff
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return response;
+      if (attempt === maxRetries - 1) throw new Error('Failed to fetch license file after retries');
+    } catch (error) {
+      if (attempt === maxRetries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+  throw new Error('Failed to fetch license file');
+}
+
 export function useDownloadLicense() {
   return useMutation({
     mutationFn: async ({ orderItemId }: { orderItemId: string }) => {
@@ -81,28 +97,23 @@ export function useDownloadLicense() {
     onSuccess: async (data) => {
       if (data?.download_url) {
         try {
-          // Fetch the file as a blob to force download (bypasses cross-origin restriction)
-          const response = await fetch(data.download_url);
-          if (!response.ok) throw new Error('Failed to fetch license file');
-          
+          const response = await fetchWithRetry(data.download_url);
           const blob = await response.blob();
           const blobUrl = URL.createObjectURL(blob);
           
-          // Create download link with blob URL (same-origin, so download attribute works)
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = data.filename || `license_${data.license_number || 'agreement'}.pdf`;
+          link.download = data.filename || `license_${data.license_number || 'agreement'}.html`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           
-          // Clean up blob URL after a short delay
           setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
           
           toast.success('License download started');
         } catch (error) {
           console.error('License download error:', error);
-          toast.error('Failed to download license file');
+          toast.error('Unable to load License. Try regenerating it.');
         }
       }
     },
@@ -110,6 +121,37 @@ export function useDownloadLicense() {
       toast.error(error.message || 'Failed to download license');
     },
   });
+}
+
+export function useRegenerateLicense() {
+  const queryClient = useQueryClient();
+  const [cooldown, setCooldown] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async ({ orderItemId }: { orderItemId: string }) => {
+      if (cooldown) throw new Error('Please wait before regenerating again');
+
+      const { data, error } = await supabase.functions.invoke('generate-license-pdf', {
+        body: { order_item_id: orderItemId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['license-documents'] });
+      toast.success('License regenerated successfully');
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 10000);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to regenerate license');
+    },
+  });
+
+  return { ...mutation, cooldown };
 }
 
 export function useRevokeLicense() {
