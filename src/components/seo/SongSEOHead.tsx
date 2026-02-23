@@ -134,7 +134,7 @@ export function generateSongSEOContent(song: {
 
 As a fully licensed track, you get copyright-safe usage rights immediately upon purchase. Whether you're a content creator, filmmaker, advertiser, or business owner, this ${genre.toLowerCase()} music provides the professional sound you need without copyright concerns.
 
-Our licensing options include Personal Use for individual projects, Commercial License for business use with full monetization rights, and Exclusive License for complete ownership. Each license comes with instant download access and a legally binding license certificate.
+Our licensing options include Commercial License for business use with full monetization rights and Exclusive License for complete ownership. Each license comes with instant download access and a legally binding license certificate.
 
 ${song.description || `Discover the perfect sound for your next project with "${song.title}" - professionally crafted, legally licensed, ready to use.`}
   `.trim();

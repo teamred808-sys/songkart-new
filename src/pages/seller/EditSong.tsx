@@ -32,7 +32,6 @@ import { cn } from '@/lib/utils';
 import { SongSEOFields } from '@/components/seller/SongSEOFields';
 
 const LICENSE_TYPES = [
-  { value: 'personal', label: 'Personal Use', description: 'For personal projects only', defaultPrice: 29.99 },
   { value: 'commercial', label: 'Commercial', description: 'For commercial projects', defaultPrice: 99.99 },
   { value: 'exclusive', label: 'Exclusive', description: 'Full rights transfer', defaultPrice: 499.99 },
 ] as const;
@@ -183,8 +182,8 @@ export default function EditSong() {
 
     // Remove conflicting tiers first
     const conflictingTiers = licenseTiers?.filter(t => {
-      if (type === 'exclusive') return t.license_type === 'personal' || t.license_type === 'commercial';
-      if (type === 'personal' || type === 'commercial') return t.license_type === 'exclusive';
+      if (type === 'exclusive') return t.license_type === 'commercial';
+      if (type === 'commercial') return t.license_type === 'exclusive';
       return false;
     }) || [];
 
@@ -239,11 +238,11 @@ export default function EditSong() {
 
   const existingLicenseTypes = licenseTiers?.map(t => t.license_type) || [];
   const hasExclusive = existingLicenseTypes.includes('exclusive');
-  const hasNonExclusive = existingLicenseTypes.includes('personal') || existingLicenseTypes.includes('commercial');
+  const hasNonExclusive = existingLicenseTypes.includes('commercial');
   const availableLicenseTypes = LICENSE_TYPES.filter(l => {
     if (existingLicenseTypes.includes(l.value)) return false;
     if (l.value === 'exclusive' && hasNonExclusive) return false;
-    if ((l.value === 'personal' || l.value === 'commercial') && hasExclusive) return false;
+    if (l.value === 'commercial' && hasExclusive) return false;
     return true;
   });
 

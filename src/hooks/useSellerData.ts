@@ -37,7 +37,7 @@ export interface SellerSong {
 export interface LicenseTier {
   id: string;
   song_id: string;
-  license_type: 'personal' | 'commercial' | 'exclusive';
+  license_type: 'personal' | 'commercial' | 'exclusive'; // personal kept for legacy data
   price: number;
   description: string | null;
   terms: string | null;

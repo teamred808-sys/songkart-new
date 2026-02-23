@@ -158,7 +158,7 @@ export default function BuyerDashboard() {
           ) : recentPurchases && recentPurchases.length > 0 ? (
             <div className="divide-y divide-border/50">
               {recentPurchases.map((purchase) => {
-                const licenseType = purchase.license_tiers?.license_type || 'personal';
+                const licenseType = purchase.license_tiers?.license_type || 'commercial';
                 return (
                   <div
                     key={purchase.id}

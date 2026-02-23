@@ -1,10 +1,5 @@
 // License type display names and descriptions
 export const LICENSE_INFO = {
-  personal: {
-    name: 'Personal Use',
-    description: 'For personal projects, demos, and non-commercial use',
-    icon: 'User',
-  },
   commercial: {
     name: 'Commercial',
     description: 'For advertising, marketing, and commercial projects',
@@ -19,7 +14,6 @@ export const LICENSE_INFO = {
 
 // License types for components
 export const LICENSE_TYPES = {
-  personal: { label: 'Personal Use', description: 'For personal projects, demos, and non-commercial use' },
   commercial: { label: 'Commercial', description: 'For advertising, marketing, and commercial projects' },
   exclusive: { label: 'Exclusive Rights', description: 'Full ownership - song removed from marketplace after purchase' },
 } as const;

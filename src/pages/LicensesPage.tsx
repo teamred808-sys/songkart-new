@@ -30,32 +30,6 @@ interface LicenseInfo {
 }
 
 const licenseData: Record<string, LicenseInfo> = {
-  personal: {
-    name: 'Personal Use License',
-    description: 'Perfect for non-commercial projects, personal videos, and content without monetization.',
-    metaDescription: 'License music for personal use on SongKart. Use copyright-safe tracks in personal videos, student projects, and non-monetized content.',
-    price: 'Starting from ₹0',
-    features: [
-      { text: 'Personal, non-commercial use only', included: true },
-      { text: 'YouTube videos (no monetization)', included: true },
-      { text: 'Student projects and presentations', included: true },
-      { text: 'Social media posts (personal account)', included: true },
-      { text: 'Podcasts (non-commercial)', included: true },
-      { text: 'Commercial/monetized content', included: false },
-      { text: 'Advertising or promotional use', included: false },
-      { text: 'Resale or redistribution rights', included: false },
-    ],
-    useCases: [
-      { icon: <Youtube className="h-6 w-6" />, title: 'Personal YouTube', description: 'Non-monetized personal vlogs and videos' },
-      { icon: <Users className="h-6 w-6" />, title: 'Student Projects', description: 'School presentations and academic work' },
-      { icon: <Podcast className="h-6 w-6" />, title: 'Personal Podcasts', description: 'Hobby podcasts without sponsors' },
-    ],
-    faqs: [
-      { question: 'Can I monetize my YouTube video with a Personal License?', answer: 'No, the Personal License is for non-monetized content only. If you want to monetize your content, you need a Commercial License.' },
-      { question: 'Can I use this license for my small business?', answer: 'No, any business use requires a Commercial License, regardless of business size.' },
-      { question: 'Is credit required for Personal License?', answer: 'While not always required, we recommend crediting the artist as a courtesy.' },
-    ],
-  },
   commercial: {
     name: 'Commercial License',
     description: 'For businesses, content creators, and anyone monetizing their content. Full commercial rights included.',
@@ -323,8 +297,8 @@ function LicensesOverview() {
         <section className="text-center py-12 bg-muted/30 rounded-lg">
           <h2 className="text-2xl font-semibold mb-4">Not Sure Which License You Need?</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            If you're monetizing content or using music for business purposes, choose Commercial. 
-            For personal projects without monetization, Personal is perfect.
+            Choose Commercial for monetized content and business use. 
+            For full ownership and exclusivity, choose Exclusive.
           </p>
           <Link to="/browse">
             <Button size="lg">Start Browsing Music</Button>

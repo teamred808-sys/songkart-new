@@ -1,0 +1,1 @@
+UPDATE public.license_tier_definitions SET is_active = false, updated_at = now() WHERE tier_key = 'personal';

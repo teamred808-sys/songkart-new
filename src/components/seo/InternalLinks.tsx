@@ -118,7 +118,7 @@ export function MoodLink({ mood, children, className }: MoodLinkProps) {
 }
 
 interface LicenseLinkProps {
-  licenseType: 'personal' | 'commercial' | 'exclusive';
+  licenseType: 'commercial' | 'exclusive';
   children?: React.ReactNode;
   className?: string;
 }
@@ -129,7 +129,6 @@ interface LicenseLinkProps {
 export function LicenseLink({ licenseType, children, className }: LicenseLinkProps) {
   const href = `/licenses/${licenseType}`;
   const labels: Record<string, string> = {
-    personal: 'Personal Use License',
     commercial: 'Commercial License',
     exclusive: 'Exclusive License'
   };
