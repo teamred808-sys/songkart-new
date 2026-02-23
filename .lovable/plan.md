@@ -1,31 +1,17 @@
 
 
-## Remove "Lyrics Only" Pricing and Make Audio Compulsory
+## Remove "Lyrics" and "Audio" Links from Navbar
 
-### Summary
-Audio (composition) upload is already required in the upload flow. This change removes the "Lyrics Only" pricing category from the seller-facing UI and always applies "With Audio" pricing limits.
+### Problem
+The navbar (both desktop and mobile) shows separate "Lyrics" and "Audio" navigation links. Since compositions (audio) are now compulsory, these separate category links are no longer needed.
 
 ### Changes
 
-**1. `src/components/seller/SellerTierCard.tsx` (lines 112-129)**
-- Remove the "Lyrics Only" column from the Pricing Limits grid
-- Show only "Max Price" using `max_price_with_audio` value
-- Change from 2-column grid to a single display
+**File: `src/components/layout/Navbar.tsx`**
 
-**2. `src/components/seller/PricingLimitBanner.tsx` (lines 7-11, 24-26, 76)**
-- Remove `hasAudio` prop entirely
-- Always use `tierInfo.max_price_with_audio` for `maxAllowed`
-- Update label from "Max with audio price" to just "Max price"
+1. **Desktop nav (lines 58-69)** -- Remove the two `<Link>` elements for "Lyrics" (`/browse?type=lyrics`) and "Audio" (`/browse?type=audio`).
 
-**3. `src/pages/seller/UploadSong.tsx`**
-- Update any references passing `hasAudio` to `PricingLimitBanner` (if any)
-- The upload form already requires audio (`Full Audio File *` is mandatory in step 2 validation at line 409)
+2. **Mobile nav (lines 196-209)** -- Remove the same two `<Link>` elements from the mobile menu.
 
-**4. `src/pages/seller/EditSong.tsx`**
-- Update any references passing `hasAudio` to `PricingLimitBanner` (if any)
+Only "Browse" and "Sellers" links will remain in the navigation.
 
-### What stays unchanged
-- Database schema (columns remain, no migration needed)
-- Upload validation (audio is already required)
-- Backend tier RPC functions
-- `useSellerTier` hook interface
