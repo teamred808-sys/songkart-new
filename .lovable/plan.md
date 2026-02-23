@@ -1,25 +1,34 @@
 
-## Dynamic Seller Tier Pricing Limits in Song Upload
+## Remove Base Price Field from Song Upload
 
 ### Summary
-Replace the hardcoded pricing caps (Personal: 500, Commercial: 3000) in the Upload Song pricing section with dynamic values from the seller's tier (`max_price_lyrics_only` and `max_price_with_audio`), fetched via the existing `useSellerTier` hook.
+Remove the "Base Price" input from the upload form since sellers set prices per license tier, making the standalone base price redundant.
 
 ### Changes
 
 **File: `src/pages/seller/UploadSong.tsx`**
 
-1. **Import `useSellerTier`** hook at the top of the file.
+1. **Remove the Base Price input** (lines 731-740): Delete the entire `<div>` containing the "Base Price" label and input field.
 
-2. **Call the hook** inside the `UploadSong` component:
+2. **Update the pricing schema** (line 54): Remove `base_price` validation or make it optional since it won't be user-facing:
    ```typescript
-   const { data: sellerTier } = useSellerTier();
+   const pricingSchema = z.object({
+     base_price: z.number().optional(),
+     license_tiers: z.array(licenseTierSchema).min(1, 'At least one license tier required'),
+   });
    ```
 
-3. **Replace hardcoded limits** (lines 795-800) with dynamic values:
-   - `max` attribute on Personal input: `sellerTier?.max_price_lyrics_only ?? undefined`
-   - `max` attribute on Commercial input: `sellerTier?.max_price_with_audio ?? undefined`
-   - Clamping logic for Personal: clamp to `sellerTier?.max_price_lyrics_only`
-   - Clamping logic for Commercial: clamp to `sellerTier?.max_price_with_audio`
-   - Exclusive: no restriction (unchanged)
+3. **Auto-derive base_price on submit** (around line 309): Instead of using the user-entered value, automatically set `base_price` to the lowest license tier price:
+   ```typescript
+   base_price: Math.min(...pricing.license_tiers.map(t => t.price)) || 0,
+   ```
 
-No other files, UI layout, tier selection logic, or form structure will be modified.
+4. **Update initial state** (line 127): Change default from `29.99` to `0`:
+   ```typescript
+   const [pricing, setPricing] = useState<PricingForm>({ base_price: 0, license_tiers: [] });
+   ```
+
+### What stays the same
+- The `base_price` column in the database (it has a default of 0, so no migration needed)
+- UI layout, license tier selection, and pricing inputs per tier
+- All other form steps and submission logic
