@@ -1,55 +1,65 @@
 
 
-## Update Promo Discount to Apply on Full Total (Song Price + Platform Fee)
+## Fix License PDF Loading and Add Regeneration Feature
 
-### Overview
-Change the promo discount calculation so it applies on the combined total (Song Price + Platform Fee) instead of only the Song Price. No UI layout, payment gateway, or validation logic changes.
+### Root Cause
+The license document is generated and stored as an **HTML file** (`.html` extension), but the download hook saves it with a `.pdf` extension. When the browser or OS tries to open the downloaded file as a PDF, it fails with "Failed to load PDF document."
 
-### Current Behavior
-- Cart sends `license_price` (song price only) to the validate-promo-code edge function
-- Edge function calculates discount based on song price alone
-- Example: Song ₹500 + Fee ₹75 = ₹575, but 20% promo gives -₹100 (20% of ₹500) → Total ₹475
+### Part 1: Fix License Download
 
-### New Behavior
-- Cart sends `buyer_total` (song price + platform fee) to the validate-promo-code edge function
-- Edge function calculates discount on the full buyer total
-- Example: Song ₹500 + Fee ₹75 = ₹575, 20% promo gives -₹115 (20% of ₹575) → Total ₹460
+**File: `src/hooks/useLicenses.ts`**
 
----
-
-### Change 1: `src/pages/buyer/Cart.tsx` (line 64-68)
-
-Update `cartItemsForValidation` to include the buyer's full payable amount per item instead of just the song price:
-
+Change the download filename from `.pdf` to `.html` on line 94:
 ```typescript
-const cartItemsForValidation = cart.items.map(item => ({
-  song_id: item.song_id,
-  license_type: item.license_tiers?.license_type || 'personal',
-  license_price: item.buyerTotalPaid || (item.songPrice + item.platformFeeBuyer) || 0,
-}));
+link.download = data.filename || `license_${data.license_number || 'agreement'}.html`;
 ```
 
-This passes the combined (song price + buyer platform fee) as the base for discount calculation.
+Add `try-catch` with retry logic around the fetch in `onSuccess`. If fetching the signed URL fails after 3 retries with exponential backoff, surface a clear error message instead of crashing.
 
-### Change 2: `supabase/functions/validate-promo-code/index.ts` (lines 132-141)
+### Part 2: Add Regenerate License Feature
 
-No structural changes needed. The edge function already calculates discount based on `item.license_price`. Since we now pass the full buyer total as `license_price`, the percentage/flat discount will automatically apply on the correct base amount.
+**File: `src/hooks/useLicenses.ts`**
 
-However, update the `min_purchase_amount` check (line 133) comment for clarity -- the logic itself remains correct since it now compares against the full buyer amount.
+Add a new `useRegenerateLicense` mutation hook:
+- Calls the existing `generate-license-pdf` edge function with the `order_item_id`
+- The edge function already handles regeneration (it creates a new license doc and updates the order item)
+- Need to modify the edge function to use `upsert: true` for storage upload so it can overwrite the existing file
+- After successful regeneration, invalidate the `license-documents` query cache
+- Include a cooldown state (10 seconds) to prevent rapid regenerations
 
----
+**File: `supabase/functions/generate-license-pdf/index.ts`**
+
+Line 480: Change `upsert: false` to `upsert: true` to allow re-uploading the license file when regenerating.
+
+Also handle the case where a `license_documents` record already exists for the same `order_item_id` -- use upsert or delete-then-insert.
+
+**File: `src/pages/buyer/MyDownloads.tsx`**
+
+Update the License download button section (around lines 388-413):
+- Import and use the new `useRegenerateLicense` hook
+- Add loading state while fetching the license URL
+- On download failure, show an inline error message with a "Regenerate License" button
+- Add a standalone "Regenerate License" icon button next to the existing download button
+- Only enable regeneration for completed orders (already guaranteed by being in this view)
+
+**File: `src/pages/buyer/MyPurchases.tsx`**
+
+Update the License download button section (around lines 284-298):
+- Add similar "Regenerate License" button alongside the existing License download button
+- Show error state with regeneration option on failure
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/buyer/Cart.tsx` | Pass `buyerTotalPaid` (song + fee) as `license_price` in promo validation request |
+| `src/hooks/useLicenses.ts` | Fix `.pdf` to `.html` extension; add retry logic; add `useRegenerateLicense` hook |
+| `supabase/functions/generate-license-pdf/index.ts` | Change storage upload to `upsert: true`; handle existing license_documents record |
+| `src/pages/buyer/MyDownloads.tsx` | Add regenerate button; show error state with regeneration option |
+| `src/pages/buyer/MyPurchases.tsx` | Add regenerate button alongside license download |
 
 ### What stays the same
-- PriceBreakdown UI layout and structure
-- Payment gateway (Cashfree) integration
-- Promo validation logic in edge function
-- Checkout button behavior
-- Cart schema
-- `finalTotal = Math.max(0, total - discount)` clamping in PriceBreakdown
+- License HTML template/layout
+- Purchase flow and payment integration
+- Edge function `download-license` logic
+- Order structure and data model
 
