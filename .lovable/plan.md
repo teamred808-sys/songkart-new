@@ -1,32 +1,21 @@
 
 
-## Fix: Show All License Types Per Song in License Vault
+## Fix: Dashboard Link for Admin Users
 
 ### Problem
-Line 107-109 in `src/pages/buyer/MyDownloads.tsx` deduplicates items by `song.id` alone:
-```typescript
-const uniqueItems = downloadableItems.filter((item, index, self) =>
-  index === self.findIndex(t => t.song?.id === item.song?.id)
-);
-```
-This means if a user purchases both a "personal" and "commercial" license for the same song, only the first one appears.
+In `src/components/layout/Navbar.tsx`, the `getDashboardLink()` function (line 31-35) returns `/admin` when the user's role is `admin`. Since there's already a separate "Admin Panel" link pointing to `/admin`, the "Dashboard" link becomes redundant.
 
 ### Fix
-Change the dedup key to a composite of `song.id` + `license_type`, so each unique license per song is shown:
+**File: `src/components/layout/Navbar.tsx` (line 32)**
 
-**File: `src/pages/buyer/MyDownloads.tsx` (lines 107-109)**
-
-Replace:
+Change:
 ```typescript
-const uniqueItems = downloadableItems.filter((item, index, self) =>
-  index === self.findIndex(t => t.song?.id === item.song?.id)
-);
+if (role === 'admin') return '/admin';
 ```
-With:
+To:
 ```typescript
-const uniqueItems = downloadableItems.filter((item, index, self) =>
-  index === self.findIndex(t => t.song?.id === item.song?.id && t.license_type === item.license_type)
-);
+if (role === 'admin') return '/seller';
 ```
 
-This is a one-line change. No other files need modification. The stats counters and card rendering already work per-item, so they will correctly reflect the additional entries.
+This makes the "Dashboard" link take admin users to their seller dashboard, while "Admin Panel" continues to provide access to admin functionality. One line change, no other files affected.
+
