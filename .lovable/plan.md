@@ -1,123 +1,41 @@
 
 
-## Restructure Promo Code UI in Order Summary
+## Update Promo Discount to Apply on Full Total (Song Price + Platform Fee)
 
 ### Overview
-Move the promo code interaction from above the price breakdown to inside the `PriceBreakdown` component, positioned below Platform Service Fee. Replace the always-visible input with a collapsed "Have a Discount Code? + Add" row that expands inline.
+Change the promo discount calculation so it applies on the combined total (Song Price + Platform Fee) instead of only the Song Price. No UI layout, payment gateway, or validation logic changes.
+
+### Current Behavior
+- Cart sends `license_price` (song price only) to the validate-promo-code edge function
+- Edge function calculates discount based on song price alone
+- Example: Song ₹500 + Fee ₹75 = ₹575, but 20% promo gives -₹100 (20% of ₹500) → Total ₹475
+
+### New Behavior
+- Cart sends `buyer_total` (song price + platform fee) to the validate-promo-code edge function
+- Edge function calculates discount on the full buyer total
+- Example: Song ₹500 + Fee ₹75 = ₹575, 20% promo gives -₹115 (20% of ₹575) → Total ₹460
 
 ---
 
-### Change 1: `src/pages/buyer/Cart.tsx`
+### Change 1: `src/pages/buyer/Cart.tsx` (line 64-68)
 
-**Remove the promo code UI block from the desktop Order Summary (lines 216-249).**
-
-Instead, pass the promo interaction state/handlers down to `PriceBreakdown`:
-
-```tsx
-<PriceBreakdown
-  subtotal={cart?.subtotal || 0}
-  platformFee={cart?.buyerPlatformFee || 0}
-  total={cart?.total || 0}
-  itemCount={cart?.itemCount || 0}
-  discount={appliedPromo?.discount_amount}
-  promoCode={appliedPromo?.code}
-  promoInput={promoInput}
-  onPromoInputChange={setPromoInput}
-  onApplyPromo={handleApplyPromo}
-  onRemovePromo={handleRemovePromo}
-  promoError={promoError}
-  isValidating={validatePromo.isPending}
-/>
-```
-
-Remove the `<div className="space-y-2">` block containing the promo input/applied badge (lines 217-249) from Cart.tsx entirely.
-
----
-
-### Change 2: `src/components/cart/PriceBreakdown.tsx`
-
-**Extend props** to accept promo interaction state:
+Update `cartItemsForValidation` to include the buyer's full payable amount per item instead of just the song price:
 
 ```typescript
-interface PriceBreakdownProps {
-  subtotal: number;
-  platformFee: number;
-  total: number;
-  itemCount: number;
-  discount?: number;
-  promoCode?: string;
-  // New props for inline promo UI
-  promoInput?: string;
-  onPromoInputChange?: (val: string) => void;
-  onApplyPromo?: () => void;
-  onRemovePromo?: () => void;
-  promoError?: string;
-  isValidating?: boolean;
-}
+const cartItemsForValidation = cart.items.map(item => ({
+  song_id: item.song_id,
+  license_type: item.license_tiers?.license_type || 'personal',
+  license_price: item.buyerTotalPaid || (item.songPrice + item.platformFeeBuyer) || 0,
+}));
 ```
 
-**Add local state** for expand/collapse:
+This passes the combined (song price + buyer platform fee) as the base for discount calculation.
 
-```typescript
-const [promoExpanded, setPromoExpanded] = useState(false);
-```
+### Change 2: `supabase/functions/validate-promo-code/index.ts` (lines 132-141)
 
-**Restructure the render order** to:
+No structural changes needed. The edge function already calculates discount based on `item.license_price`. Since we now pass the full buyer total as `license_price`, the percentage/flat discount will automatically apply on the correct base amount.
 
-1. Song Price row (unchanged)
-2. Platform Service Fee row (unchanged)
-3. **New: Promo Code section** (below Platform Fee, above Separator):
-   - If promo is applied (`discount > 0 && promoCode`): show applied badge with discount amount and remove button
-   - Else if collapsed: show `"Have a Discount Code?"` text + `"+ Add"` button
-   - Else if expanded: show inline Input + Apply button
-   - Show promoError if any
-4. Separator (unchanged)
-5. Total row showing `finalTotal` (unchanged)
-6. Trust message (unchanged)
-
-The collapsed row:
-```tsx
-<div className="flex items-center justify-between text-sm">
-  <span className="text-muted-foreground">Have a Discount Code?</span>
-  <Button variant="ghost" size="sm" onClick={() => setPromoExpanded(true)}>
-    + Add
-  </Button>
-</div>
-```
-
-The expanded row:
-```tsx
-<div className="flex gap-2">
-  <Input
-    placeholder="Enter code"
-    value={promoInput}
-    onChange={e => onPromoInputChange?.(e.target.value.toUpperCase())}
-    className="font-mono h-8 text-sm"
-    maxLength={20}
-  />
-  <Button variant="outline" size="sm" onClick={onApplyPromo} disabled={!promoInput?.trim() || isValidating}>
-    {isValidating ? '...' : 'Apply'}
-  </Button>
-</div>
-```
-
-The applied state:
-```tsx
-<div className="flex items-center justify-between text-sm text-green-600">
-  <span className="flex items-center gap-1">
-    <Tag className="h-3 w-3" />
-    Promo Applied ({promoCode})
-  </span>
-  <div className="flex items-center gap-2">
-    <span>-<Price amount={discount} /></span>
-    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onRemovePromo}>
-      <X className="h-3 w-3" />
-    </Button>
-  </div>
-</div>
-```
-
-When promo is removed, collapse back to default state.
+However, update the `min_purchase_amount` check (line 133) comment for clarity -- the logic itself remains correct since it now compares against the full buyer amount.
 
 ---
 
@@ -125,15 +43,13 @@ When promo is removed, collapse back to default state.
 
 | File | Change |
 |------|--------|
-| `src/pages/buyer/Cart.tsx` | Remove promo input block from desktop Order Summary; pass promo state as props to PriceBreakdown |
-| `src/components/cart/PriceBreakdown.tsx` | Add collapsed/expanded promo code UI below Platform Fee row; accept new interaction props |
+| `src/pages/buyer/Cart.tsx` | Pass `buyerTotalPaid` (song + fee) as `license_price` in promo validation request |
 
 ### What stays the same
-- Pricing logic and total calculation
-- Payment gateway integration (Cashfree)
+- PriceBreakdown UI layout and structure
+- Payment gateway (Cashfree) integration
+- Promo validation logic in edge function
 - Checkout button behavior
-- Mobile action bar
-- Card styling and spacing system
-- All promo validation logic (edge function calls)
-- Cart structure
+- Cart schema
+- `finalTotal = Math.max(0, total - discount)` clamping in PriceBreakdown
 
