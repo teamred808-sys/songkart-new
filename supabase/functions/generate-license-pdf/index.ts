@@ -471,18 +471,24 @@ serve(async (req) => {
     
     const pdfStoragePath = `licenses/${orderItem.orders.buyer_id}/${licenseNumber}.html`;
 
-    // Upload to storage
+    // Upload to storage (upsert: true to allow regeneration)
     const { error: uploadError } = await supabase.storage
       .from("license-documents")
       .upload(pdfStoragePath, htmlContent, {
         contentType: "text/html",
-        upsert: false,
+        upsert: true,
       });
 
     if (uploadError) {
       console.error("Storage upload error:", uploadError);
       throw new Error("Failed to upload license document");
     }
+
+    // Delete existing license_documents record for this order_item_id (for regeneration)
+    await supabase
+      .from("license_documents")
+      .delete()
+      .eq("order_item_id", order_item_id);
 
     // Create license_documents record
     const { data: licenseDoc, error: licenseError } = await supabase

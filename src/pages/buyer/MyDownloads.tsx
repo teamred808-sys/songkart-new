@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useCheckout';
 import { useBuyerPurchases } from '@/hooks/useBuyerData';
-import { useDownloadLicense } from '@/hooks/useLicenses';
+import { useDownloadLicense, useRegenerateLicense } from '@/hooks/useLicenses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,9 @@ import {
   XCircle,
   Info,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +76,7 @@ export default function MyDownloads() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   const { data: purchases, isLoading: purchasesLoading } = useBuyerPurchases();
   const downloadLicense = useDownloadLicense();
+  const { mutate: regenerateLicense, isPending: isRegenerating, cooldown: regenerateCooldown } = useRegenerateLicense();
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   const isLoading = ordersLoading || purchasesLoading;
@@ -385,29 +388,53 @@ export default function MyDownloads() {
                         </TooltipProvider>
                       )}
 
-                      {/* License PDF */}
+                      {/* License Agreement */}
                       {item.source === 'order' && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start gap-2 h-10"
-                                onClick={() => downloadLicense.mutate({ orderItemId: item.id })}
-                                disabled={downloadLicense.isPending}
-                              >
-                                <ScrollText className="h-4 w-4 text-amber-500" />
-                                <span className="flex-1 text-left">
-                                  {downloadLicense.isPending ? 'Loading...' : 'License Agreement'}
-                                </span>
-                                <Download className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Download legal license document (PDF)</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex gap-2">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="flex-1 justify-start gap-2 h-10"
+                                  onClick={() => downloadLicense.mutate({ orderItemId: item.id })}
+                                  disabled={downloadLicense.isPending}
+                                >
+                                  <ScrollText className="h-4 w-4 text-amber-500" />
+                                  <span className="flex-1 text-left">
+                                    {downloadLicense.isPending ? 'Loading...' : 'License Agreement'}
+                                  </span>
+                                  <Download className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Download license agreement</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-10 w-10 shrink-0"
+                                  onClick={() => regenerateLicense({ orderItemId: item.id })}
+                                  disabled={isRegenerating || regenerateCooldown}
+                                >
+                                  {isRegenerating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{regenerateCooldown ? 'Please wait...' : 'Regenerate License'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       )}
                     </div>
                   </div>
