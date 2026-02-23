@@ -197,12 +197,6 @@ export default function UploadSong() {
     const exists = pricing.license_tiers.find(t => t.license_type === type);
     if (exists) return;
     
-    const defaultPrices: Record<string, number> = {
-      personal: 29.99,
-      commercial: 99.99,
-      exclusive: 499.99,
-    };
-    
     setPricing(prev => {
       let filteredTiers = [...prev.license_tiers];
       if (type === 'exclusive') {
@@ -214,7 +208,7 @@ export default function UploadSong() {
         ...prev,
         license_tiers: [
           ...filteredTiers,
-          { license_type: type, price: defaultPrices[type], terms: '' },
+          { license_type: type, price: 0, terms: '' },
         ],
       };
     });
@@ -784,7 +778,8 @@ export default function UploadSong() {
                             step="0.01"
                             min="0"
                             max={tier.license_type === 'personal' ? (sellerTier?.max_price_lyrics_only ?? undefined) : tier.license_type === 'commercial' ? (sellerTier?.max_price_with_audio ?? undefined) : undefined}
-                            value={tier.price}
+                            value={tier.price || ''}
+                            placeholder="Enter price"
                             onChange={(e) => {
                               let val = parseFloat(e.target.value) || 0;
                               if (tier.license_type === 'personal' && sellerTier?.max_price_lyrics_only && val > sellerTier.max_price_lyrics_only) val = sellerTier.max_price_lyrics_only;
