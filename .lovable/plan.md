@@ -1,52 +1,50 @@
 
 
-## Fix License Generation After Sale
+## Mutual Exclusivity for License Tier Selection
 
-### Problems Found
+### Overview
+Add frontend state logic to enforce that Exclusive is mutually exclusive with Personal Use and Commercial in both the Upload and Edit song pages. No backend, validation, or submission changes.
 
-1. **Paid checkout (webhook path): License PDF never generates**
-   - The `cashfree-webhook` function calls `generate-license-pdf` using the service role key as a Bearer token
-   - `generate-license-pdf` has `verify_jwt = true` in config.toml, which causes the gateway to reject the request before the function even runs
-   - Evidence: no logs exist for `generate-license-pdf`, and one order item has no license document at all
+### Rules
+- Selecting **Exclusive** auto-removes Personal and Commercial tiers, and disables their buttons
+- Selecting **Personal** or **Commercial** auto-removes Exclusive tier, and disables its button
+- Personal and Commercial can coexist freely
+- Deselecting all tiers re-enables everything
 
-2. **`generate-license-pdf` uses `getUser()` instead of skipping auth**
-   - When called server-to-server (from the webhook), there is no user JWT -- it should accept service-role calls without user validation
+---
 
-3. **Free checkout path works but has a minor issue**
-   - The free checkout generates licenses inline (not via the separate function), so it works
-   - However, `license_pdf_url` on the order item shows as `null` for the successful free checkout, suggesting the update may be failing silently due to RLS
+### Change 1: `src/pages/seller/UploadSong.tsx`
 
-### Solution
+**Modify `addLicenseTier` function (line 194-211):**
+- When adding `exclusive`: filter out any existing `personal` and `commercial` tiers first
+- When adding `personal` or `commercial`: filter out any existing `exclusive` tier first
 
-#### Change 1: `supabase/config.toml`
-Set `verify_jwt = false` for `generate-license-pdf` so the gateway allows service-role calls from the webhook.
+**Modify tier button rendering (lines 734-749):**
+- Compute `hasExclusive` = exclusive tier is selected
+- Compute `hasNonExclusive` = personal or commercial tier is selected
+- Disable `exclusive` button when `hasNonExclusive` is true
+- Disable `personal` and `commercial` buttons when `hasExclusive` is true
+- Apply `opacity-50 cursor-not-allowed` styling to disabled buttons
 
-```toml
-[functions.generate-license-pdf]
-verify_jwt = false
-```
+---
 
-#### Change 2: `supabase/functions/generate-license-pdf/index.ts`
-Since this function is called server-to-server (from the webhook using the service role key), it should NOT require a user JWT. Instead, validate that the caller provides a valid service-role or anon key via the authorization header, but skip user-level auth.
+### Change 2: `src/pages/seller/EditSong.tsx`
 
-Add a simple check that the authorization header is present (the service role key is already used to create the Supabase client for data access). The function already uses its own `SUPABASE_SERVICE_ROLE_KEY` for all database operations, so no user context is needed.
+**Modify `availableLicenseTypes` filter (line 228):**
+- Additionally filter out `exclusive` if any `personal` or `commercial` tier exists
+- Additionally filter out `personal` and `commercial` if `exclusive` tier exists
+- This prevents adding conflicting tiers via the "Add License Type" buttons
 
-No code changes needed in the function body itself -- it already uses `supabase.auth.getUser()` is NOT called in `generate-license-pdf` (it creates a service-role client directly). The only fix needed is the config.toml change above.
+**Modify `handleAddLicenseTier` (line 178):**
+- When adding `exclusive`: remove existing `personal` and `commercial` tiers first
+- When adding `personal` or `commercial`: remove existing `exclusive` tier first
 
-### Files Changed
+---
 
-| File | Change |
-|------|--------|
-| `supabase/config.toml` | Set `verify_jwt = false` for `generate-license-pdf` |
+### What stays the same
+- Backend license mapping and pricing calculation
+- Form structure and tier detail components
+- Validation and submission flow
+- Next step behavior
+- All styling (just adding disabled state visuals)
 
-### What This Fixes
-- Paid purchases via Cashfree will now correctly generate license PDFs
-- Free checkout path continues working as before (generates inline)
-- Existing license documents are not affected
-- No frontend changes needed
-
-### What Stays the Same
-- Free checkout inline license generation (unchanged)
-- License download function (unchanged)
-- License revocation (unchanged)
-- All UI components (unchanged)
