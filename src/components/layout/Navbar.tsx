@@ -29,7 +29,7 @@ export function Navbar() {
   };
 
   const getDashboardLink = () => {
-    if (role === 'admin') return '/admin';
+    if (role === 'admin') return '/seller';
     if (role === 'seller') return '/seller';
     return '/buyer';
   };
