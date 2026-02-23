@@ -56,18 +56,6 @@ export function Navbar() {
               Browse
             </Link>
             <Link 
-              to="/browse?type=lyrics" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium"
-            >
-              Lyrics
-            </Link>
-            <Link 
-              to="/browse?type=audio" 
-              className="text-muted-foreground hover:text-foreground transition-colors font-medium"
-            >
-              Audio
-            </Link>
-            <Link 
               to="/sellers" 
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
@@ -192,20 +180,6 @@ export function Navbar() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Browse
-            </Link>
-            <Link 
-              to="/browse?type=lyrics" 
-              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Lyrics
-            </Link>
-            <Link 
-              to="/browse?type=audio" 
-              className="px-4 py-3 min-h-[48px] flex items-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Audio
             </Link>
             <Link 
               to="/sellers" 
