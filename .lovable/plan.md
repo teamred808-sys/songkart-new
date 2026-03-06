@@ -1,42 +1,20 @@
 
 
-## Fix: Purchased songs not showing after payment
+## Make Price Field Start Empty on License Tier Selection
 
-### Root Cause
-
-From the edge function logs, the **Cashfree webhook is failing** with `"Signature length mismatch"` every time. This means the webhook never successfully processes, so:
-- No `orders` record is created
-- No `order_items` are created
-- No `download_access` is granted
-- The cart is never cleared
-
-The `verify-payment` function confirms the Cashfree order is `PAID`, but it only reads the status — it doesn't create the order as a fallback.
-
-### Fix Strategy
-
-**Update the `verify-payment` edge function** to act as a fallback order creator when:
-1. Cashfree confirms `PAID` status
-2. The checkout session exists and is NOT yet `completed`
-3. No order has been created yet
-
-This reuses the same order-creation logic from the webhook (create order, order items, download access, wallet credit, transaction records, clear cart, mark session completed).
-
-Additionally, **fix the webhook signature verification** — the new production credentials likely use a different signature format than what the current HMAC-SHA256 implementation expects. Cashfree's production webhooks may use Base64 encoding rather than hex.
+### Problem
+When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
 
 ### Changes
 
-1. **`supabase/functions/verify-payment/index.ts`** — Add fallback order fulfillment logic:
-   - After confirming `PAID` from Cashfree, check if `checkout_sessions.status` is still `pending`/`processing`
-   - If no order exists yet, run the full order creation flow (same as webhook)
-   - Return the created order data
+**File: `src/pages/seller/UploadSong.tsx`**
 
-2. **`supabase/functions/cashfree-webhook/index.ts`** — Fix signature verification:
-   - Update to handle Cashfree's actual production signature format (Base64-encoded HMAC)
-   - Add a fallback that logs but still processes if signature format is unexpected (with extra validation of order data against our checkout session)
+1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
+   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
 
-### Why this approach
+2. **Line 830** -- Simplify the value binding back:
+   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
+   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
 
-- The verify-payment fallback ensures orders are always created after confirmed payment, regardless of webhook reliability
-- Idempotency is maintained — if the webhook eventually succeeds, the `checkout_sessions.status === 'completed'` check prevents duplicate processing
-- This is a standard pattern for payment integrations: never rely solely on webhooks
+This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
 
