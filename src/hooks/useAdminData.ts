@@ -493,17 +493,12 @@ export function useProcessWithdrawal() {
       notes?: string;
       paymentReference?: string;
     }) => {
-      const updateData: any = { 
-        status,
-        notes,
-        processed_at: status === 'processed' ? new Date().toISOString() : null,
-        payout_details: paymentReference ? { reference: paymentReference } : null
-      };
-
-      const { error } = await supabase
-        .from('withdrawal_requests')
-        .update(updateData)
-        .eq('id', withdrawalId);
+      const { data, error } = await supabase.rpc('process_withdrawal_request', {
+        p_withdrawal_id: withdrawalId,
+        p_status: status,
+        p_notes: notes || null,
+        p_payment_reference: paymentReference || null,
+      });
 
       if (error) throw error;
 
@@ -513,6 +508,8 @@ export function useProcessWithdrawal() {
         entity_id: withdrawalId,
         metadata: { status, notes, paymentReference }
       });
+
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
