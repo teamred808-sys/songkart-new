@@ -196,7 +196,16 @@ export default function Wallet() {
           </Alert>
         )}
 
-        {/* Funds Flow Visualization */}
+        {hasPendingWithdrawal && (
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <Clock className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-500">Withdrawal In Progress</AlertTitle>
+            <AlertDescription>
+              Withdrawal request already in progress. Please wait until it is processed.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
