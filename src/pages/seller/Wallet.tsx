@@ -135,7 +135,7 @@ export default function Wallet() {
 
   const hasBalanceForWithdrawal = availableBalance >= threshold;
   const hasVerifiedPayout = withdrawEligibility?.can_withdraw === true;
-  const canWithdraw = hasBalanceForWithdrawal && hasVerifiedPayout;
+  const canWithdraw = hasBalanceForWithdrawal && hasVerifiedPayout && !hasPendingWithdrawal;
 
   return (
     <TooltipProvider>
