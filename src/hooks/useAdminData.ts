@@ -678,7 +678,7 @@ export function useDeleteFeaturedContent() {
   });
 }
 
-// Release Cleared Funds (7+ days old)
+// Release Cleared Funds (configurable hold period)
 export function useReleaseFunds() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -701,7 +701,50 @@ export function useReleaseFunds() {
           description: `₹${summary.total_released} released for ${summary.sellers_affected} sellers (${summary.transactions_cleared} transactions)` 
         });
       } else {
-        toast({ title: 'No Funds to Release', description: 'No transactions older than 7 days pending clearance.' });
+        toast({ title: 'No Funds to Release', description: 'No transactions past the hold period pending clearance.' });
+      }
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to release funds', description: error.message, variant: 'destructive' });
+    }
+  });
+}
+
+// Instant Release Funds for a specific seller
+export function useInstantReleaseFunds() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (sellerId: string) => {
+      const { data, error } = await supabase.rpc('instant_release_seller_funds', {
+        p_seller_id: sellerId
+      });
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        action: 'instant_release_funds',
+        entity_type: 'seller_wallet',
+        entity_id: sellerId,
+        metadata: { released: data }
+      });
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      
+      const result = data?.[0];
+      if (result?.released_amount > 0) {
+        toast({ 
+          title: 'Funds Instantly Released', 
+          description: `₹${result.released_amount} released (${result.transaction_count} transactions)` 
+        });
+      } else {
+        toast({ title: 'No Pending Funds', description: 'This seller has no pending funds to release.' });
       }
     },
     onError: (error) => {

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useEffect } from 'react';
-import { Wallet, AlertTriangle } from 'lucide-react';
+import { Wallet, AlertTriangle, Clock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function PlatformSettings() {
@@ -13,6 +13,7 @@ export default function PlatformSettings() {
   const updateSetting = useUpdatePlatformSetting();
   const [commissionRate, setCommissionRate] = useState('');
   const [minWithdrawal, setMinWithdrawal] = useState('');
+  const [holdDays, setHoldDays] = useState('');
 
   // Initialize values from settings when data loads
   useEffect(() => {
@@ -21,6 +22,11 @@ export default function PlatformSettings() {
     }
     if (settings?.min_withdrawal?.amount !== undefined) {
       setMinWithdrawal(String(settings.min_withdrawal.amount));
+    }
+    if (settings?.payment_hold_days?.days !== undefined) {
+      setHoldDays(String(settings.payment_hold_days.days));
+    } else {
+      setHoldDays('7');
     }
   }, [settings]);
 
@@ -40,6 +46,14 @@ export default function PlatformSettings() {
     updateSetting.mutate({ key: 'min_withdrawal', value: { amount } });
   };
 
+  const handleSaveHoldDays = () => {
+    const days = Number(holdDays);
+    if (isNaN(days) || days < 0 || days > 30) {
+      return;
+    }
+    updateSetting.mutate({ key: 'payment_hold_days', value: { days } });
+  };
+
   const commissionRateNum = Number(commissionRate);
   const isCommissionValid = !isNaN(commissionRateNum) && commissionRateNum >= 0 && commissionRateNum <= 100;
   const isHighCommission = isCommissionValid && commissionRateNum > 50;
@@ -47,8 +61,12 @@ export default function PlatformSettings() {
   const minWithdrawalNum = Number(minWithdrawal);
   const isWithdrawalValid = !isNaN(minWithdrawalNum) && minWithdrawalNum >= 0;
 
+  const holdDaysNum = Number(holdDays);
+  const isHoldDaysValid = !isNaN(holdDaysNum) && holdDaysNum >= 0 && holdDaysNum <= 30;
+
   const currentRate = settings?.commission_rate?.rate;
   const currentMinWithdrawal = settings?.min_withdrawal?.amount;
+  const currentHoldDays = settings?.payment_hold_days?.days ?? 7;
 
   return (
     <div className="space-y-6">
@@ -57,7 +75,7 @@ export default function PlatformSettings() {
         <p className="text-muted-foreground">Configure global platform settings</p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Commission Settings */}
         <Card>
           <CardHeader>
@@ -153,6 +171,64 @@ export default function PlatformSettings() {
                 <Button 
                   onClick={handleSaveWithdrawal} 
                   disabled={updateSetting.isPending || !isWithdrawalValid || minWithdrawal === ''}
+                >
+                  {updateSetting.isPending ? 'Saving...' : 'Save Settings'}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment Hold Period */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Payment Hold Period
+            </CardTitle>
+            <CardDescription>How long seller funds are held before becoming available</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Hold Period (days)</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="7" 
+                    min="0"
+                    max="30"
+                    value={holdDays} 
+                    onChange={(e) => setHoldDays(e.target.value)} 
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Current hold: <span className="font-medium">{currentHoldDays} days</span>
+                  </p>
+                  {!isHoldDaysValid && holdDays !== '' && (
+                    <p className="text-sm text-destructive">
+                      Must be between 0 and 30 days
+                    </p>
+                  )}
+                  {holdDaysNum === 0 && (
+                    <Alert variant="default" className="mt-2 border-amber-500 bg-amber-500/10">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <AlertDescription className="text-amber-600 dark:text-amber-400">
+                        Setting 0 days means funds are immediately available — increases refund/dispute risk
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Seller earnings are held for this period before they can withdraw. Set 0 for instant availability.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleSaveHoldDays} 
+                  disabled={updateSetting.isPending || !isHoldDaysValid || holdDays === ''}
                 >
                   {updateSetting.isPending ? 'Saving...' : 'Save Settings'}
                 </Button>
