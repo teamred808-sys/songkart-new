@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal } from '@/hooks/useSellerData';
+import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal, useHasPendingWithdrawal } from '@/hooks/useSellerData';
 import { usePlatformSettings } from '@/hooks/useAdminData';
 import { usePayoutProfile, useWithdrawEligibility } from '@/hooks/usePayoutProfile';
 import { usePendingClearance } from '@/hooks/usePendingClearance';

@@ -265,6 +265,28 @@ export function useWithdrawalRequests() {
   });
 }
 
+export function useHasPendingWithdrawal() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['has-pending-withdrawal', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+
+      const { data, error } = await supabase
+        .from('withdrawal_requests')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'approved'])
+        .limit(1);
+
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
+    },
+    enabled: !!user?.id,
+  });
+}
+
 export function useRequestWithdrawal() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -278,6 +300,18 @@ export function useRequestWithdrawal() {
       maxBalance?: number;
     }) => {
       if (!user?.id) throw new Error('Not authenticated');
+      
+      // Check for existing pending withdrawal
+      const { data: pending } = await supabase
+        .from('withdrawal_requests')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'approved'])
+        .limit(1);
+
+      if (pending && pending.length > 0) {
+        throw new Error('Withdrawal request already in progress. Please wait until it is processed.');
+      }
       
       // Client-side pre-validation
       if (data.amount <= 0) {
@@ -306,6 +340,7 @@ export function useRequestWithdrawal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['withdrawal-requests'] });
       queryClient.invalidateQueries({ queryKey: ['seller-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['has-pending-withdrawal'] });
       toast({ title: 'Withdrawal requested', description: 'Your request is being processed.' });
     },
     onError: (error: any) => {
