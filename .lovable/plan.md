@@ -1,33 +1,20 @@
 
 
-## Admin Instant Fund Release & Configurable Hold Period
+## Make Price Field Start Empty on License Tier Selection
 
 ### Problem
-1. Admin can only release funds that are already 7+ days old (the "Release Cleared Funds" button). There's no way to instantly release a specific seller's pending funds before the 7-day hold.
-2. The 7-day hold period is hardcoded in the `release_cleared_funds` DB function and `verify-payment` edge function. Admin cannot change it.
+When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
 
 ### Changes
 
-#### 1. Add "Payment Hold Days" setting to Platform Settings page
-- Add a new setting card in `src/pages/admin/PlatformSettings.tsx` for `payment_hold_days` (default: 7, min: 0, max: 30)
-- Admin can change the global hold period from this page
+**File: `src/pages/seller/UploadSong.tsx`**
 
-#### 2. Update `release_cleared_funds` DB function
-- New migration: alter the function to read `payment_hold_days` from `platform_settings` instead of hardcoded `'7 days'`
+1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
+   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
 
-#### 3. Create `instant_release_seller_funds` DB function
-- New migration: a function that takes `p_seller_id` and immediately moves ALL pending transactions for that seller to cleared, updating the wallet balances — bypassing the hold period
+2. **Line 830** -- Simplify the value binding back:
+   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
+   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
 
-#### 4. Add per-seller "Instant Release" button in Withdrawal Management
-- In `src/pages/admin/WithdrawalManagement.tsx`, add a dialog/button that lets admin select a seller and instantly release their held funds
-- Add `useInstantReleaseFunds` hook in `src/hooks/useAdminData.ts` that calls the new DB function via RPC
-
-#### 5. Update `get_pending_clearance_info` function
-- Read `payment_hold_days` from `platform_settings` instead of hardcoded 7 days, so seller wallet page shows correct clearance dates
-
-### Files to modify
-- `src/pages/admin/PlatformSettings.tsx` — add hold days setting card
-- `src/hooks/useAdminData.ts` — add `useInstantReleaseFunds` hook
-- `src/pages/admin/WithdrawalManagement.tsx` — add instant release UI
-- 1 DB migration — update `release_cleared_funds`, `get_pending_clearance_info`, and create `instant_release_seller_funds`
+This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
 

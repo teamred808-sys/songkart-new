@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { useAllWithdrawals, useProcessWithdrawal, useReleaseFunds, useProcessPayout } from '@/hooks/useAdminData';
+import { useAllWithdrawals, useProcessWithdrawal, useReleaseFunds, useProcessPayout, useInstantReleaseFunds, useAllUsers } from '@/hooks/useAdminData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CheckCircle, XCircle, Banknote, Clock, Loader2, RefreshCw, Send, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CheckCircle, XCircle, Banknote, Clock, Loader2, RefreshCw, Send, AlertCircle, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function WithdrawalManagement() {
@@ -15,6 +18,17 @@ export default function WithdrawalManagement() {
   const processWithdrawal = useProcessWithdrawal();
   const releaseFunds = useReleaseFunds();
   const processPayout = useProcessPayout();
+  const instantRelease = useInstantReleaseFunds();
+  
+  const [instantReleaseOpen, setInstantReleaseOpen] = useState(false);
+  const [sellerSearch, setSellerSearch] = useState('');
+  const { data: sellers } = useAllUsers({ role: 'seller', search: sellerSearch || undefined });
+
+  const handleInstantRelease = (sellerId: string) => {
+    instantRelease.mutate(sellerId, {
+      onSuccess: () => setInstantReleaseOpen(false)
+    });
+  };
 
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = { 
@@ -49,6 +63,64 @@ export default function WithdrawalManagement() {
             <p className="text-muted-foreground">Manage seller payout requests</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Instant Release Dialog */}
+            <Dialog open={instantReleaseOpen} onOpenChange={setInstantReleaseOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10">
+                  <Zap className="mr-2 h-4 w-4" />
+                  Instant Release
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Instant Fund Release</DialogTitle>
+                  <DialogDescription>
+                    Immediately release all pending (held) funds for a specific seller, bypassing the hold period.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Search Seller</Label>
+                    <Input 
+                      placeholder="Search by name or email..." 
+                      value={sellerSearch}
+                      onChange={(e) => setSellerSearch(e.target.value)}
+                    />
+                  </div>
+                  {sellerSearch && sellers && sellers.length > 0 && (
+                    <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2">
+                      {sellers.slice(0, 10).map((seller: any) => (
+                        <div key={seller.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/50">
+                          <div>
+                            <p className="font-medium text-sm">{seller.full_name || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground">{seller.email}</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleInstantRelease(seller.id)}
+                            disabled={instantRelease.isPending}
+                          >
+                            {instantRelease.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Zap className="mr-1 h-3 w-3" />
+                                Release
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {sellerSearch && sellers?.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No sellers found</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -65,7 +137,7 @@ export default function WithdrawalManagement() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Move funds older than 7 days from pending to available balance</p>
+                <p>Move funds past the hold period from pending to available balance</p>
               </TooltipContent>
             </Tooltip>
             <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? undefined : v as any)}>

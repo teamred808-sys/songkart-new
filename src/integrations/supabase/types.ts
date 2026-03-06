@@ -3581,6 +3581,13 @@ export type Database = {
         Returns: undefined
       }
       increment_view_count: { Args: { song_uuid: string }; Returns: undefined }
+      instant_release_seller_funds: {
+        Args: { p_seller_id: string }
+        Returns: {
+          released_amount: number
+          transaction_count: number
+        }[]
+      }
       is_display_name_available: {
         Args: { p_exclude_user_id?: string; p_name: string }
         Returns: boolean
