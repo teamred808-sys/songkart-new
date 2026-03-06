@@ -6,13 +6,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-webhook-timestamp",
 };
 
-// Convert hex string to Uint8Array
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+// Convert ArrayBuffer to Base64 string
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
-  return bytes;
+  return btoa(binary);
 }
 
 // Convert ArrayBuffer to hex string
@@ -29,7 +30,6 @@ async function verifyWebhookSignature(
   timestamp: string | null,
   secretKey: string
 ): Promise<{ valid: boolean; reason?: string }> {
-  // Cashfree sends signature in header
   if (!signature) {
     return { valid: false, reason: "Missing webhook signature header" };
   }
@@ -55,7 +55,6 @@ async function verifyWebhookSignature(
     // Cashfree signature format: timestamp + raw body
     const signaturePayload = timestamp + body;
     
-    // Import the secret key for HMAC
     const encoder = new TextEncoder();
     const keyData = encoder.encode(secretKey);
     
@@ -67,30 +66,28 @@ async function verifyWebhookSignature(
       ["sign"]
     );
     
-    // Generate expected signature
     const signatureBuffer = await crypto.subtle.sign(
       "HMAC",
       cryptoKey,
       encoder.encode(signaturePayload)
     );
     
-    const expectedSignature = bytesToHex(signatureBuffer);
+    // Try Base64 comparison first (Cashfree production format)
+    const expectedBase64 = arrayBufferToBase64(signatureBuffer);
     
-    // Constant-time comparison to prevent timing attacks
-    if (signature.length !== expectedSignature.length) {
-      return { valid: false, reason: "Signature length mismatch" };
+    if (signature === expectedBase64) {
+      return { valid: true };
     }
     
-    let result = 0;
-    for (let i = 0; i < signature.length; i++) {
-      result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
-    }
+    // Fallback: try hex comparison (sandbox/legacy format)
+    const expectedHex = bytesToHex(signatureBuffer);
     
-    if (result !== 0) {
-      return { valid: false, reason: "Signature verification failed" };
+    if (signature === expectedHex) {
+      return { valid: true };
     }
-    
-    return { valid: true };
+
+    console.error(`Signature mismatch. Received length: ${signature.length}, Expected base64 length: ${expectedBase64.length}, Expected hex length: ${expectedHex.length}`);
+    return { valid: false, reason: "Signature verification failed" };
   } catch (error) {
     console.error("Signature verification error:", error);
     return { valid: false, reason: "Signature verification error" };
