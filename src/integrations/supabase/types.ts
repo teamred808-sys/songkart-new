@@ -3604,6 +3604,15 @@ export type Database = {
         Returns: Json
       }
       process_strike_expiry: { Args: never; Returns: Json }
+      process_withdrawal_request: {
+        Args: {
+          p_notes?: string
+          p_payment_reference?: string
+          p_status: string
+          p_withdrawal_id: string
+        }
+        Returns: Json
+      }
       record_song_view: {
         Args: {
           p_device_fingerprint?: string
