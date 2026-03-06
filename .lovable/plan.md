@@ -1,20 +1,16 @@
 
 
-## Make Price Field Start Empty on License Tier Selection
+## Update Cashfree Production Credentials
 
-### Problem
-When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
+### What needs to happen
+The project already has `CASHFREE_APP_ID` and `CASHFREE_SECRET_KEY` stored as backend secrets. These need to be updated with the new production credentials you provided.
 
-### Changes
+### Steps
+1. Update `CASHFREE_APP_ID` with the new App ID
+2. Update `CASHFREE_SECRET_KEY` with the new Secret Key
 
-**File: `src/pages/seller/UploadSong.tsx`**
+Since you've already shared the values in chat, I'll update both secrets directly. No code changes are needed — all edge functions (`create-checkout-session`, `verify-payment`, `cashfree-webhook`, `process-payout`, `cashfree-payout-webhook`) already reference these secret names.
 
-1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
-   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
-
-2. **Line 830** -- Simplify the value binding back:
-   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
-   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
-
-This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
+### Important Note
+These are **production** credentials (the key contains `_prod_`). The Cashfree API endpoint in the edge functions should point to the production URL (`https://api.cashfree.com`) rather than sandbox (`https://sandbox.cashfree.com`). I'll verify this is correct in the existing code.
 
