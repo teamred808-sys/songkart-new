@@ -76,6 +76,7 @@ export default function Wallet() {
   const { data: payoutProfile, isLoading: payoutLoading } = usePayoutProfile();
   const { data: withdrawEligibility } = useWithdrawEligibility();
   const { data: pendingClearance, isLoading: clearanceLoading } = usePendingClearance();
+  const { data: hasPendingWithdrawal } = useHasPendingWithdrawal();
   const requestWithdrawal = useRequestWithdrawal();
   const { formatPrice, currencySymbol } = useCurrency();
 
