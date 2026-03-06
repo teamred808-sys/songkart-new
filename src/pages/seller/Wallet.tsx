@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal } from '@/hooks/useSellerData';
+import { useSellerWallet, useWithdrawalRequests, useRequestWithdrawal, useHasPendingWithdrawal } from '@/hooks/useSellerData';
 import { usePlatformSettings } from '@/hooks/useAdminData';
 import { usePayoutProfile, useWithdrawEligibility } from '@/hooks/usePayoutProfile';
 import { usePendingClearance } from '@/hooks/usePendingClearance';
@@ -76,6 +76,7 @@ export default function Wallet() {
   const { data: payoutProfile, isLoading: payoutLoading } = usePayoutProfile();
   const { data: withdrawEligibility } = useWithdrawEligibility();
   const { data: pendingClearance, isLoading: clearanceLoading } = usePendingClearance();
+  const { data: hasPendingWithdrawal } = useHasPendingWithdrawal();
   const requestWithdrawal = useRequestWithdrawal();
   const { formatPrice, currencySymbol } = useCurrency();
 
@@ -134,7 +135,7 @@ export default function Wallet() {
 
   const hasBalanceForWithdrawal = availableBalance >= threshold;
   const hasVerifiedPayout = withdrawEligibility?.can_withdraw === true;
-  const canWithdraw = hasBalanceForWithdrawal && hasVerifiedPayout;
+  const canWithdraw = hasBalanceForWithdrawal && hasVerifiedPayout && !hasPendingWithdrawal;
 
   return (
     <TooltipProvider>
@@ -195,7 +196,16 @@ export default function Wallet() {
           </Alert>
         )}
 
-        {/* Funds Flow Visualization */}
+        {hasPendingWithdrawal && (
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <Clock className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-500">Withdrawal In Progress</AlertTitle>
+            <AlertDescription>
+              Withdrawal request already in progress. Please wait until it is processed.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
