@@ -106,8 +106,8 @@ serve(async (req: Request) => {
     }
 
     // Generate a secure token (UUID format)
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    const verificationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hour expiry
 
     console.log("[send-verification-email] Creating verification token");
 
@@ -116,7 +116,7 @@ serve(async (req: Request) => {
       .from("seller_verification_tokens")
       .insert({
         user_id: user.id,
-        token: token,
+        token: verificationToken,
         expires_at: expiresAt.toISOString(),
       });
 
@@ -131,8 +131,8 @@ serve(async (req: Request) => {
     console.log("[send-verification-email] Token created, sending email");
 
     // Get the app URL from environment or construct it
-    const appUrl = Deno.env.get("APP_URL") || "https://vxegvnndkeoubqnruiqj.lovableproject.com";
-    const verificationLink = `${appUrl}/verify-email?token=${token}`;
+    const appUrl = Deno.env.get("APP_URL") || "https://songkart.lovable.app";
+    const verificationLink = `${appUrl}/verify-email?token=${verificationToken}`;
 
     // Send the email
     const emailResponse = await resend.emails.send({
@@ -155,7 +155,7 @@ serve(async (req: Request) => {
             </a>
           </div>
           <p style="color: #999; font-size: 14px;">
-            This link will expire in 1 hour. If you didn't request this verification, you can safely ignore this email.
+            This link will expire in 24 hours. If you didn't request this verification, you can safely ignore this email.
           </p>
           <p style="color: #999; font-size: 14px;">
             Or copy and paste this link in your browser:<br/>
@@ -178,7 +178,7 @@ serve(async (req: Request) => {
       await supabaseAdmin
         .from("seller_verification_tokens")
         .delete()
-        .eq("token", token);
+        .eq("token", verificationToken);
 
       // Check if it's a domain verification issue
       const errorMessage = emailResponse.error.message || "";
