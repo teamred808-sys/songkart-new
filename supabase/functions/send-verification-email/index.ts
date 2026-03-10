@@ -155,7 +155,7 @@ serve(async (req: Request) => {
             </a>
           </div>
           <p style="color: #999; font-size: 14px;">
-            This link will expire in 1 hour. If you didn't request this verification, you can safely ignore this email.
+            This link will expire in 24 hours. If you didn't request this verification, you can safely ignore this email.
           </p>
           <p style="color: #999; font-size: 14px;">
             Or copy and paste this link in your browser:<br/>
