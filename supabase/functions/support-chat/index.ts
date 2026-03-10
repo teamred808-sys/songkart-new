@@ -313,14 +313,20 @@ serve(async (req) => {
         "I'm having trouble answering right now. Please contact support@songkart.com for assistance. 🎵";
     }
 
-    // === STEP 5: Cache the AI response ===
-    await supabase.from("chat_response_cache").upsert({
-      question_hash: questionHash,
-      question: userText,
-      response: assistantResponse,
-      source: "ai",
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    }, { onConflict: "question_hash" });
+    // === STEP 5: Cache the AI response (skip fallback/error responses) ===
+    const isFallback = assistantResponse.includes("having trouble answering") ||
+      assistantResponse.includes("temporarily unavailable") ||
+      assistantResponse.includes("couldn't generate a response");
+
+    if (!isFallback) {
+      await supabase.from("chat_response_cache").upsert({
+        question_hash: questionHash,
+        question: userText,
+        response: assistantResponse,
+        source: "ai",
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      }, { onConflict: "question_hash" });
+    }
 
     // Log assistant response
     await supabase.from("chat_logs").insert({
