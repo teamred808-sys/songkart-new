@@ -1,20 +1,31 @@
 
 
-## Make Price Field Start Empty on License Tier Selection
+## Fix: Verification page showing generic error instead of specific message
 
-### Problem
-When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
+### Root Cause
 
-### Changes
+When `supabase.functions.invoke()` receives a non-2xx response, it sets `error` with a generic message ("Edge Function returned a non-2xx status code") BUT still populates `data` with the actual response body. The current code in `VerifyEmail.tsx` checks `if (error)` first and returns early, never reaching the `data?.error` check that has the real message like "This verification link has already been used".
 
-**File: `src/pages/seller/UploadSong.tsx`**
+From the logs: the token **was already used** — the function correctly returns `{ error: "This verification link has already been used", already_used: true }` with status 400, but the frontend never reads it.
 
-1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
-   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
+### Fix in `src/pages/VerifyEmail.tsx`
 
-2. **Line 830** -- Simplify the value binding back:
-   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
-   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
+Change the error handling block (lines 31-36) to extract the message from `data` first when available, falling back to the generic `error.message`:
 
-This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
+```typescript
+if (error) {
+  console.error("Verification error:", error);
+  setStatus("error");
+  // data may still contain the specific error message from the function
+  setMessage(data?.error || error.message || "Failed to verify email. Please try again.");
+  return;
+}
+```
+
+This single change ensures users see "This verification link has already been used" or "This verification link has expired" instead of the generic "Edge Function returned a non-2xx status code".
+
+### Files Changed
+| File | Change |
+|---|---|
+| `src/pages/VerifyEmail.tsx` | Use `data?.error` over `error.message` for specific error messages |
 
