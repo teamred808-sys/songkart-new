@@ -1,25 +1,20 @@
 
 
-## Fix: "Verify Now" button failing with auth error
+## Make Price Field Start Empty on License Tier Selection
 
-### Root Cause
+### Problem
+When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
 
-The `send-verification-email` edge function has `verify_jwt = true` in `supabase/config.toml`. The Supabase gateway validates the JWT **before** the function code runs. The logs show repeated `"invalid claim: missing sub claim"` errors at the gateway level, meaning the token never reaches the function's own auth logic.
+### Changes
 
-This is a known issue with Lovable Cloud deployments where `verify_jwt = true` can fail on valid user tokens.
+**File: `src/pages/seller/UploadSong.tsx`**
 
-### Fix
+1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
+   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
 
-1. **`supabase/config.toml`** — Change `verify_jwt = false` for `send-verification-email`
+2. **Line 830** -- Simplify the value binding back:
+   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
+   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
 
-2. **`supabase/functions/send-verification-email/index.ts`** — Add explicit token validation in code:
-   - Extract the Bearer token from the Authorization header
-   - Call `supabase.auth.getUser(token)` to validate explicitly
-   - This replaces the gateway-level JWT check with in-code validation that works reliably on Lovable Cloud
-
-3. **Redeploy** the edge function
-
-### Changes are minimal
-- config.toml: 1 line change
-- index.ts: Update the user auth section (lines 39-56) to use explicit `getUser(token)` instead of relying on client header passthrough
+This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
 

@@ -35,7 +35,8 @@ serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Create client with user's token to get their info
+    // Extract token and validate explicitly (Lovable Cloud compatible)
+    const token = authHeader.replace("Bearer ", "");
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -45,8 +46,8 @@ serve(async (req: Request) => {
       }
     );
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Explicitly validate the token
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(token);
     if (userError || !user) {
       console.error("[send-verification-email] User auth error:", userError);
       return new Response(
