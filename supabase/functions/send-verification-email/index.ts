@@ -178,7 +178,7 @@ serve(async (req: Request) => {
       await supabaseAdmin
         .from("seller_verification_tokens")
         .delete()
-        .eq("token", token);
+        .eq("token", verificationToken);
 
       // Check if it's a domain verification issue
       const errorMessage = emailResponse.error.message || "";
