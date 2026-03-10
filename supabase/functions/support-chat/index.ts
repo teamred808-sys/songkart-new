@@ -8,22 +8,19 @@ const corsHeaders = {
 };
 
 // Round-robin key rotation
-const API_KEYS: string[] = [];
 let keyIndex = 0;
 
-function getNextKey(): string {
-  if (API_KEYS.length === 0) {
-    const k1 = Deno.env.get("GEMINI_API_KEY_1");
-    const k2 = Deno.env.get("GEMINI_API_KEY_2");
-    const k3 = Deno.env.get("GEMINI_API_KEY_3");
-    const k4 = Deno.env.get("GEMINI_API_KEY_4");
-    if (k1) API_KEYS.push(k1);
-    if (k2) API_KEYS.push(k2);
-    if (k3) API_KEYS.push(k3);
-    if (k4) API_KEYS.push(k4);
+function loadApiKeys(): string[] {
+  const keys: string[] = [];
+  for (let i = 1; i <= 4; i++) {
+    const k = Deno.env.get(`GEMINI_API_KEY_${i}`);
+    if (k) keys.push(k);
   }
-  if (API_KEYS.length === 0) throw new Error("No Gemini API keys configured");
-  const key = API_KEYS[keyIndex % API_KEYS.length];
+  return keys;
+}
+
+function getNextKey(keys: string[]): string {
+  const key = keys[keyIndex % keys.length];
   keyIndex++;
   return key;
 }
