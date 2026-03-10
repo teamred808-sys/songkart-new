@@ -31,7 +31,7 @@ export default function VerifyEmail() {
         if (error) {
           console.error("Verification error:", error);
           setStatus("error");
-          setMessage(error.message || "Failed to verify email. Please try again.");
+          setMessage(data?.error || error.message || "Failed to verify email. Please try again.");
           return;
         }
 
