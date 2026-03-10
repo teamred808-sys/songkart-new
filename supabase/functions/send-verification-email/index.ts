@@ -106,8 +106,8 @@ serve(async (req: Request) => {
     }
 
     // Generate a secure token (UUID format)
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    const verificationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hour expiry
 
     console.log("[send-verification-email] Creating verification token");
 
