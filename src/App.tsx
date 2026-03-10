@@ -29,6 +29,7 @@ import LicensesPage from "./pages/LicensesPage";
 import { SongRedirect } from "./components/redirects/SongRedirect";
 import { SellerRedirect } from "./components/redirects/SellerRedirect";
 import VerifyEmail from "./pages/VerifyEmail";
+import ChatWidget from "./components/chat/ChatWidget";
 
 // Retry wrapper: reloads page once on stale chunk errors
 function lazyRetry(importFn: () => Promise<any>) {
@@ -224,6 +225,7 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
             </Routes>
+            <ChatWidget />
             </AudioPlayerProvider>
           </CurrencyProvider>
         </AuthProvider>
