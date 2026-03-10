@@ -1,20 +1,36 @@
 
 
-## Make Price Field Start Empty on License Tier Selection
+## Fix: Switch Chatbot to Lovable AI Gateway
 
 ### Problem
-When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
+The chatbot is broken due to two issues:
+1. **Model `gemini-2.0-flash` has been discontinued** by Google (404 error)
+2. **Gemini API key has zero quota** on free tier (429 error)
+
+Both issues cause every request to fail, triggering the fallback "I'm having trouble answering" message.
+
+### Solution
+Switch from direct Google Gemini API calls to the **Lovable AI Gateway**, which is already configured in the project. This eliminates the need for any external API keys and uses the pre-provisioned `LOVABLE_API_KEY`.
 
 ### Changes
 
-**File: `src/pages/seller/UploadSong.tsx`**
+**File: `supabase/functions/support-chat/index.ts`**
 
-1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
-   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
+Replace the direct Gemini API call (lines 289-341) with a call to the Lovable AI Gateway:
+- URL: `https://ai.gateway.lovable.dev/v1/chat/completions`
+- Model: `google/gemini-3-flash-preview` (current recommended default)
+- Auth: `Bearer LOVABLE_API_KEY`
+- Remove the `loadApiKeys()` and `getNextKey()` key rotation logic (no longer needed)
+- Convert the message format from Gemini's `contents/parts` format to OpenAI-compatible `messages` format (system + user/assistant roles)
+- Keep all RAG logic (cache check, FAQ matching, KB retrieval) exactly as-is
+- Keep rate limiting, logging, and failsafe behavior unchanged
 
-2. **Line 830** -- Simplify the value binding back:
-   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
-   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
-
-This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
+### What stays the same
+- Chat UI (no changes)
+- FAQ matching logic
+- Knowledge base retrieval
+- Cache system
+- Rate limiting
+- Logging to `chat_logs`
+- Fallback error message
 
