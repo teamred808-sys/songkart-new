@@ -116,7 +116,7 @@ serve(async (req: Request) => {
       .from("seller_verification_tokens")
       .insert({
         user_id: user.id,
-        token: token,
+        token: verificationToken,
         expires_at: expiresAt.toISOString(),
       });
 
