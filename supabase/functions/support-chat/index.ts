@@ -7,23 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Round-robin key rotation
-let keyIndex = 0;
-
-function loadApiKeys(): string[] {
-  const keys: string[] = [];
-  for (let i = 1; i <= 4; i++) {
-    const k = Deno.env.get(`GEMINI_API_KEY_${i}`);
-    if (k) keys.push(k);
-  }
-  return keys;
-}
-
-function getNextKey(keys: string[]): string {
-  const key = keys[keyIndex % keys.length];
-  keyIndex++;
-  return key;
-}
+// Lovable AI Gateway config
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_MODEL = "google/gemini-3-flash-preview";
 
 // Rate limiting: 10 requests per minute per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
