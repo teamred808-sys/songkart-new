@@ -255,80 +255,60 @@ serve(async (req) => {
       }
     }
 
-    // === STEP 4: Build Gemini request with RAG context ===
+    // === STEP 4: Call Lovable AI Gateway with RAG context ===
     const systemPrompt = kbContext
       ? `${RAG_SYSTEM_PROMPT}\n\n--- CONTEXT ---\n${kbContext}\n--- END CONTEXT ---`
       : SYSTEM_PROMPT;
 
-    const geminiContents = [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Understood! I'm SongKart's support assistant. How can I help you today?" }] },
+    const aiMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages.map((msg: { role: string; content: string }) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      })),
     ];
 
-    for (const msg of messages) {
-      geminiContents.push({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }],
-      });
-    }
-
-    // Try keys with round-robin and fallback
-    const apiKeys = loadApiKeys();
     let assistantResponse: string | null = null;
-    let lastError: string | null = null;
 
-    if (apiKeys.length === 0) {
-      console.error("No Gemini API keys found in environment");
-    }
-
-    for (let attempt = 0; attempt < apiKeys.length; attempt++) {
-      const apiKey = getNextKey(apiKeys);
-
-      try {
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: geminiContents,
-              generationConfig: {
-                temperature: 0.7,
-                topP: 0.9,
-                maxOutputTokens: 1024,
-              },
-              safetySettings: [
-                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-              ],
-            }),
-          }
-        );
-
-        if (!geminiResponse.ok) {
-          const errText = await geminiResponse.text();
-          console.error(`Gemini API error (attempt ${attempt + 1}):`, geminiResponse.status, errText);
-          lastError = errText;
-          continue;
-        }
-
-        const data = await geminiResponse.json();
-        assistantResponse =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-          "I'm sorry, I couldn't generate a response. Please try again.";
-        break;
-      } catch (err) {
-        console.error(`Gemini call failed (attempt ${attempt + 1}):`, err);
-        lastError = err instanceof Error ? err.message : String(err);
-        continue;
+    try {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) {
+        throw new Error("LOVABLE_API_KEY is not configured");
       }
+
+      const aiResponse = await fetch(AI_GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: AI_MODEL,
+          messages: aiMessages,
+          temperature: 0.7,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text();
+        console.error("AI Gateway error:", aiResponse.status, errText);
+        if (aiResponse.status === 429) {
+          assistantResponse = "I'm receiving too many requests right now. Please try again in a moment. 🎵";
+        } else if (aiResponse.status === 402) {
+          assistantResponse = "I'm temporarily unavailable. Please contact support@songkart.com for assistance. 🎵";
+        }
+      } else {
+        const data = await aiResponse.json();
+        assistantResponse = data?.choices?.[0]?.message?.content ||
+          "I'm sorry, I couldn't generate a response. Please try again.";
+      }
+    } catch (err) {
+      console.error("AI Gateway call failed:", err);
     }
 
     // === STEP 6: Failsafe ===
     if (!assistantResponse) {
-      console.error("All Gemini API keys failed. Last error:", lastError);
       assistantResponse =
         "I'm having trouble answering right now. Please contact support@songkart.com for assistance. 🎵";
     }
