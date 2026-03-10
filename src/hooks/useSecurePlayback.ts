@@ -28,7 +28,7 @@ export function useSecurePlayback() {
   });
   
   const deviceFingerprint = useRef<string>(generateDeviceFingerprint());
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Generate a simple device fingerprint
   function generateDeviceFingerprint(): string {
