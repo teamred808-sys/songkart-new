@@ -136,20 +136,16 @@ serve(async (req) => {
     }
 
     // Try keys with round-robin and fallback
+    const apiKeys = loadApiKeys();
     let assistantResponse: string | null = null;
     let lastError: string | null = null;
-    const triedKeys = new Set<number>();
 
-    while (triedKeys.size < API_KEYS.length || API_KEYS.length === 0) {
-      // Initialize keys on first call
-      if (API_KEYS.length === 0) getNextKey();
-      if (API_KEYS.length === 0) break;
+    if (apiKeys.length === 0) {
+      console.error("No Gemini API keys found in environment");
+    }
 
-      const currentIndex = keyIndex % API_KEYS.length;
-      if (triedKeys.has(currentIndex) && triedKeys.size >= API_KEYS.length) break;
-      triedKeys.add(currentIndex);
-
-      const apiKey = getNextKey();
+    for (let attempt = 0; attempt < apiKeys.length; attempt++) {
+      const apiKey = getNextKey(apiKeys);
 
       try {
         const geminiResponse = await fetch(
@@ -176,7 +172,7 @@ serve(async (req) => {
 
         if (!geminiResponse.ok) {
           const errText = await geminiResponse.text();
-          console.error(`Gemini API error (key ${currentIndex + 1}):`, geminiResponse.status, errText);
+          console.error(`Gemini API error (attempt ${attempt + 1}):`, geminiResponse.status, errText);
           lastError = errText;
           continue;
         }
@@ -187,7 +183,7 @@ serve(async (req) => {
           "I'm sorry, I couldn't generate a response. Please try again.";
         break;
       } catch (err) {
-        console.error(`Gemini call failed (key ${currentIndex + 1}):`, err);
+        console.error(`Gemini call failed (attempt ${attempt + 1}):`, err);
         lastError = err instanceof Error ? err.message : String(err);
         continue;
       }
