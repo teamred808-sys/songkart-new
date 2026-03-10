@@ -1,36 +1,20 @@
 
 
-## Fix: Chatbot Caching Error Responses
+## Make Price Field Start Empty on License Tier Selection
 
-### Root Cause
-The edge function caches **all** AI responses, including fallback error messages. Once an error was cached (when the old Gemini key failed), every subsequent identical question returns the cached error for 24 hours.
+### Problem
+When a seller selects a license tier (e.g., Commercial), the price is initialized to `0`, which pre-fills the input with "0". The seller should see an empty field with the "Enter price" placeholder instead, and set the price themselves.
 
-### Fix
+### Changes
 
-**1. Database: Delete bad cache entries**
-Run a migration to clear all cached error responses:
-```sql
-DELETE FROM chat_response_cache 
-WHERE response LIKE '%having trouble answering%' 
-   OR response LIKE '%temporarily unavailable%';
-```
+**File: `src/pages/seller/UploadSong.tsx`**
 
-**2. Edge function: Don't cache error/fallback responses**
-In `supabase/functions/support-chat/index.ts`, add a check before caching (around line 317):
+1. **Line 258** -- Change the initial price from `0` to `undefined`/empty:
+   - Change `{ license_type: type, price: 0, terms: '' }` to `{ license_type: type, price: undefined, terms: '' }`
 
-```typescript
-// Only cache successful AI responses, not fallback errors
-const isFallback = assistantResponse.includes("having trouble answering") || 
-                   assistantResponse.includes("temporarily unavailable");
+2. **Line 830** -- Simplify the value binding back:
+   - Change `value={tier.price === 0 ? '0' : (tier.price || '')}` to `value={tier.price ?? ''}`
+   - This displays empty when price is `undefined`/`null`, and shows `0` if the seller explicitly types `0`
 
-if (!isFallback) {
-  await supabase.from("chat_response_cache").upsert({ ... });
-}
-```
-
-### Files Modified
-| File | Change |
-|------|--------|
-| `supabase/functions/support-chat/index.ts` | Skip caching fallback/error responses |
-| New migration | Delete existing bad cache entries |
+This way the field starts blank with the "Enter price" placeholder, and sellers can type `0` for free songs or any other price.
 
