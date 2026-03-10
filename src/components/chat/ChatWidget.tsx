@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Bot, User, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  type?: "faq" | "ai";
+  feedbackGiven?: boolean;
+};
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-chat`;
 
@@ -37,15 +42,15 @@ export default function ChatWidget() {
     }
   }, [open]);
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
+  const sendMessage = useCallback(async (overrideText?: string, skipFaq?: boolean) => {
+    const text = overrideText || input.trim();
     if (!text || loading) return;
 
-    setInput("");
+    if (!overrideText) setInput("");
     setError(null);
     const userMsg: Message = { role: "user", content: text };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    const newMessages = overrideText ? messages : [...messages, userMsg];
+    if (!overrideText) setMessages(newMessages);
     setLoading(true);
 
     try {
@@ -56,8 +61,9 @@ export default function ChatWidget() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: newMessages,
+          messages: overrideText ? newMessages : newMessages,
           session_id: getSessionId(),
+          skip_faq: skipFaq || false,
         }),
       });
 
@@ -69,7 +75,14 @@ export default function ChatWidget() {
 
       const data = await resp.json();
       if (data.response) {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.response,
+            type: data.type || "ai",
+          },
+        ]);
       } else {
         setError("Failed to get a response. Please try again.");
       }
@@ -79,6 +92,23 @@ export default function ChatWidget() {
       setLoading(false);
     }
   }, [input, loading, messages]);
+
+  const handleFaqFeedback = useCallback((msgIndex: number, helpful: boolean) => {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === msgIndex ? { ...m, feedbackGiven: true } : m))
+    );
+
+    if (!helpful) {
+      // Re-send the original question but skip FAQ this time
+      const originalQuestion = messages
+        .slice(0, msgIndex)
+        .reverse()
+        .find((m) => m.role === "user");
+      if (originalQuestion) {
+        sendMessage(originalQuestion.content, true);
+      }
+    }
+  }, [messages, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -161,28 +191,53 @@ export default function ChatWidget() {
             )}
 
             {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn("flex gap-2", msg.role === "user" ? "flex-row-reverse" : "flex-row")}
-              >
+              <div key={i}>
                 <div
-                  className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
-                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}
+                  className={cn("flex gap-2", msg.role === "user" ? "flex-row-reverse" : "flex-row")}
                 >
-                  {msg.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  <div
+                    className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                      msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {msg.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  </div>
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed",
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    )}
+                  >
+                    {renderContent(msg.content)}
+                  </div>
                 </div>
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  )}
-                >
-                  {renderContent(msg.content)}
-                </div>
+
+                {/* FAQ feedback buttons */}
+                {msg.role === "assistant" && msg.type === "faq" && !msg.feedbackGiven && (
+                  <div className="ml-9 mt-1.5 flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                    <button
+                      onClick={() => handleFaqFeedback(i, true)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <ThumbsUp className="h-3 w-3" /> Yes
+                    </button>
+                    <button
+                      onClick={() => handleFaqFeedback(i, false)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <ThumbsDown className="h-3 w-3" /> No
+                    </button>
+                  </div>
+                )}
+                {msg.role === "assistant" && msg.type === "faq" && msg.feedbackGiven && (
+                  <div className="ml-9 mt-1 text-xs text-muted-foreground">
+                    Thanks for your feedback!
+                  </div>
+                )}
               </div>
             ))}
 
@@ -218,7 +273,7 @@ export default function ChatWidget() {
               />
               <Button
                 size="icon"
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
                 className="shrink-0"
               >

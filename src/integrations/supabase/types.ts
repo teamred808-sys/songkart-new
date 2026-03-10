@@ -376,6 +376,7 @@ export type Database = {
           id: string
           role: string
           session_id: string
+          source: string | null
           user_id: string | null
         }
         Insert: {
@@ -384,6 +385,7 @@ export type Database = {
           id?: string
           role: string
           session_id: string
+          source?: string | null
           user_id?: string | null
         }
         Update: {
@@ -392,7 +394,38 @@ export type Database = {
           id?: string
           role?: string
           session_id?: string
+          source?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_response_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          question: string
+          question_hash: string
+          response: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          question: string
+          question_hash: string
+          response: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          question?: string
+          question_hash?: string
+          response?: string
+          source?: string
         }
         Relationships: []
       }
@@ -1081,6 +1114,33 @@ export type Database = {
           },
         ]
       }
+      faq: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          question: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          question: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          question?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -1176,6 +1236,33 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      knowledge_base: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          tags: string[]
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tags?: string[]
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          tags?: string[]
+          title?: string
         }
         Relationships: []
       }
