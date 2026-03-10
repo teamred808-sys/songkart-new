@@ -131,8 +131,8 @@ serve(async (req: Request) => {
     console.log("[send-verification-email] Token created, sending email");
 
     // Get the app URL from environment or construct it
-    const appUrl = Deno.env.get("APP_URL") || "https://vxegvnndkeoubqnruiqj.lovableproject.com";
-    const verificationLink = `${appUrl}/verify-email?token=${token}`;
+    const appUrl = Deno.env.get("APP_URL") || "https://songkart.lovable.app";
+    const verificationLink = `${appUrl}/verify-email?token=${verificationToken}`;
 
     // Send the email
     const emailResponse = await resend.emails.send({
