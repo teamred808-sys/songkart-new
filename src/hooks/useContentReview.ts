@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "./useAuth";
+import { apiFetch, API_BASE } from '@/lib/api';
 
 export interface ContentReviewItem {
   id: string;
@@ -41,39 +41,20 @@ export function useContentReviewQueue(status?: string) {
   return useQuery({
     queryKey: ["content-review-queue", status],
     queryFn: async () => {
-      let query = supabase
-        .from("content_review_queue")
-        .select("*")
-        .order("priority", { ascending: true })
-        .order("created_at", { ascending: false });
+      const params = new URLSearchParams();
+      if (status && status !== "all") params.append('status', status);
 
-      if (status && status !== "all") {
-        query = query.eq("status", status);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
+      const data = await apiFetch(`/content_review_queue?${params.toString()}`);
 
       // Fetch song details for each queue item
       const enrichedData = await Promise.all(
-        (data || []).map(async (item) => {
+        (data || []).map(async (item: any) => {
           // Fetch main song
-          const { data: songData } = await supabase
-            .from("songs")
-            .select("id, title, seller_id, cover_image_url, preview_audio_url, full_lyrics")
-            .eq("id", item.song_id)
-            .single();
+          const songData = await apiFetch(`/songs/${item.song_id}`).catch(() => null);
 
           let song = null;
           if (songData) {
-            // Fetch seller info
-            const { data: sellerData } = await supabase
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", songData.seller_id)
-              .single();
-
+            const sellerData = await apiFetch(`/profiles/${songData.seller_id}`).catch(() => null);
             song = {
               ...songData,
               seller_name: sellerData?.full_name || null,
@@ -84,19 +65,9 @@ export function useContentReviewQueue(status?: string) {
           // Fetch matched song if exists
           let matched_song = null;
           if (item.matched_song_id) {
-            const { data: matchedSongData } = await supabase
-              .from("songs")
-              .select("id, title, seller_id, full_lyrics")
-              .eq("id", item.matched_song_id)
-              .single();
-
+            const matchedSongData = await apiFetch(`/songs/${item.matched_song_id}`).catch(() => null);
             if (matchedSongData) {
-              const { data: matchedSellerData } = await supabase
-                .from("profiles")
-                .select("full_name")
-                .eq("id", matchedSongData.seller_id)
-                .single();
-
+              const matchedSellerData = await apiFetch(`/profiles/${matchedSongData.seller_id}`).catch(() => null);
               matched_song = {
                 ...matchedSongData,
                 seller_name: matchedSellerData?.full_name || null,
@@ -104,11 +75,7 @@ export function useContentReviewQueue(status?: string) {
             }
           }
 
-          return {
-            ...item,
-            song,
-            matched_song,
-          };
+          return { ...item, song, matched_song };
         })
       );
 
@@ -121,11 +88,7 @@ export function useContentReviewStats() {
   return useQuery({
     queryKey: ["content-review-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("content_review_queue")
-        .select("status, queue_type");
-
-      if (error) throw error;
+      const data = await apiFetch('/content_review_queue');
 
       const stats = {
         pending: 0,
@@ -135,7 +98,7 @@ export function useContentReviewStats() {
         plagiarism: 0,
       };
 
-      data?.forEach((item) => {
+      (data || []).forEach((item: any) => {
         if (item.status === "pending") stats.pending++;
         if (item.status === "in_review") stats.in_review++;
         if (item.status === "resolved") stats.resolved++;
@@ -165,56 +128,41 @@ export function useResolveContentReview() {
       notes?: string;
     }) => {
       // Update queue item
-      const { error: queueError } = await supabase
-        .from("content_review_queue")
-        .update({
+      await apiFetch(`/content_review_queue/${queueId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           status: "resolved",
           resolved_by: user?.id,
           resolved_at: new Date().toISOString(),
           resolution,
           resolution_notes: notes,
-        })
-        .eq("id", queueId);
-
-      if (queueError) throw queueError;
+        }),
+      });
 
       // Update song based on resolution
       let songUpdate: Record<string, unknown> = {};
-      
       if (resolution === "approved") {
-        songUpdate = {
-          content_check_status: "clear",
-          requires_ownership_proof: false,
-        };
+        songUpdate = { content_check_status: "clear", requires_ownership_proof: false };
       } else if (resolution === "rejected") {
-        songUpdate = {
-          content_check_status: "blocked",
-          status: "rejected",
-          rejection_reason: notes || "Copyright/plagiarism violation",
-        };
+        songUpdate = { content_check_status: "blocked", status: "rejected", rejection_reason: notes || "Copyright/plagiarism violation" };
       } else if (resolution === "needs_proof") {
-        songUpdate = {
-          content_check_status: "flagged",
-          requires_ownership_proof: true,
-        };
+        songUpdate = { content_check_status: "flagged", requires_ownership_proof: true };
       }
 
-      const { error: songError } = await supabase
-        .from("songs")
-        .update(songUpdate)
-        .eq("id", songId);
-
-      if (songError) throw songError;
+      await apiFetch(`/songs/${songId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(songUpdate),
+      });
 
       // Update fingerprint review info
-      await supabase
-        .from("content_fingerprints")
-        .update({
+      await apiFetch(`/content_fingerprints?song_id=${songId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           reviewed_by: user?.id,
           reviewed_at: new Date().toISOString(),
           review_notes: notes,
-        })
-        .eq("song_id", songId);
+        }),
+      }).catch(() => {/* non-critical */});
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["content-review-queue"] });
@@ -249,24 +197,31 @@ export function useUploadOwnershipProof() {
       const fileExt = file.name.split(".").pop();
       const fileName = `${user?.id}/${songId}/ownership-proof-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("license-documents")
-        .upload(fileName, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('path', fileName);
 
-      if (uploadError) throw uploadError;
+      const token = localStorage.getItem('auth_token');
+      const uploadRes = await fetch(`${API_BASE}/storage/license-documents/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
 
-      const { data: urlData } = supabase.storage
-        .from("license-documents")
-        .getPublicUrl(fileName);
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Upload failed');
+      }
 
-      const { error: updateError } = await supabase
-        .from("songs")
-        .update({ ownership_proof_url: urlData.publicUrl })
-        .eq("id", songId);
+      const uploadData = await uploadRes.json();
+      const publicUrl = uploadData.public_url;
 
-      if (updateError) throw updateError;
+      await apiFetch(`/songs/${songId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ ownership_proof_url: publicUrl }),
+      });
 
-      return urlData.publicUrl;
+      return publicUrl;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["songs"] });
@@ -284,21 +239,8 @@ export function useSellerContentFlags(sellerId?: string) {
     queryFn: async () => {
       if (!sellerId) return [];
 
-      const { data, error } = await supabase
-        .from("songs")
-        .select(`
-          id,
-          title,
-          cover_image_url,
-          content_check_status,
-          requires_ownership_proof,
-          ownership_proof_url
-        `)
-        .eq("seller_id", sellerId)
-        .in("content_check_status", ["flagged", "blocked"]);
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch(`/songs?seller_id=${sellerId}`);
+      return (data || []).filter((s: any) => s.content_check_status === 'flagged' || s.content_check_status === 'blocked');
     },
     enabled: !!sellerId,
   });

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { apiFetch } from '@/lib/api';
 
 export interface SongRating {
   id: string;
@@ -35,15 +35,8 @@ export function useUserRating(songId: string) {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from("song_ratings")
-        .select("*")
-        .eq("song_id", songId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
+      const dataArr = await apiFetch(`/song_ratings?song_id=${songId}&user_id=${user.id}`);
+      return dataArr?.[0] || null;
     },
     enabled: !!songId && !!user?.id,
   });
@@ -61,26 +54,10 @@ export function useSubmitRating() {
       songId: string;
       rating: number;
     }) => {
-      const { data, error } = await supabase.rpc("submit_rating", {
-        p_song_id: songId,
-        p_rating: rating,
+      const result = await apiFetch('/rpc/submit_rating', {
+        method: 'POST',
+        body: JSON.stringify({ song_id: songId, rating }),
       });
-
-      if (error) throw error;
-
-      const result = data as {
-        success: boolean;
-        error?: string;
-        rating?: number;
-        is_update?: boolean;
-        is_verified_purchase?: boolean;
-        average_rating?: number;
-        total_ratings?: number;
-      };
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to submit rating");
-      }
 
       return result;
     },
@@ -103,13 +80,11 @@ export function useSongRatings(songId: string, limit = 10, offset = 0) {
   return useQuery({
     queryKey: ["song-ratings", songId, limit, offset],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_song_ratings", {
-        p_song_id: songId,
-        p_limit: limit,
-        p_offset: offset,
+      const data = await apiFetch('/rpc/get_song_ratings', {
+        method: 'POST',
+        body: JSON.stringify({ song_id: songId, limit, offset }),
       });
 
-      if (error) throw error;
       return (data || []) as SongRating[];
     },
     enabled: !!songId,
@@ -125,21 +100,7 @@ export function useHasPurchased(songId: string) {
     queryFn: async () => {
       if (!user?.id) return false;
 
-      const { data, error } = await supabase
-        .from("order_items")
-        .select(`
-          id,
-          orders!inner (
-            buyer_id,
-            payment_status
-          )
-        `)
-        .eq("song_id", songId)
-        .eq("orders.buyer_id", user.id)
-        .eq("orders.payment_status", "completed")
-        .limit(1);
-
-      if (error) throw error;
+      const data = await apiFetch(`/order_items/full?song_id=${songId}&orders.buyer_id=${user.id}&orders.payment_status=completed&limit=1`);
       return data && data.length > 0;
     },
     enabled: !!songId && !!user?.id,
@@ -158,17 +119,10 @@ export function useFlagRating() {
       ratingId: string;
       reason: string;
     }) => {
-      const { data, error } = await supabase.rpc("flag_rating", {
-        p_rating_id: ratingId,
-        p_reason: reason,
+      const result = await apiFetch('/rpc/flag_rating', {
+        method: 'POST',
+        body: JSON.stringify({ rating_id: ratingId, reason }),
       });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; error?: string; message?: string };
-      if (!result.success) {
-        throw new Error(result.error || "Failed to flag rating");
-      }
 
       return result;
     },
@@ -187,21 +141,10 @@ export function useAllRatings(filters?: { status?: string; limit?: number }) {
   return useQuery({
     queryKey: ["all-ratings", filters],
     queryFn: async () => {
-      let query = supabase
-        .from("song_ratings")
-        .select(`
-          *,
-          profiles:user_id (full_name, avatar_url),
-          songs:song_id (title, seller_id)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (filters?.limit) {
-        query = query.limit(filters.limit);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const params = new URLSearchParams();
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      
+      const data = await apiFetch(`/song_ratings/full?${params.toString()}`);
       return data;
     },
   });
@@ -212,21 +155,7 @@ export function useFlaggedRatings() {
   return useQuery({
     queryKey: ["rating-abuse-flags"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rating_abuse_flags")
-        .select(`
-          *,
-          song_ratings (
-            *,
-            profiles:user_id (full_name, avatar_url),
-            songs:song_id (title)
-          ),
-          flagged_by_profile:flagged_by (full_name),
-          reviewed_by_profile:reviewed_by (full_name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch('/rating_abuse_flags/full');
       return data;
     },
   });
@@ -244,17 +173,10 @@ export function useAdminRemoveRating() {
       ratingId: string;
       reason: string;
     }) => {
-      const { data, error } = await supabase.rpc("admin_remove_rating", {
-        p_rating_id: ratingId,
-        p_reason: reason,
+      const result = await apiFetch('/rpc/admin_remove_rating', {
+        method: 'POST',
+        body: JSON.stringify({ rating_id: ratingId }),
       });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; error?: string; message?: string };
-      if (!result.success) {
-        throw new Error(result.error || "Failed to remove rating");
-      }
 
       return result;
     },
@@ -286,17 +208,15 @@ export function useUpdateFlagStatus() {
       status: string;
       actionTaken?: string;
     }) => {
-      const { error } = await supabase
-        .from("rating_abuse_flags")
-        .update({
+      await apiFetch(`/rating_abuse_flags/${flagId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           status,
           action_taken: actionTaken,
           reviewed_at: new Date().toISOString(),
           reviewed_by: user?.id,
         })
-        .eq("id", flagId);
-
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rating-abuse-flags"] });
@@ -314,13 +234,11 @@ export function useDeleteMyRating() {
 
   return useMutation({
     mutationFn: async ({ songId }: { songId: string }) => {
-      const { data, error } = await supabase.rpc("delete_my_rating", {
-        p_song_id: songId,
+      const result = await apiFetch('/rpc/delete_my_rating', {
+        method: 'POST',
+        body: JSON.stringify({ song_id: songId }),
       });
 
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string; deleted?: boolean };
-      if (!result.success) throw new Error(result.error || "Failed to delete rating");
       return result;
     },
     onSuccess: (_, variables) => {
@@ -345,22 +263,7 @@ export function useSellerRatings() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from("song_ratings")
-        .select(`
-          *,
-          profiles:user_id (full_name, avatar_url),
-          songs:song_id!inner (
-            id,
-            title,
-            seller_id,
-            cover_image_url
-          )
-        `)
-        .eq("songs.seller_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/song_ratings/full?songs.seller_id=${user.id}`);
       return data;
     },
     enabled: !!user?.id,
@@ -377,13 +280,7 @@ export function useSellerRatingStats() {
       if (!user?.id) return null;
 
       // Get all songs with ratings for this seller
-      const { data: songs, error } = await supabase
-        .from("songs")
-        .select("id, title, average_rating, total_ratings")
-        .eq("seller_id", user.id)
-        .gt("total_ratings", 0);
-
-      if (error) throw error;
+      const songs = await apiFetch(`/songs?seller_id=${user.id}&total_ratings=gt.0`);
 
       if (!songs || songs.length === 0) {
         return {
@@ -395,21 +292,18 @@ export function useSellerRatingStats() {
       }
 
       // Calculate overall stats
-      const totalRatings = songs.reduce((sum, s) => sum + (s.total_ratings || 0), 0);
+      const totalRatings = songs.reduce((sum: number, s: any) => sum + (s.total_ratings || 0), 0);
       const weightedSum = songs.reduce(
-        (sum, s) => sum + (s.average_rating || 0) * (s.total_ratings || 0),
+        (sum: number, s: any) => sum + (s.average_rating || 0) * (s.total_ratings || 0),
         0
       );
       const averageRating = totalRatings > 0 ? weightedSum / totalRatings : 0;
 
       // Get distribution
-      const { data: allRatings } = await supabase
-        .from("song_ratings")
-        .select("rating, songs!inner(seller_id)")
-        .eq("songs.seller_id", user.id);
+      const allRatings = await apiFetch(`/song_ratings/full?songs.seller_id=${user.id}`);
 
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      allRatings?.forEach((r) => {
+      allRatings?.forEach((r: any) => {
         if (r.rating >= 1 && r.rating <= 5) {
           distribution[r.rating as 1 | 2 | 3 | 4 | 5]++;
         }

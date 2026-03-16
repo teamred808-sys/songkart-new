@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 import { Search, Music, CheckCircle, User } from "lucide-react";
 
 interface SellerProfile {
@@ -25,43 +25,27 @@ export default function Sellers() {
     queryKey: ["sellers"],
     queryFn: async () => {
       // Get all users with seller role
-      const { data: sellerRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "seller");
-
-      if (rolesError) throw rolesError;
+      const sellerRoles = await apiFetch('/user_roles?role=seller').catch(() => []);
       if (!sellerRoles || sellerRoles.length === 0) return [];
 
-      const sellerIds = sellerRoles.map((r) => r.user_id);
+      const sellerIds = sellerRoles.map((r: any) => r.user_id);
 
       // Get profiles for these sellers
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, bio, is_verified")
-        .in("id", sellerIds);
-
-      if (profilesError) throw profilesError;
+      const profiles = await apiFetch(`/profiles?id=in.(${sellerIds.join(',')})`).catch(() => []);
 
       // Get song counts for each seller
-      const { data: songs, error: songsError } = await supabase
-        .from("songs")
-        .select("seller_id")
-        .eq("status", "approved")
-        .in("seller_id", sellerIds);
-
-      if (songsError) throw songsError;
+      const songs = await apiFetch(`/songs?status=approved&seller_id=in.(${sellerIds.join(',')})`).catch(() => []);
 
       // Count songs per seller
       const songCounts: Record<string, number> = {};
-      songs?.forEach((song) => {
+      songs?.forEach((song: any) => {
         if (song.seller_id) {
           songCounts[song.seller_id] = (songCounts[song.seller_id] || 0) + 1;
         }
       });
 
       // Combine data
-      return (profiles || []).map((profile) => ({
+      return (profiles || []).map((profile: any) => ({
         ...profile,
         songCount: songCounts[profile.id] || 0,
       })) as SellerProfile[];

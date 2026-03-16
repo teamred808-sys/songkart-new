@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { apiFetch, API_BASE } from '@/lib/api';
 
 export interface CmsMedia {
   id: string;
@@ -24,12 +24,7 @@ export function useMediaLibrary() {
   return useQuery({
     queryKey: ['cms-media'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cms_media')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await apiFetch('/cms_media?order=created_at:desc');
       return data as CmsMedia[];
     },
   });
@@ -51,58 +46,38 @@ export function useUploadMedia() {
         throw new Error('File too large. Maximum size is 10MB');
       }
       
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Not authenticated');
-      
-      // Generate unique filename
-      const ext = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-      const storagePath = `uploads/${fileName}`;
-      
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('cms-media')
-        .upload(storagePath, file);
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('cms-media')
-        .getPublicUrl(storagePath);
-      
-      // Create media record
-      const { data, error } = await supabase
-        .from('cms_media')
-        .insert({
-          file_name: file.name,
-          file_type: file.type,
-          file_size: file.size,
-          storage_path: storagePath,
-          public_url: urlData.publicUrl,
-          alt_text: altText || null,
-          uploaded_by: user.user.id,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      const mediaRecord = data as CmsMedia;
+      // Upload file using FormData to backend storage endpoint
+      const formData = new FormData();
+      formData.append('file', file);
+      if (altText) formData.append('alt_text', altText);
+
+      const token = localStorage.getItem('auth_token');
+      const uploadRes = await fetch(`${API_BASE}/storage/cms-media/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      const mediaRecord = await uploadRes.json() as CmsMedia;
 
       // Attempt AVIF compression (non-blocking — original is already saved)
       try {
         const fileType = file.type.toLowerCase();
         if (fileType !== 'image/svg+xml' && fileType !== 'image/gif') {
-          const { data: compressData } = await supabase.functions.invoke('compress-image', {
-            body: { storagePath },
+          const compressData = await apiFetch('/compress-image', {
+            method: 'POST',
+            body: JSON.stringify({ storagePath: mediaRecord.storage_path }),
           });
           if (compressData?.avifUrl) {
-            const { data: updated } = await supabase
-              .from('cms_media')
-              .update({ avif_url: compressData.avifUrl } as any)
-              .eq('id', mediaRecord.id)
-              .select()
-              .single();
+            const updated = await apiFetch(`/cms_media/${mediaRecord.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ avif_url: compressData.avifUrl }),
+            });
             if (updated) return updated as CmsMedia;
           }
         }
@@ -128,20 +103,8 @@ export function useDeleteMedia() {
   
   return useMutation({
     mutationFn: async (media: CmsMedia) => {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('cms-media')
-        .remove([media.storage_path]);
-      
-      if (storageError) throw storageError;
-      
-      // Delete record
-      const { error } = await supabase
-        .from('cms_media')
-        .delete()
-        .eq('id', media.id);
-      
-      if (error) throw error;
+      // Delete both storage file and DB record via backend
+      await apiFetch(`/cms_media/${media.id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cms-media'] });
@@ -159,17 +122,10 @@ export function useUpdateMedia() {
   
   return useMutation({
     mutationFn: async ({ id, altText, caption }: { id: string; altText?: string; caption?: string }) => {
-      const { data, error } = await supabase
-        .from('cms_media')
-        .update({
-          alt_text: altText,
-          caption: caption,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
+      const data = await apiFetch(`/cms_media/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ alt_text: altText, caption }),
+      });
       return data as CmsMedia;
     },
     onSuccess: () => {

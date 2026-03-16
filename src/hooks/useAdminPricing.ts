@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export interface PricingZone {
   id: string;
@@ -38,13 +38,8 @@ export function useAdminPricingZones() {
   return useQuery({
     queryKey: ['admin-pricing-zones'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pricing_zones')
-        .select('*')
-        .order('multiplier', { ascending: true });
-
-      if (error) throw error;
-      return data as PricingZone[];
+      const data = await apiFetch('/pricing_zones');
+      return (data as PricingZone[]).sort((a, b) => a.multiplier - b.multiplier);
     },
   });
 }
@@ -54,20 +49,8 @@ export function useAdminCountryMappings() {
   return useQuery({
     queryKey: ['admin-country-mappings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pricing_zone_countries')
-        .select(`
-          *,
-          pricing_zones (
-            zone_code,
-            zone_name,
-            multiplier
-          )
-        `)
-        .order('country_name', { ascending: true });
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/pricing_zone_countries');
+      return (data as PricingZoneCountry[]).sort((a, b) => a.country_name.localeCompare(b.country_name));
     },
   });
 }
@@ -77,13 +60,8 @@ export function useAdminExchangeRates() {
   return useQuery({
     queryKey: ['admin-exchange-rates'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('currency_exchange_rates')
-        .select('*')
-        .order('currency_code', { ascending: true });
-
-      if (error) throw error;
-      return data as CurrencyExchangeRate[];
+      const data = await apiFetch('/currency_exchange_rates');
+      return (data as CurrencyExchangeRate[]).sort((a, b) => a.currency_code.localeCompare(b.currency_code));
     },
   });
 }
@@ -93,14 +71,9 @@ export function useDynamicPricingEnabled() {
   return useQuery({
     queryKey: ['dynamic-pricing-enabled'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('value')
-        .eq('key', 'dynamic_pricing_enabled')
-        .maybeSingle();
-
-      if (error) throw error;
-      return (data?.value as { enabled: boolean })?.enabled ?? true;
+      const data = await apiFetch('/platform_settings?key=dynamic_pricing_enabled');
+      const setting = Array.isArray(data) ? data[0] : data;
+      return (setting?.value as { enabled: boolean })?.enabled ?? true;
     },
   });
 }
@@ -111,15 +84,14 @@ export function useToggleDynamicPricing() {
 
   return useMutation({
     mutationFn: async (enabled: boolean) => {
-      const { error } = await supabase
-        .from('platform_settings')
-        .upsert({
+      await apiFetch('/platform_settings', {
+        method: 'POST',
+        body: JSON.stringify({
           key: 'dynamic_pricing_enabled',
           value: { enabled },
           updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
-
-      if (error) throw error;
+        })
+      });
       return enabled;
     },
     onSuccess: (enabled) => {
@@ -139,17 +111,13 @@ export function useUpdatePricingZone() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PricingZone> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('pricing_zones')
-        .update({
+      const data = await apiFetch(`/pricing_zones/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           ...updates,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      });
       return data;
     },
     onSuccess: () => {
@@ -170,13 +138,10 @@ export function useCreatePricingZone() {
 
   return useMutation({
     mutationFn: async (zone: Omit<PricingZone, 'id' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('pricing_zones')
-        .insert(zone)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch('/pricing_zones', {
+        method: 'POST',
+        body: JSON.stringify(zone)
+      });
       return data;
     },
     onSuccess: () => {
@@ -197,14 +162,10 @@ export function useUpdateCountryMapping() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PricingZoneCountry> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('pricing_zone_countries')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch(`/pricing_zone_countries/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
       return data;
     },
     onSuccess: () => {
@@ -224,17 +185,13 @@ export function useUpdateExchangeRate() {
 
   return useMutation({
     mutationFn: async ({ id, rate_from_inr }: { id: string; rate_from_inr: number }) => {
-      const { data, error } = await supabase
-        .from('currency_exchange_rates')
-        .update({
+      const data = await apiFetch(`/currency_exchange_rates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           rate_from_inr,
           last_updated: new Date().toISOString()
         })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      });
       return data;
     },
     onSuccess: () => {
@@ -254,20 +211,7 @@ export function usePricingAnalytics(limit = 100) {
   return useQuery({
     queryKey: ['pricing-analytics', limit],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('order_pricing_snapshots')
-        .select(`
-          *,
-          orders (
-            order_number,
-            buyer_id,
-            created_at
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
+      const data = await apiFetch(`/order_pricing_snapshots?limit=${limit}`);
       return data;
     },
   });

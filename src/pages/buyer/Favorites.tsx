@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useFavorites, useToggleFavorite, useAddToCart } from '@/hooks/useBuyerData';
+import { useFavorites, useToggleFavorite } from '@/hooks/useBuyerData';
+import { useValidatedAddToCart } from '@/hooks/useCheckout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,25 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, Heart, ShoppingCart, Search, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 import { Price } from '@/components/ui/Price';
 
 export default function Favorites() {
   const { data: favorites, isLoading } = useFavorites();
   const toggleFavorite = useToggleFavorite();
-  const addToCart = useAddToCart();
+  const addToCart = useValidatedAddToCart();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch license tiers for add to cart
   const { data: licenseTiers } = useQuery({
     queryKey: ['all-license-tiers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('license_tiers')
-        .select('*')
-        .eq('is_available', true);
-      if (error) throw error;
+      const data = await apiFetch('/license_tiers?is_available=true');
       return data;
     },
   });

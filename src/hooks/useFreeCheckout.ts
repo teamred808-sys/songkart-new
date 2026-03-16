@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '@/lib/api';
 
 interface FreeCheckoutParams {
   songId: string;
@@ -29,17 +29,16 @@ export function useFreeCheckout() {
     mutationFn: async ({ songId, licenseTierId, acknowledgmentAccepted }: FreeCheckoutParams): Promise<FreeCheckoutResponse> => {
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke('free-checkout', {
-        body: {
+      const data = await apiFetch('/free-checkout', {
+        method: 'POST',
+        body: JSON.stringify({
           song_id: songId,
           license_tier_id: licenseTierId,
           acknowledgment_accepted: acknowledgmentAccepted,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-
       return data;
     },
     onSuccess: (data) => {
@@ -77,16 +76,8 @@ export function useFreeCheckoutFromCart() {
       if (!user) throw new Error('Not authenticated');
 
       // Get cart items first
-      const { data: cartItems, error: cartError } = await supabase
-        .from('cart_items')
-        .select(`
-          *,
-          songs:song_id (id, title),
-          license_tiers:license_tier_id (id, license_type, price)
-        `)
-        .eq('user_id', user.id);
+      const cartItems = await apiFetch(`/cart_items/full?user_id=${user.id}`);
 
-      if (cartError) throw new Error('Failed to fetch cart');
       if (!cartItems || cartItems.length === 0) throw new Error('Cart is empty');
 
       // For free checkout from cart, we only support single items
@@ -103,19 +94,18 @@ export function useFreeCheckoutFromCart() {
         throw new Error('This is not a free license');
       }
 
-      const { data, error } = await supabase.functions.invoke('free-checkout', {
-        body: {
+      const data = await apiFetch('/free-checkout', {
+        method: 'POST',
+        body: JSON.stringify({
           song_id: item.song_id,
           license_tier_id: item.license_tier_id,
           acknowledgment_accepted: acknowledgmentAccepted,
           promo_code_id: promoCodeId,
           promo_discount: promoDiscount,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-
       return data;
     },
     onSuccess: (data) => {

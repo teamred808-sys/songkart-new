@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch, API_BASE } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { useUpdateSellerDynamicPricing } from '@/hooks/useSellerData';
 import { useDisplayNameAvailability, checkDisplayNameAvailable } from '@/hooks/useDisplayNameCheck';
@@ -100,9 +100,9 @@ export default function SellerSettings() {
         }
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      await apiFetch(`/profiles/${profile.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           full_name: formData.full_name,
           bio: formData.bio,
           website: formData.website,
@@ -110,14 +110,7 @@ export default function SellerSettings() {
           role: formData.role || null,
           specialties: formData.specialties.length > 0 ? formData.specialties : null,
         })
-        .eq('id', profile.id);
-
-      if (error) {
-        if (error.code === '23505' && error.message.includes('full_name')) {
-          throw new Error('This display name is already taken.');
-        }
-        throw error;
-      }
+      });
 
       await refreshProfile();
       toast({ title: 'Profile updated successfully' });
@@ -137,22 +130,25 @@ export default function SellerSettings() {
       const fileExt = file.name.split('.').pop();
       const filePath = `${profile.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('song-covers')
-        .upload(filePath, file, { upsert: true });
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('path', filePath);
 
-      if (uploadError) throw uploadError;
+      const token = localStorage.getItem('auth_token');
+      const uploadRes = await fetch(`${API_BASE}/storage/song-covers/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: uploadFormData,
+      });
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('song-covers')
-        .getPublicUrl(filePath);
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      const uploadData = await uploadRes.json();
+      const publicUrl = uploadData.public_url;
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
+      await apiFetch(`/profiles/${profile.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
 
       await refreshProfile();
       toast({ title: 'Avatar updated successfully' });

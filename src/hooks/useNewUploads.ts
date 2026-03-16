@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 
 export interface NewUploadSong {
   id: string;
@@ -43,25 +43,14 @@ export function useNewUploads(limit: number = 8) {
   return useQuery({
     queryKey: ['new-uploads', limit],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_new_uploads', {
-        p_limit: limit
-      });
-
-      if (error) {
-        console.error('Error fetching new uploads:', error);
-        throw error;
-      }
+      const data = await apiFetch('/rpc/get_new_uploads', { method: 'POST', body: JSON.stringify({ limit_val: limit }) }).catch(() => []);
 
       const songs = (data || []) as NewUploadSong[];
       
       // Batch-fetch license tiers for all songs
       if (songs.length > 0) {
         const songIds = songs.map(s => s.id);
-        const { data: tiers } = await supabase
-          .from('license_tiers')
-          .select('song_id, license_type, price')
-          .in('song_id', songIds)
-          .eq('is_available', true);
+        const tiers = await apiFetch(`/license_tiers?song_id=in.(${songIds.join(',')})&is_available=true`);
         
         const tierMap = new Map<string, Array<{ license_type: string; price: number }>>();
         tiers?.forEach(t => {
@@ -86,18 +75,15 @@ export function useNewUploadsSectionEnabled() {
   return useQuery({
     queryKey: ['new-uploads-enabled'],
     queryFn: async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('value')
-        .eq('key', 'new_uploads_section_enabled')
-        .single();
+      const data = await apiFetch('/platform_settings?key=new_uploads_section_enabled');
+      const setting = data?.[0] || null;
 
-      if (error) {
-        console.error('Error fetching new uploads enabled setting:', error);
+      if (!setting) {
+        console.error('Error fetching new uploads enabled setting');
         return true; // Default to enabled
       }
 
-      return data?.value === true || data?.value === 'true';
+      return setting?.value === true || setting?.value === 'true';
     },
     staleTime: 1000 * 60 * 10, // 10 minutes
   });
@@ -107,20 +93,19 @@ export function useNewUploadsSettings() {
   return useQuery({
     queryKey: ['new-uploads-settings'],
     queryFn: async (): Promise<NewUploadsSettings> => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('key, value')
-        .in('key', [
-          'new_uploads_visibility_hours',
-          'new_uploads_max_per_seller',
-          'new_uploads_upload_rate_limit',
-          'new_uploads_section_enabled',
-          'new_uploads_scoring_weights'
-        ]);
+      const keys = [
+        'new_uploads_visibility_hours',
+        'new_uploads_max_per_seller',
+        'new_uploads_upload_rate_limit',
+        'new_uploads_section_enabled',
+        'new_uploads_scoring_weights'
+      ];
+      
+      const data = await apiFetch(`/platform_settings?key=in.(${keys.join(',')})`);
 
-      if (error) {
-        console.error('Error fetching new uploads settings:', error);
-        throw error;
+      if (!data) {
+        console.error('Error fetching new uploads settings');
+        throw new Error('Failed to fetch settings');
       }
 
       const settings: NewUploadsSettings = {
@@ -170,12 +155,21 @@ export function useUpdateNewUploadsSetting() {
 
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: unknown }) => {
-      const { error } = await supabase
-        .from('platform_settings')
-        .update({ value: value as never, updated_at: new Date().toISOString() })
-        .eq('key', key);
-
-      if (error) throw error;
+      // First get the setting to get its ID
+      const settings = await apiFetch(`/platform_settings?key=${key}`);
+      const setting = settings?.[0];
+      
+      if (setting) {
+        await apiFetch(`/platform_settings/${setting.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ value: value as never, updated_at: new Date().toISOString() })
+        });
+      } else {
+        await apiFetch('/platform_settings', {
+          method: 'POST',
+          body: JSON.stringify({ key, value: value as never, updated_at: new Date().toISOString() })
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['new-uploads-settings'] });
@@ -198,13 +192,11 @@ export function useManageNewUpload() {
       action: 'pin' | 'unpin' | 'exclude' | 'include'; 
       pinUntil?: string;
     }) => {
-      const { data, error } = await supabase.rpc('admin_manage_new_upload', {
-        p_song_id: songId,
-        p_action: action,
-        p_pin_until: pinUntil || null
+      const data = await apiFetch('/rpc/admin_manage_new_upload', { 
+        method: 'POST',
+        body: JSON.stringify({ song_id: songId, action, pin_until: pinUntil })
       });
 
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -219,11 +211,8 @@ export function useAdminNewUploadsEligible() {
     queryKey: ['admin-new-uploads-eligible'],
     queryFn: async () => {
       // Get visibility hours setting
-      const { data: settingData } = await supabase
-        .from('platform_settings')
-        .select('value')
-        .eq('key', 'new_uploads_visibility_hours')
-        .single();
+      const settingDataArr = await apiFetch('/platform_settings?key=new_uploads_visibility_hours');
+      const settingData = settingDataArr?.[0] || null;
 
       const visibilityHours = settingData?.value ? 
         (typeof settingData.value === 'number' ? settingData.value : parseInt(String(settingData.value), 10)) : 72;
@@ -231,33 +220,12 @@ export function useAdminNewUploadsEligible() {
       const cutoffDate = new Date();
       cutoffDate.setHours(cutoffDate.getHours() - visibilityHours);
 
-      const { data, error } = await supabase
-        .from('songs')
-        .select(`
-          id,
-          title,
-          approved_at,
-          new_uploads_excluded,
-          new_uploads_pinned,
-          new_uploads_pinned_until,
-          base_price,
-          has_audio,
-          has_lyrics,
-          play_count,
-          cover_image_url,
-          seller_id,
-          profiles!songs_seller_id_fkey (
-            full_name,
-            is_verified
-          )
-        `)
-        .eq('status', 'approved')
-        .not('approved_at', 'is', null)
-        .gte('approved_at', cutoffDate.toISOString())
-        .order('approved_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch(`/songs/full?status=approved&approved_at=gte.${cutoffDate.toISOString()}`);
+      
+      // Filter out null approved_at and sort
+      return (data || [])
+        .filter((s: any) => s.approved_at !== null)
+        .sort((a: any, b: any) => new Date(b.approved_at).getTime() - new Date(a.approved_at).getTime());
     },
     staleTime: 1000 * 60 * 2,
   });

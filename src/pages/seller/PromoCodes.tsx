@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tag, Plus, Percent, IndianRupee } from 'lucide-react';
 import { usePromoCodes, useCreatePromoCode, useUpdatePromoCode } from '@/hooks/usePromoCodes';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Price } from '@/components/ui/Price';
@@ -38,13 +38,8 @@ export default function PromoCodes() {
     queryKey: ['seller-songs-for-promo', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
-        .from('songs')
-        .select('id, title')
-        .eq('seller_id', user.id)
-        .eq('status', 'approved')
-        .order('title');
-      return data || [];
+      const data = await apiFetch(`/songs?seller_id=${user.id}&status=approved`);
+      return (data || []).sort((a: any, b: any) => a.title.localeCompare(b.title));
     },
     enabled: !!user,
   });

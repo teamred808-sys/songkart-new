@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
@@ -24,16 +24,17 @@ export default function VerifyEmail() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke("verify-seller-email", {
-          body: { token },
-        });
-
-        if (error) {
+        const data = await apiFetch('/users/verification/verify', {
+          method: 'POST',
+          body: JSON.stringify({ token }),
+        }).catch((error) => {
           console.error("Verification error:", error);
           setStatus("error");
-          setMessage(data?.error || error.message || "Failed to verify email. Please try again.");
-          return;
-        }
+          setMessage(error.message || "Failed to verify email. Please try again.");
+          return null;
+        });
+
+        if (!data) return;
 
         if (data?.error) {
           setStatus("error");

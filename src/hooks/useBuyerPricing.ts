@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 
 export interface CountryPricing {
   zone_code: string;
@@ -32,20 +32,16 @@ export function useCountryPricing(countryCode?: string) {
     queryFn: async (): Promise<CountryPricing | null> => {
       if (!countryCode) return null;
 
-      const { data, error } = await supabase.rpc('get_country_pricing', {
-        p_country_code: countryCode
+      const data = await apiFetch('/rpc/get_country_pricing', {
+        method: 'POST',
+        body: JSON.stringify({ country_code: countryCode }),
       });
-
-      if (error) {
-        console.error('Error fetching country pricing:', error);
-        throw error;
-      }
 
       if (Array.isArray(data) && data.length > 0) {
         return data[0] as CountryPricing;
       }
 
-      return null;
+      return data as CountryPricing || null;
     },
     enabled: !!countryCode,
     staleTime: 1000 * 60 * 10, // Cache for 10 minutes
@@ -64,23 +60,21 @@ export function useDynamicPrice(
     queryFn: async (): Promise<LocalizedPrice | null> => {
       if (!sellerId || !countryCode) return null;
 
-      const { data, error } = await supabase.rpc('calculate_dynamic_price', {
-        p_base_price_inr: basePriceInr,
-        p_seller_id: sellerId,
-        p_has_audio: hasAudio,
-        p_country_code: countryCode
+      const data = await apiFetch('/rpc/calculate_dynamic_price', {
+        method: 'POST',
+        body: JSON.stringify({
+          base_price_inr: basePriceInr,
+          country_code: countryCode,
+          seller_id: sellerId,
+          has_audio: hasAudio,
+        }),
       });
-
-      if (error) {
-        console.error('Error calculating dynamic price:', error);
-        throw error;
-      }
 
       if (Array.isArray(data) && data.length > 0) {
         return data[0] as LocalizedPrice;
       }
 
-      return null;
+      return data as LocalizedPrice || null;
     },
     enabled: !!sellerId && !!countryCode && basePriceInr > 0,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -93,15 +87,13 @@ export function useBuyerCountry() {
     queryKey: ['buyer-country'],
     queryFn: async (): Promise<{ country_code: string; detection_method: string }> => {
       // Try to get country from edge function
-      const { data, error } = await supabase.functions.invoke('detect-buyer-country');
-
-      if (error) {
+      try {
+        const data = await apiFetch('/detect-buyer-country', { method: 'POST' });
+        return data || { country_code: 'IN', detection_method: 'fallback' };
+      } catch (error) {
         console.error('Error detecting buyer country:', error);
-        // Default to India if detection fails
         return { country_code: 'IN', detection_method: 'fallback' };
       }
-
-      return data || { country_code: 'IN', detection_method: 'fallback' };
     },
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
     retry: 1,
@@ -136,36 +128,24 @@ export function formatLocalizedPrice(
 }
 
 // Get all pricing zones (for reference)
-export function usePricingZones() {
+export function usePricingZones(countryCode?: string) {
   return useQuery({
-    queryKey: ['pricing-zones'],
+    queryKey: ['pricing-zones', countryCode],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pricing_zones')
-        .select('*')
-        .eq('is_active', true)
-        .order('multiplier', { ascending: true });
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch(`/pricing_zone_countries?country_code=${countryCode}`);
+      return data?.[0] || null;
     },
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
 }
 
 // Get all exchange rates (for reference)
-export function useExchangeRates() {
+export function useExchangeRates(countryCode?: string) {
   return useQuery({
-    queryKey: ['exchange-rates'],
+    queryKey: ['exchange-rates', countryCode],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('currency_exchange_rates')
-        .select('*')
-        .eq('is_active', true)
-        .order('currency_code', { ascending: true });
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch(`/currency_exchange_rates?currency_code=${countryCode}`);
+      return data?.[0] || null;
     },
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });

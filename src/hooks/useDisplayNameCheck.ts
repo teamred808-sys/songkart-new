@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useDebounce } from '@/hooks/useDebounce';
+import { apiFetch } from '@/lib/api';
 
 export function useDisplayNameAvailability(name: string, excludeUserId?: string) {
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -17,12 +17,10 @@ export function useDisplayNameAvailability(name: string, excludeUserId?: string)
     const checkAvailability = async () => {
       setIsChecking(true);
       try {
-        const { data, error } = await supabase.rpc('is_display_name_available', {
-          p_name: debouncedName,
-          p_exclude_user_id: excludeUserId || null
+        const data = await apiFetch('/auth/check-name', {
+          method: 'POST',
+          body: JSON.stringify({ name: debouncedName, exclude_user_id: excludeUserId })
         });
-        
-        if (error) throw error;
         setIsAvailable(data as boolean);
       } catch (error) {
         console.error('Error checking display name:', error);
@@ -39,11 +37,14 @@ export function useDisplayNameAvailability(name: string, excludeUserId?: string)
 }
 
 export async function checkDisplayNameAvailable(name: string, excludeUserId?: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('is_display_name_available', {
-    p_name: name.trim(),
-    p_exclude_user_id: excludeUserId || null
-  });
-  
-  if (error) throw error;
-  return data as boolean;
+  try {
+    const data = await apiFetch('/auth/check-name', {
+      method: 'POST',
+      body: JSON.stringify({ name, exclude_user_id: excludeUserId })
+    });
+    return data as boolean;
+  } catch (e) {
+    console.error('Error checking display name:', e);
+    return true;
+  }
 }

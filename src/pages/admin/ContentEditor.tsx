@@ -14,7 +14,6 @@ import { RichTextEditor } from '@/components/cms/RichTextEditor';
 import { useContentById, useCreateContent, useUpdateContent, usePublishContent, slugify, type ContentType } from '@/hooks/useCmsContent';
 import { useUploadMedia } from '@/hooks/useCmsMedia';
 import { useCategories, useCreateCategory, useContentCategories, useSaveContentCategories } from '@/hooks/useCmsCategories';
-import type { Json } from '@/integrations/supabase/types';
 
 export default function ContentEditor() {
   const { id } = useParams();
@@ -46,7 +45,7 @@ export default function ContentEditor() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [excerpt, setExcerpt] = useState('');
-  const [contentJson, setContentJson] = useState<Json>({});
+  const [contentJson, setContentJson] = useState<Record<string, unknown>>({});
   const [contentHtml, setContentHtml] = useState('');
   const [featuredImage, setFeaturedImage] = useState('');
   const [seoTitle, setSeoTitle] = useState('');
@@ -96,7 +95,7 @@ export default function ContentEditor() {
   }, [title]);
 
   const handleEditorChange = useCallback((json: Record<string, unknown>, html: string) => {
-    setContentJson(json as Json);
+    setContentJson(json);
     setContentHtml(html);
     setHasChanges(true);
     const plainText = stripHtml(html);
@@ -119,7 +118,7 @@ export default function ContentEditor() {
     const name = newCategoryName.trim();
     if (!name) return;
     try {
-      const created = await createCategory.mutateAsync(name);
+      const created = await createCategory.mutateAsync({ name, slug: slugify(name) });
       setSelectedCategoryIds((prev) => [...prev, created.id]);
       setNewCategoryName('');
       setHasChanges(true);

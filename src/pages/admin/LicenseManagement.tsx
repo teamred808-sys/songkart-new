@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
@@ -105,11 +105,11 @@ export default function LicenseManagement() {
 
   const handleDownloadLicense = async (license: LicenseDocument) => {
     try {
-      const { data, error } = await supabase.functions.invoke('download-license', {
-        body: { license_document_id: license.id },
+      const data = await apiFetch('/download-license', {
+        method: 'POST',
+        body: JSON.stringify({ license_document_id: license.id }),
       });
 
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       if (data?.download_url) {

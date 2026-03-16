@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from './useAuth';
 
 export function useCartCount() {
@@ -10,13 +10,13 @@ export function useCartCount() {
     queryFn: async () => {
       if (!user) return 0;
 
-      const { count, error } = await supabase
-        .from('cart_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return count || 0;
+      try {
+        const { count } = await apiFetch('/cart/count');
+        return count || 0;
+      } catch (error) {
+        console.error('Failed to fetch cart count:', error);
+        return 0;
+      }
     },
     enabled: !!user,
   });

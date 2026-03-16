@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { isValidUUID } from '@/lib/validation';
+import { apiFetch } from '@/lib/api';
 
 export interface SellerTierInfo {
   tier_level: number;
@@ -39,14 +39,13 @@ export function useSellerTier(sellerId?: string) {
         return null;
       }
 
-      const { data, error } = await supabase.rpc('get_seller_tier', {
-        p_seller_id: targetSellerId
-      });
-
-      if (error) {
+      const data = await apiFetch('/rpc/get_seller_tier', { 
+        method: 'POST',
+        body: JSON.stringify({ p_seller_id: targetSellerId })
+      }).catch((error) => {
         console.error('Error fetching seller tier:', error);
         throw error;
-      }
+      });
 
       // RPC returns an array, get first row
       if (Array.isArray(data) && data.length > 0) {
@@ -71,16 +70,17 @@ export function useValidateSongPrice() {
       throw new Error('User not authenticated');
     }
 
-    const { data, error } = await supabase.rpc('validate_song_price', {
-      p_seller_id: user.id,
-      p_price: price,
-      p_has_audio: hasAudio
-    });
-
-    if (error) {
+    const data = await apiFetch('/rpc/validate_song_price', { 
+      method: 'POST',
+      body: JSON.stringify({
+        p_seller_id: user.id,
+        p_price: price,
+        p_has_audio: hasAudio
+      })
+    }).catch((error) => {
       console.error('Error validating price:', error);
       throw error;
-    }
+    });
 
     return data as unknown as PriceValidationResult;
   };
@@ -92,13 +92,8 @@ export function useTierDefinitions() {
   return useQuery({
     queryKey: ['tier-definitions'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('seller_tiers')
-        .select('*')
-        .order('tier_level', { ascending: true });
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/seller_tiers');
+      return (data as any[]).sort((a, b) => a.tier_level - b.tier_level);
     },
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });

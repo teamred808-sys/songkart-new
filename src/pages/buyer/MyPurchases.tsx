@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useOrders } from '@/hooks/useCheckout';
 import { useBuyerPurchases } from '@/hooks/useBuyerData';
 import { useDownloadLicense, useRegenerateLicense } from '@/hooks/useLicenses';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -70,11 +70,11 @@ export default function MyPurchases() {
 
     setDownloadingAudio(item.id);
     try {
-      const { data, error } = await supabase.functions.invoke('download-order-audio', {
-        body: { order_item_id: item.id },
+      const data = await apiFetch('/download-order-audio', {
+        method: 'POST',
+        body: JSON.stringify({ order_item_id: item.id }),
       });
 
-      if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
       if (data?.download_url) {

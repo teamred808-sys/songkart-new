@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export interface PayoutProfile {
   id: string;
@@ -56,15 +56,8 @@ export function usePayoutProfile() {
     queryFn: async (): Promise<PayoutProfile | null> => {
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('seller_payout_profiles')
-        .select('*')
-        .eq('seller_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as PayoutProfile | null;
+      const data = await apiFetch(`/seller_payout_profiles?seller_id=${user.id}&is_active=true`);
+      return (data?.[0] || null) as PayoutProfile | null;
     },
     enabled: !!user,
   });
@@ -81,11 +74,7 @@ export function useWithdrawEligibility() {
         return { can_withdraw: false, reason: 'not_authenticated', message: 'Please sign in.' };
       }
 
-      const { data, error } = await supabase.rpc('can_seller_withdraw', {
-        p_seller_id: user.id,
-      });
-
-      if (error) throw error;
+      const data = await apiFetch('/rpc/can_seller_withdraw', { method: 'POST' });
       return data as unknown as WithdrawEligibility;
     },
     enabled: !!user,
@@ -106,11 +95,8 @@ export function useSavePayoutProfile() {
       const accountNumberLast4 = input.account_number.slice(-4);
 
       // Check if profile exists
-      const { data: existing } = await supabase
-        .from('seller_payout_profiles')
-        .select('id, is_locked')
-        .eq('seller_id', user.id)
-        .maybeSingle();
+      const existingArr = await apiFetch(`/seller_payout_profiles?seller_id=${user.id}`);
+      const existing = existingArr?.[0] || null;
 
       if (existing?.is_locked) {
         throw new Error('Your payout profile is currently locked and cannot be edited.');
@@ -132,23 +118,16 @@ export function useSavePayoutProfile() {
       };
 
       if (existing) {
-        const { data, error } = await supabase
-          .from('seller_payout_profiles')
-          .update(profileData)
-          .eq('id', existing.id)
-          .select()
-          .single();
-
-        if (error) throw error;
+        const data = await apiFetch(`/seller_payout_profiles/${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(profileData),
+        });
         return data;
       } else {
-        const { data, error } = await supabase
-          .from('seller_payout_profiles')
-          .insert(profileData)
-          .select()
-          .single();
-
-        if (error) throw error;
+        const data = await apiFetch('/seller_payout_profiles', {
+          method: 'POST',
+          body: JSON.stringify(profileData),
+        });
         return data;
       }
     },
@@ -168,27 +147,10 @@ export function useAllPayoutProfiles(filters?: { status?: string }) {
   return useQuery({
     queryKey: ['admin-payout-profiles', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('seller_payout_profiles')
-        .select(`
-          *,
-          profiles:seller_id (
-            id,
-            full_name,
-            email,
-            avatar_url,
-            is_verified
-          )
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      const params = new URLSearchParams({ is_active: 'true' });
+      if (filters?.status) params.append('verification_status', filters.status);
 
-      if (filters?.status && ['pending', 'verified', 'rejected', 'not_added'].includes(filters.status)) {
-        query = query.eq('verification_status', filters.status as 'pending' | 'verified' | 'rejected' | 'not_added');
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/seller_payout_profiles?${params.toString()}`);
       return data;
     },
   });
@@ -222,23 +184,22 @@ export function useVerifyPayoutProfile() {
         updateData.rejection_reason = reason;
       }
 
-      const { data, error } = await supabase
-        .from('seller_payout_profiles')
-        .update(updateData)
-        .eq('id', profileId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Log admin action
-      await supabase.from('activity_logs').insert({
-        user_id: user.id,
-        entity_type: 'payout_profile',
-        entity_id: profileId,
-        action: action === 'verify' ? 'verified' : 'rejected',
-        metadata: { reason },
+      const data = await apiFetch(`/seller_payout_profiles/${profileId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateData),
       });
+
+      // Log admin action (non-critical)
+      await apiFetch('/activity_logs', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: user.id,
+          entity_type: 'payout_profile',
+          entity_id: profileId,
+          action: action === 'verify' ? 'verified' : 'rejected',
+          metadata: { reason },
+        }),
+      }).catch(() => {});
 
       return data;
     },
@@ -270,18 +231,14 @@ export function useLockPayoutProfile() {
       lock: boolean;
       reason?: string;
     }) => {
-      const { data, error } = await supabase
-        .from('seller_payout_profiles')
-        .update({
+      const data = await apiFetch(`/seller_payout_profiles/${profileId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           is_locked: lock,
           locked_reason: lock ? reason : null,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', profileId)
-        .select()
-        .single();
-
-      if (error) throw error;
+        }),
+      });
       return data;
     },
     onSuccess: (_, variables) => {
@@ -299,18 +256,10 @@ export function usePayoutChangeLogs(sellerId?: string) {
   return useQuery({
     queryKey: ['payout-change-logs', sellerId],
     queryFn: async () => {
-      let query = supabase
-        .from('payout_profile_change_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const params = new URLSearchParams({ limit: '50' });
+      if (sellerId) params.append('seller_id', sellerId);
 
-      if (sellerId) {
-        query = query.eq('seller_id', sellerId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/payout_profile_change_logs?${params.toString()}`);
       return data;
     },
     enabled: !!sellerId,

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export function useBuyerStats() {
   const { user } = useAuth();
@@ -12,34 +12,23 @@ export function useBuyerStats() {
       if (!user) throw new Error('Not authenticated');
 
       // Get purchases count and total spent
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('buyer_id', user.id)
-        .eq('payment_status', 'completed');
-
-      if (error) throw error;
-
+      const transactions = await apiFetch(`/transactions?buyer_id=${user.id}&payment_status=completed`);
       const totalPurchases = transactions?.length || 0;
-      const totalSpent = transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+      const totalSpent = transactions?.reduce((sum: number, t: any) => sum + Number(t.amount), 0) || 0;
 
       // Get cart items count
-      const { count: cartCount } = await supabase
-        .from('cart_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+      const cartItems = await apiFetch(`/cart_items?user_id=${user.id}`);
+      const cartCount = cartItems?.length || 0;
 
       // Get favorites count
-      const { count: favoritesCount } = await supabase
-        .from('favorites')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+      const favorites = await apiFetch(`/favorites?user_id=${user.id}`);
+      const favoritesCount = favorites?.length || 0;
 
       return {
         totalPurchases,
         totalSpent,
-        cartItems: cartCount || 0,
-        favorites: favoritesCount || 0,
+        cartItems: cartCount,
+        favorites: favoritesCount,
       };
     },
     enabled: !!user,
@@ -53,31 +42,7 @@ export function useBuyerPurchases() {
     queryKey: ['buyer-purchases', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          songs (
-            id,
-            title,
-            cover_image_url,
-            artwork_cropped_url,
-            audio_url,
-            full_lyrics,
-            seller_id,
-            profiles:seller_id (full_name)
-          ),
-          license_tiers (
-            license_type,
-            terms
-          )
-        `)
-        .eq('buyer_id', user.id)
-        .eq('payment_status', 'completed')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/transactions/full?buyer_id=${user.id}&payment_status=completed`);
       return data;
     },
     enabled: !!user,
@@ -91,27 +56,7 @@ export function useRecentPurchases(limit = 5) {
     queryKey: ['buyer-recent-purchases', user?.id, limit],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          songs (
-            id,
-            title,
-            cover_image_url,
-            artwork_cropped_url
-          ),
-          license_tiers (
-            license_type
-          )
-        `)
-        .eq('buyer_id', user.id)
-        .eq('payment_status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
+      const data = await apiFetch(`/transactions/full?buyer_id=${user.id}&payment_status=completed&limit=${limit}`);
       return data;
     },
     enabled: !!user,
@@ -125,30 +70,7 @@ export function useCart() {
     queryKey: ['cart', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select(`
-          *,
-          songs (
-            id,
-            title,
-            cover_image_url,
-            artwork_cropped_url,
-            seller_id,
-            profiles:seller_id (full_name)
-          ),
-          license_tiers (
-            id,
-            license_type,
-            price,
-            terms
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/cart_items/full?user_id=${user.id}`);
       return data;
     },
     enabled: !!user,
@@ -164,30 +86,25 @@ export function useAddToCart() {
       if (!user) throw new Error('Not authenticated');
 
       // Check if item already in cart
-      const { data: existing } = await supabase
-        .from('cart_items')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('song_id', songId)
-        .single();
+      const existingArr = await apiFetch(`/cart_items?user_id=${user.id}&song_id=${songId}`);
+      const existing = existingArr?.[0] || null;
 
       if (existing) {
         // Update license tier
-        const { error } = await supabase
-          .from('cart_items')
-          .update({ license_tier_id: licenseTierId })
-          .eq('id', existing.id);
-        if (error) throw error;
+        await apiFetch(`/cart_items/${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ license_tier_id: licenseTierId })
+        });
       } else {
         // Add new item
-        const { error } = await supabase
-          .from('cart_items')
-          .insert({
+        await apiFetch('/cart_items', {
+          method: 'POST',
+          body: JSON.stringify({
             user_id: user.id,
             song_id: songId,
             license_tier_id: licenseTierId,
-          });
-        if (error) throw error;
+          })
+        });
       }
     },
     onSuccess: () => {
@@ -208,11 +125,7 @@ export function useRemoveFromCart() {
 
   return useMutation({
     mutationFn: async (cartItemId: string) => {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('id', cartItemId);
-      if (error) throw error;
+      await apiFetch(`/cart_items/${cartItemId}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -234,32 +147,7 @@ export function useFavorites() {
     queryKey: ['favorites', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('favorites')
-        .select(`
-          *,
-          songs (
-            id,
-            title,
-            cover_image_url,
-            artwork_cropped_url,
-            base_price,
-            seller_id,
-            genre_id,
-            mood_id,
-            has_audio,
-            has_lyrics,
-            play_count,
-            profiles:seller_id (full_name),
-            genres:genre_id (name),
-            moods:mood_id (name)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/favorites/full?user_id=${user.id}`);
       return data;
     },
     enabled: !!user,
@@ -275,30 +163,22 @@ export function useToggleFavorite() {
       if (!user) throw new Error('Not authenticated');
 
       // Check if already favorited
-      const { data: existing } = await supabase
-        .from('favorites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('song_id', songId)
-        .single();
+      const existingArr = await apiFetch(`/favorites?user_id=${user.id}&song_id=${songId}`);
+      const existing = existingArr?.[0] || null;
 
       if (existing) {
         // Remove favorite
-        const { error } = await supabase
-          .from('favorites')
-          .delete()
-          .eq('id', existing.id);
-        if (error) throw error;
+        await apiFetch(`/favorites/${existing.id}`, { method: 'DELETE' });
         return { action: 'removed' };
       } else {
         // Add favorite
-        const { error } = await supabase
-          .from('favorites')
-          .insert({
+        await apiFetch('/favorites', {
+          method: 'POST',
+          body: JSON.stringify({
             user_id: user.id,
             song_id: songId,
-          });
-        if (error) throw error;
+          })
+        });
         return { action: 'added' };
       }
     },
@@ -321,14 +201,8 @@ export function useCheckFavorite(songId: string) {
     queryFn: async () => {
       if (!user) return false;
 
-      const { data } = await supabase
-        .from('favorites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('song_id', songId)
-        .single();
-
-      return !!data;
+      const data = await apiFetch(`/favorites?user_id=${user.id}&song_id=${songId}`);
+      return data && data.length > 0;
     },
     enabled: !!user && !!songId,
   });

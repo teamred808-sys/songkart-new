@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 interface PromoCode {
   id: string;
@@ -50,17 +50,12 @@ export function usePromoCodes(role?: 'admin' | 'seller') {
   return useQuery({
     queryKey: ['promo-codes', role, user?.id],
     queryFn: async () => {
-      let query = supabase
-        .from('promo_codes')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const params = new URLSearchParams();
       if (role === 'seller' && user) {
-        query = query.eq('created_by', user.id).eq('creator_role', 'seller');
+        params.append('created_by', user.id);
+        params.append('creator_role', 'seller');
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/promo_codes?${params.toString()}`);
       return data as PromoCode[];
     },
     enabled: !!user,
@@ -75,17 +70,10 @@ export function useCreatePromoCode() {
     mutationFn: async (input: CreatePromoCodeInput) => {
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
-        .from('promo_codes')
-        .insert({
-          ...input,
-          code: input.code.trim().toUpperCase(),
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch('/promo_codes', {
+        method: 'POST',
+        body: JSON.stringify({ ...input, code: input.code.trim().toUpperCase(), created_by: user.id }),
+      });
       return data;
     },
     onSuccess: () => {
@@ -107,14 +95,10 @@ export function useUpdatePromoCode() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PromoCode> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('promo_codes')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch(`/promo_codes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
       return data;
     },
     onSuccess: () => {
@@ -133,11 +117,10 @@ export function useValidatePromoCode() {
       code: string;
       cart_items: Array<{ song_id: string; license_type: string; license_price: number }>;
     }): Promise<ValidatePromoResult> => {
-      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { code, cart_items },
+      const data = await apiFetch('/validate-promo-code', {
+        method: 'POST',
+        body: JSON.stringify({ code, cart_items }),
       });
-
-      if (error) throw new Error(error.message);
       return data as ValidatePromoResult;
     },
   });

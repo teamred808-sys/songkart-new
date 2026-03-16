@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { AdminSection, BugSeverity, BugStatus } from '@/lib/adminConstants';
-import type { Json } from '@/integrations/supabase/types';
+import { apiFetch } from '@/lib/api';
 
 interface InternalNote {
   id: string;
@@ -21,9 +20,9 @@ export interface BugReport {
   status: string;
   reporter_id: string | null;
   assignee_id: string | null;
-  screenshots: Json;
-  logs: Json;
-  internal_notes: Json;
+  screenshots: Record<string, unknown>[];
+  logs: Record<string, unknown>[];
+  internal_notes: Record<string, unknown>[];
   resolution_notes: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -43,30 +42,14 @@ export function useBugReports(filters?: BugReportFilters) {
   return useQuery({
     queryKey: ['admin-bug-reports', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('admin_bug_reports')
-        .select(`
-          *,
-          reporter:reporter_id(full_name, email),
-          assignee:assignee_id(full_name, email)
-        `)
-        .order('created_at', { ascending: false });
+      const params = new URLSearchParams();
+      
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.severity) params.append('severity', filters.severity);
+      if (filters?.section) params.append('affected_section', filters.section);
+      if (filters?.search) params.append('search', filters.search);
 
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.severity) {
-        query = query.eq('severity', filters.severity);
-      }
-      if (filters?.section) {
-        query = query.eq('affected_section', filters.section);
-      }
-      if (filters?.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/admin_bug_reports?${params.toString()}`);
       return data as unknown as BugReport[];
     },
   });
@@ -76,20 +59,16 @@ export function useBugReportStats() {
   return useQuery({
     queryKey: ['admin-bug-report-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_bug_reports')
-        .select('status, severity');
-
-      if (error) throw error;
+      const data = await apiFetch('/admin_bug_reports');
 
       const stats = {
         total: data.length,
-        open: data.filter((b) => b.status === 'open').length,
-        inProgress: data.filter((b) => b.status === 'in_progress').length,
-        resolved: data.filter((b) => b.status === 'resolved').length,
-        closed: data.filter((b) => b.status === 'closed').length,
-        critical: data.filter((b) => b.severity === 'critical' && b.status !== 'resolved' && b.status !== 'closed').length,
-        high: data.filter((b) => b.severity === 'high' && b.status !== 'resolved' && b.status !== 'closed').length,
+        open: data.filter((b: any) => b.status === 'open').length,
+        inProgress: data.filter((b: any) => b.status === 'in_progress').length,
+        resolved: data.filter((b: any) => b.status === 'resolved').length,
+        closed: data.filter((b: any) => b.status === 'closed').length,
+        critical: data.filter((b: any) => b.severity === 'critical' && b.status !== 'resolved' && b.status !== 'closed').length,
+        high: data.filter((b: any) => b.severity === 'high' && b.status !== 'resolved' && b.status !== 'closed').length,
       };
 
       return stats;
@@ -111,23 +90,21 @@ export function useCreateBugReport() {
 
   return useMutation({
     mutationFn: async (input: CreateBugReportInput) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { user } = await apiFetch('/auth/me').catch(() => ({ user: null }));
       
-      const { data, error } = await supabase
-        .from('admin_bug_reports')
-        .insert([{
+      const data = await apiFetch('/admin_bug_reports', {
+        method: 'POST',
+        body: JSON.stringify({
           title: input.title,
           description: input.description,
           affected_section: input.affected_section,
           severity: input.severity,
           reporter_id: user?.id,
-          screenshots: (input.screenshots || []) as unknown as Json,
-          logs: (input.logs || []) as unknown as Json,
-        }])
-        .select()
-        .single();
+          screenshots: (input.screenshots || []),
+          logs: (input.logs || []),
+        })
+      });
 
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -162,14 +139,11 @@ export function useUpdateBugReport() {
         updateData.resolved_at = new Date().toISOString();
       }
 
-      const { data, error } = await supabase
-        .from('admin_bug_reports')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+      const data = await apiFetch(`/admin_bug_reports/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateData)
+      });
 
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -196,13 +170,7 @@ export function useAddBugReportNote() {
   return useMutation({
     mutationFn: async (input: AddNoteInput) => {
       // First get current notes
-      const { data: current, error: fetchError } = await supabase
-        .from('admin_bug_reports')
-        .select('internal_notes')
-        .eq('id', input.bugReportId)
-        .single();
-
-      if (fetchError) throw fetchError;
+      const current = await apiFetch(`/admin_bug_reports/${input.bugReportId}`);
 
       const currentNotes = (current?.internal_notes as unknown as InternalNote[]) || [];
       const newNote: InternalNote = {
@@ -213,16 +181,13 @@ export function useAddBugReportNote() {
         created_at: new Date().toISOString(),
       };
 
-      const updatedNotes = [...currentNotes, newNote] as unknown as Json;
+      const updatedNotes = [...currentNotes, newNote];
 
-      const { data, error } = await supabase
-        .from('admin_bug_reports')
-        .update({ internal_notes: updatedNotes })
-        .eq('id', input.bugReportId)
-        .select()
-        .single();
+      const data = await apiFetch(`/admin_bug_reports/${input.bugReportId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ internal_notes: updatedNotes })
+      });
 
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -236,7 +201,7 @@ export function useAddBugReportNote() {
 }
 
 // Helper to parse internal notes from JSON
-export function parseInternalNotes(notes: Json): InternalNote[] {
+export function parseInternalNotes(notes: any): InternalNote[] {
   if (!notes || !Array.isArray(notes)) return [];
   return notes as unknown as InternalNote[];
 }

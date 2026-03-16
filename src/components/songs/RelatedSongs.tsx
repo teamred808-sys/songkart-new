@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Music, ArrowRight } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface RelatedSongsProps {
   currentSongId: string;
@@ -29,36 +29,27 @@ export function RelatedSongs({ currentSongId, genreId, moodId, limit = 4 }: Rela
   const { data: songs, isLoading } = useQuery({
     queryKey: ['related-songs', currentSongId, genreId, moodId],
     queryFn: async (): Promise<RelatedSong[]> => {
-      let query = supabase
-        .from('songs')
-        .select(`
-          id,
-          title,
-          cover_image_url,
-          base_price,
-          genre:genres(name),
-          seller:profiles!songs_seller_id_fkey(full_name)
-        `)
-        .eq('status', 'approved')
-        .neq('id', currentSongId)
-        .limit(limit);
-
-      // Prioritize same genre, then same mood
-      if (genreId) {
-        query = query.eq('genre_id', genreId);
-      } else if (moodId) {
-        query = query.eq('mood_id', moodId);
-      }
-
-      const { data, error } = await query.order('play_count', { ascending: false });
-
-      if (error) throw error;
+      const params = new URLSearchParams({
+        status: 'approved',
+        limit: limit.toString()
+      });
       
-      // Map the response to use cover_art_url for component compatibility
-      return (data || []).map(song => ({
-        ...song,
-        cover_art_url: song.cover_image_url
-      })) as unknown as RelatedSong[];
+      if (genreId) {
+        params.append('genre_id', genreId);
+      } else if (moodId) {
+        params.append('mood_id', moodId);
+      }
+      
+      const data = await apiFetch(`/songs/full?${params.toString()}`);
+      
+      // Filter out current song and map
+      return (data || [])
+        .filter((song: any) => song.id !== currentSongId)
+        .sort((a: any, b: any) => (b.play_count || 0) - (a.play_count || 0))
+        .map((song: any) => ({
+          ...song,
+          cover_art_url: song.cover_image_url
+        })) as unknown as RelatedSong[];
     },
     staleTime: 5 * 60 * 1000,
   });

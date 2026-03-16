@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import type { AdminSection, ErrorType } from '@/lib/adminConstants';
-import type { Json } from '@/integrations/supabase/types';
+import { apiFetch } from '@/lib/api';
 
 interface ErrorContext {
   module: AdminSection;
@@ -11,7 +10,7 @@ interface ErrorContext {
   context?: Record<string, unknown>;
 }
 
-function getBrowserInfo(): Json {
+function getBrowserInfo(): Record<string, unknown> {
   return {
     userAgent: navigator.userAgent,
     language: navigator.language,
@@ -47,9 +46,9 @@ function getSeverity(error: unknown): 'warning' | 'error' | 'critical' {
   return 'error';
 }
 
-function contextToJson(context?: Record<string, unknown>): Json {
+function contextToJson(context?: Record<string, unknown>): Record<string, unknown> {
   if (!context) return {};
-  return JSON.parse(JSON.stringify(context)) as Json;
+  return JSON.parse(JSON.stringify(context));
 }
 
 export function useErrorMonitoring() {
@@ -61,21 +60,22 @@ export function useErrorMonitoring() {
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       try {
-        const { error: insertError } = await supabase.from('system_error_logs').insert([{
-          error_type: getErrorType(error),
-          error_message: errorMessage,
-          error_stack: errorStack,
-          module: context.module,
-          action_performed: context.action,
-          user_id: user?.id,
-          severity: getSeverity(error),
-          context: contextToJson(context.context),
-          browser_info: getBrowserInfo(),
-        }]);
-
-        if (insertError) {
+        await apiFetch('/system_error_logs', {
+          method: 'POST',
+          body: JSON.stringify([{
+            error_type: getErrorType(error),
+            error_message: errorMessage,
+            error_stack: errorStack,
+            module: context.module,
+            action_performed: context.action,
+            user_id: user?.id,
+            severity: getSeverity(error),
+            context: context.context,
+            browser_info: getBrowserInfo(),
+          }]),
+        }).catch((insertError) => {
           console.error('Failed to log error to system_error_logs:', insertError);
-        }
+        });
       } catch (logError) {
         console.error('Error logging failed:', logError);
       }
@@ -128,17 +128,20 @@ export async function logSystemError(
   const errorStack = error instanceof Error ? error.stack : undefined;
 
   try {
-    const { error: insertError } = await supabase.from('system_error_logs').insert([{
-      error_type: getErrorType(error),
-      error_message: errorMessage,
-      error_stack: errorStack,
-      module: context.module,
-      action_performed: context.action,
-      user_id: context.userId,
-      severity: getSeverity(error),
-      context: contextToJson(context.context),
-      browser_info: getBrowserInfo(),
-    }]);
+    const insertError = await apiFetch('/system_error_logs', {
+      method: 'POST',
+      body: JSON.stringify([{
+        error_type: getErrorType(error),
+        error_message: errorMessage,
+        error_stack: errorStack,
+        module: context.module,
+        action_performed: context.action,
+        user_id: context.userId,
+        severity: getSeverity(error),
+        context: context.context,
+        browser_info: getBrowserInfo(),
+      }]),
+    }).then(() => null).catch((e) => e);
 
     if (insertError) {
       console.error('Failed to log error:', insertError);

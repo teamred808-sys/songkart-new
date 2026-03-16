@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch, API_BASE } from '@/lib/api';
 import { useDisplayNameAvailability, checkDisplayNameAvailable } from '@/hooks/useDisplayNameCheck';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,21 +55,14 @@ export default function BuyerSettings() {
         }
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      await apiFetch(`/profiles/${profile.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           full_name: formData.full_name,
           bio: formData.bio,
           website: formData.website,
-        })
-        .eq('id', profile.id);
-
-      if (error) {
-        if (error.code === '23505' && error.message.includes('full_name')) {
-          throw new Error('This display name is already taken.');
-        }
-        throw error;
-      }
+        }),
+      });
 
       await refreshProfile();
       toast.success('Profile updated successfully');
@@ -89,22 +82,25 @@ export default function BuyerSettings() {
       const fileExt = file.name.split('.').pop();
       const filePath = `${profile.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('song-covers')
-        .upload(filePath, file, { upsert: true });
+      const formData2 = new FormData();
+      formData2.append('file', file);
+      formData2.append('path', filePath);
 
-      if (uploadError) throw uploadError;
+      const token = localStorage.getItem('auth_token');
+      const uploadRes = await fetch(`${API_BASE}/storage/song-covers/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData2,
+      });
 
-      const { data: urlData } = supabase.storage
-        .from('song-covers')
-        .getPublicUrl(filePath);
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      const uploadData = await uploadRes.json();
+      const publicUrl = uploadData.public_url;
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
+      await apiFetch(`/profiles/${profile.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
 
       await refreshProfile();
       toast.success('Avatar updated successfully');

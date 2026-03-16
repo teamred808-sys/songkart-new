@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { AdminSection, ErrorType } from '@/lib/adminConstants';
+import { apiFetch } from '@/lib/api';
 
 export interface SystemErrorLog {
   id: string;
@@ -31,27 +31,14 @@ export function useRecentErrors(filters?: ErrorLogFilters) {
   return useQuery({
     queryKey: ['admin-error-logs', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('system_error_logs')
-        .select(`
-          *,
-          user:user_id(full_name, email)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(filters?.limit || 50);
+      const params = new URLSearchParams();
+      if (filters?.module) params.append('module', filters.module);
+      if (filters?.severity) params.append('severity', filters.severity);
+      if (filters?.resolved !== undefined) params.append('resolved', filters.resolved.toString());
+      if (filters?.limit) params.append('limit', filters.limit.toString());
+      else params.append('limit', '50');
 
-      if (filters?.module) {
-        query = query.eq('module', filters.module);
-      }
-      if (filters?.severity) {
-        query = query.eq('severity', filters.severity);
-      }
-      if (filters?.resolved !== undefined) {
-        query = query.eq('resolved', filters.resolved);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/system_error_logs/full?${params.toString()}`);
       return data as SystemErrorLog[];
     },
   });
@@ -66,28 +53,14 @@ export function useErrorStats() {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
       // Get today's errors
-      const { data: todayData, error: todayError } = await supabase
-        .from('system_error_logs')
-        .select('severity')
-        .gte('created_at', today);
-
-      if (todayError) throw todayError;
+      const todayData = await apiFetch(`/system_error_logs?created_at=gte.${today}`).catch(() => []);
 
       // Get last week's errors by module
-      const { data: weekData, error: weekError } = await supabase
-        .from('system_error_logs')
-        .select('module, severity')
-        .gte('created_at', weekAgo);
-
-      if (weekError) throw weekError;
+      const weekData = await apiFetch(`/system_error_logs?created_at=gte.${weekAgo}`).catch(() => []);
 
       // Get unresolved count
-      const { count: unresolvedCount, error: unresolvedError } = await supabase
-        .from('system_error_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('resolved', false);
-
-      if (unresolvedError) throw unresolvedError;
+      const unresolvedData = await apiFetch(`/system_error_logs?resolved=false`).catch(() => []);
+      const unresolvedCount = unresolvedData?.length || 0;
 
       // Calculate module error counts
       const moduleErrors: Record<string, number> = {};
@@ -113,17 +86,12 @@ export function useSystemHealthSummary() {
   const { data: bugStats } = useQuery({
     queryKey: ['admin-bug-report-stats-summary'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_bug_reports')
-        .select('status, severity')
-        .in('status', ['open', 'in_progress']);
-
-      if (error) throw error;
+      const data = await apiFetch('/admin_bug_reports?status=in.(open,in_progress)').catch(() => []);
 
       return {
-        openBugs: data.filter((b) => b.status === 'open').length,
-        inProgressBugs: data.filter((b) => b.status === 'in_progress').length,
-        criticalBugs: data.filter((b) => b.severity === 'critical').length,
+        openBugs: data.filter((b: any) => b.status === 'open').length,
+        inProgressBugs: data.filter((b: any) => b.status === 'in_progress').length,
+        criticalBugs: data.filter((b: any) => b.severity === 'critical').length,
       };
     },
   });
@@ -150,14 +118,10 @@ export function useResolveError() {
 
   return useMutation({
     mutationFn: async (errorId: string) => {
-      const { data, error } = await supabase
-        .from('system_error_logs')
-        .update({ resolved: true })
-        .eq('id', errorId)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch(`/system_error_logs/${errorId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolved: true })
+      });
       return data;
     },
     onSuccess: () => {
@@ -176,14 +140,10 @@ export function useLinkErrorToBug() {
 
   return useMutation({
     mutationFn: async ({ errorId, bugReportId }: { errorId: string; bugReportId: string }) => {
-      const { data, error } = await supabase
-        .from('system_error_logs')
-        .update({ linked_bug_report_id: bugReportId })
-        .eq('id', errorId)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiFetch(`/system_error_logs/${errorId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ linked_bug_report_id: bugReportId })
+      });
       return data;
     },
     onSuccess: () => {

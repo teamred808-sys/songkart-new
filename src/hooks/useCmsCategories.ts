@@ -1,17 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export function useCategories() {
   return useQuery({
     queryKey: ['cms-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cms_categories')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/cms_categories');
+      return (data as any[]).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 }
@@ -19,19 +15,11 @@ export function useCategories() {
 export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => {
-      const slug = name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
-      const { data, error } = await supabase
-        .from('cms_categories')
-        .insert({ name: name.trim(), slug })
-        .select()
-        .single();
-      if (error) throw error;
+    mutationFn: async ({ name, slug, description }: { name: string; slug: string; description?: string }) => {
+      const data = await apiFetch('/cms_categories', {
+        method: 'POST',
+        body: JSON.stringify({ name, slug, description }),
+      });
       return data;
     },
     onSuccess: () => {
@@ -52,12 +40,8 @@ export function useContentCategories(contentId: string | undefined) {
     queryKey: ['cms-content-categories', contentId],
     queryFn: async () => {
       if (!contentId) return [];
-      const { data, error } = await supabase
-        .from('cms_content_categories')
-        .select('category_id')
-        .eq('content_id', contentId);
-      if (error) throw error;
-      return data.map((r) => r.category_id);
+      const data = await apiFetch(`/cms_content_category_map?content_id=${contentId}`);
+      return data;
     },
     enabled: !!contentId,
   });
@@ -67,18 +51,22 @@ export function useSaveContentCategories() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ contentId, categoryIds }: { contentId: string; categoryIds: string[] }) => {
-      const { error: delError } = await supabase
-        .from('cms_content_categories')
-        .delete()
-        .eq('content_id', contentId);
-      if (delError) throw delError;
-
+      // First delete existing mappings
+      await apiFetch(`/cms_content_category_map?content_id=${contentId}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+      
+      // Then insert new ones if any
       if (categoryIds.length > 0) {
-        const rows = categoryIds.map((category_id) => ({ content_id: contentId, category_id }));
-        const { error: insError } = await supabase
-          .from('cms_content_categories')
-          .insert(rows);
-        if (insError) throw insError;
+        const mappings = categoryIds.map(categoryId => ({
+          content_id: contentId,
+          category_id: categoryId,
+        }));
+        
+        await apiFetch('/cms_content_category_map', {
+          method: 'POST',
+          body: JSON.stringify(mappings),
+        });
       }
     },
     onSuccess: (_, vars) => {
@@ -95,12 +83,9 @@ export function useAllContentCategories() {
   return useQuery({
     queryKey: ['all-content-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cms_content_categories')
-        .select('content_id, category_id, cms_categories(name)');
-      if (error) throw error;
+      const data = await apiFetch('/cms_content_categories/full');
       const map: Record<string, string[]> = {};
-      for (const row of data) {
+      for (const row of data || []) {
         const name = (row as any).cms_categories?.name;
         if (name) {
           if (!map[row.content_id]) map[row.content_id] = [];
@@ -116,17 +101,8 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error: junctionError } = await supabase
-        .from('cms_content_categories')
-        .delete()
-        .eq('category_id', id);
-      if (junctionError) throw junctionError;
-
-      const { error } = await supabase
-        .from('cms_categories')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      await apiFetch(`/cms_content_categories?category_id=${id}`, { method: 'DELETE' }).catch(() => {});
+      await apiFetch(`/cms_categories/${id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cms-categories'] });

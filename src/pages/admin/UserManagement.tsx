@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAllUsers, useUpdateUserStatus, useVerifyUser } from '@/hooks/useAdminData';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -20,15 +20,11 @@ function useAllSellersHealth() {
   return useQuery({
     queryKey: ['admin-all-sellers-health'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('seller_account_health')
-        .select('seller_id, health_score, is_frozen, is_deactivated, community_strikes_active, copyright_strikes_active');
-      
-      if (error) throw error;
+      const data = await apiFetch('/seller_account_health?select=seller_id,health_score,is_frozen,is_deactivated,community_strikes_active,copyright_strikes_active');
       
       // Convert to map for quick lookup
       const healthMap: Record<string, any> = {};
-      data?.forEach(h => { healthMap[h.seller_id] = h; });
+      data?.forEach((h: any) => { healthMap[h.seller_id] = h; });
       return healthMap;
     }
   });

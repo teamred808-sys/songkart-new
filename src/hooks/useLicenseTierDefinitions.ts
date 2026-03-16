@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 
 export interface LicenseRights {
   personal_use: boolean;
@@ -31,14 +31,10 @@ export function useLicenseTierDefinitions() {
   return useQuery({
     queryKey: ['license-tier-definitions'],
     queryFn: async (): Promise<LicenseTierDefinition[]> => {
-      const { data, error } = await supabase
-        .from('license_tier_definitions')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      const data = await apiFetch('/license_tier_definitions?is_active=true');
+      const sortedData = (data as any[]).sort((a, b) => a.display_order - b.display_order);
 
-      if (error) throw error;
-      return (data || []).map(item => ({
+      return (sortedData || []).map(item => ({
         ...item,
         rights: item.rights as unknown as LicenseRights,
       })) as LicenseTierDefinition[];
@@ -51,14 +47,10 @@ export function useLicenseRightsLabels() {
   return useQuery({
     queryKey: ['license-rights-labels'],
     queryFn: async (): Promise<LicenseRightsLabel[]> => {
-      const { data, error } = await supabase
-        .from('license_rights_labels')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      const data = await apiFetch('/license_rights_labels?is_active=true');
+      const sortedData = (data as any[]).sort((a, b) => a.display_order - b.display_order);
 
-      if (error) throw error;
-      return (data || []) as LicenseRightsLabel[];
+      return (sortedData || []) as LicenseRightsLabel[];
     },
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });

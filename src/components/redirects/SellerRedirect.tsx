@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { PageLoader } from '@/components/ui/PageLoader';
+import { apiFetch } from '@/lib/api';
 
 /**
  * Handles redirects from old UUID-based seller URLs to new username-based URLs
@@ -17,14 +17,8 @@ export function SellerRedirect() {
     queryFn: async () => {
       if (!id) return null;
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const dataArr = await apiFetch(`/profiles?id=${id}`);
+      return dataArr?.[0] || null;
     },
     enabled: !!id,
   });

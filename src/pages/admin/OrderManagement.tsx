@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -41,27 +41,12 @@ export default function OrderManagement() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders', statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            *,
-            songs:song_id (
-              id,
-              title,
-              cover_image_url
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
-
+      const params = new URLSearchParams();
       if (statusFilter !== 'all') {
-        query = query.eq('payment_status', statusFilter);
+        params.append('payment_status', statusFilter);
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      
+      const data = await apiFetch(`/orders/full?${params.toString()}`);
       return data;
     },
   });
@@ -69,11 +54,8 @@ export default function OrderManagement() {
   const { data: buyers } = useQuery({
     queryKey: ['buyers-profiles'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email');
-      if (error) throw error;
-      return new Map(data.map(p => [p.id, p]));
+      const data = await apiFetch('/profiles');
+      return new Map((data || []).map((p: any) => [p.id, p]));
     },
   });
 

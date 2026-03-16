@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useUserDetail, useUpdateUserStatus, useVerifyUser } from '@/hooks/useAdminData';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,15 +23,12 @@ function useUserHealth(userId: string) {
   return useQuery({
     queryKey: ['admin-user-health', userId],
     queryFn: async () => {
-      const [healthResult, strikesResult] = await Promise.all([
-        supabase.from('seller_account_health').select('*').eq('seller_id', userId).maybeSingle(),
-        supabase.from('seller_strikes').select('*, song:songs(title)').eq('seller_id', userId).order('created_at', { ascending: false })
+      const [health, strikes] = await Promise.all([
+        apiFetch(`/seller_account_health?seller_id=${userId}`).then((d: any) => d?.[0] || null),
+        apiFetch(`/seller_strikes?seller_id=${userId}`)
       ]);
       
-      return {
-        health: healthResult.data,
-        strikes: strikesResult.data || []
-      };
+      return { health, strikes: strikes || [] };
     },
     enabled: !!userId
   });
@@ -42,14 +39,7 @@ function useUserActivity(userId: string) {
   return useQuery({
     queryKey: ['admin-user-activity', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (error) throw error;
+      const data = await apiFetch(`/activity_logs?user_id=${userId}&limit=10`);
       return data || [];
     },
     enabled: !!userId

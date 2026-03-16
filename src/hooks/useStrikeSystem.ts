@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { apiFetch } from '@/lib/api';
 
 // Types
 export interface SellerStrike {
@@ -80,14 +80,9 @@ export function useSellerHealth(sellerId?: string) {
     queryFn: async () => {
       if (!targetId) return null;
 
-      const { data, error } = await supabase
-        .from('seller_account_health')
-        .select('*')
-        .eq('seller_id', targetId)
-        .maybeSingle();
+      const dataArr = await apiFetch(`/seller_account_health?seller_id=${targetId}`);
+      const data = dataArr?.[0] || null;
 
-      if (error) throw error;
-      
       // Return default health if no record exists
       if (!data) {
         return {
@@ -117,16 +112,7 @@ export function useSellerStrikes(sellerId?: string) {
     queryFn: async () => {
       if (!targetId) return [];
 
-      const { data, error } = await supabase
-        .from('seller_strikes')
-        .select(`
-          *,
-          song:songs(title)
-        `)
-        .eq('seller_id', targetId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/seller_strikes/full?seller_id=${targetId}`);
       return data as SellerStrike[];
     },
     enabled: !!targetId,
@@ -142,14 +128,7 @@ export function useStrikeNotifications() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data, error } = await supabase
-        .from('strike_notifications')
-        .select('*')
-        .eq('seller_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
+      const data = await apiFetch(`/strike_notifications?seller_id=${user.id}&limit=50`);
       return data as StrikeNotification[];
     },
     enabled: !!user?.id,
@@ -165,14 +144,8 @@ export function useUnreadStrikeNotifications() {
     queryFn: async () => {
       if (!user?.id) return 0;
 
-      const { count, error } = await supabase
-        .from('strike_notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('seller_id', user.id)
-        .eq('is_read', false);
-
-      if (error) throw error;
-      return count || 0;
+      const data = await apiFetch(`/strike_notifications?seller_id=${user.id}&is_read=false`);
+      return data?.length || 0;
     },
     enabled: !!user?.id,
   });
@@ -187,27 +160,12 @@ export function useAllStrikesAdmin(filters?: {
   return useQuery({
     queryKey: ['admin-strikes', filters],
     queryFn: async () => {
-      let query = supabase
-        .from('seller_strikes')
-        .select(`
-          *,
-          song:songs(title),
-          seller:profiles!seller_id(full_name, email, username)
-        `)
-        .order('created_at', { ascending: false });
+      const params = new URLSearchParams();
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.strike_type) params.append('strike_type', filters.strike_type);
+      if (filters?.seller_id) params.append('seller_id', filters.seller_id);
 
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.strike_type) {
-        query = query.eq('strike_type', filters.strike_type);
-      }
-      if (filters?.seller_id) {
-        query = query.eq('seller_id', filters.seller_id);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/seller_strikes/full?${params.toString()}`);
       return data;
     },
   });
@@ -218,15 +176,7 @@ export function useAllSellerHealthAdmin() {
   return useQuery({
     queryKey: ['admin-seller-health'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('seller_account_health')
-        .select(`
-          *,
-          seller:profiles!seller_id(full_name, email, username, avatar_url)
-        `)
-        .order('health_score', { ascending: true });
-
-      if (error) throw error;
+      const data = await apiFetch('/seller_account_health/full');
       return data;
     },
   });
@@ -245,16 +195,10 @@ export function useIssueStrike() {
       evidence_urls?: string[];
       song_id?: string;
     }) => {
-      const { data, error } = await supabase.rpc('issue_seller_strike', {
-        p_seller_id: params.seller_id,
-        p_strike_type: params.strike_type,
-        p_reason: params.reason,
-        p_details: params.details || null,
-        p_evidence_urls: params.evidence_urls || [],
-        p_song_id: params.song_id || null,
+      const data = await apiFetch('/rpc/issue_seller_strike', { 
+        method: 'POST',
+        body: JSON.stringify(params)
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: (data, variables) => {
@@ -276,12 +220,10 @@ export function useReverseStrike() {
 
   return useMutation({
     mutationFn: async (params: { strike_id: string; reason: string }) => {
-      const { data, error } = await supabase.rpc('reverse_seller_strike', {
-        p_strike_id: params.strike_id,
-        p_reason: params.reason,
+      const data = await apiFetch('/rpc/reverse_seller_strike', { 
+        method: 'POST',
+        body: JSON.stringify(params)
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -303,12 +245,10 @@ export function useRestoreAccount() {
 
   return useMutation({
     mutationFn: async (params: { seller_id: string; notes: string }) => {
-      const { data, error } = await supabase.rpc('restore_seller_account', {
-        p_seller_id: params.seller_id,
-        p_notes: params.notes,
+      const data = await apiFetch('/rpc/restore_seller_account', { 
+        method: 'POST',
+        body: JSON.stringify(params)
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: (_, variables) => {
@@ -330,12 +270,10 @@ export function useSubmitAppeal() {
 
   return useMutation({
     mutationFn: async (params: { strike_id: string; reason: string }) => {
-      const { data, error } = await supabase.rpc('submit_strike_appeal', {
-        p_strike_id: params.strike_id,
-        p_reason: params.reason,
+      const data = await apiFetch('/rpc/submit_strike_appeal', { 
+        method: 'POST',
+        body: JSON.stringify(params)
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -355,12 +293,10 @@ export function useMarkNotificationRead() {
 
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('strike_notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('id', notificationId);
-
-      if (error) throw error;
+      await apiFetch(`/strike_notifications/${notificationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_read: true, read_at: new Date().toISOString() })
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['strike-notifications', user?.id] });
@@ -378,11 +314,7 @@ export function useCanUpload() {
     queryFn: async () => {
       if (!user?.id) return { can_upload: true, reason: null };
 
-      const { data, error } = await supabase.rpc('check_seller_can_upload', {
-        p_seller_id: user.id,
-      });
-
-      if (error) throw error;
+      const data = await apiFetch('/rpc/check_seller_can_upload', { method: 'POST' }).catch(() => ({ can_upload: true, reason: null }));
       return data as { can_upload: boolean; reason: string | null };
     },
     enabled: !!user?.id,
@@ -398,11 +330,7 @@ export function useCanWithdraw() {
     queryFn: async () => {
       if (!user?.id) return { can_withdraw: true, reason: null };
 
-      const { data, error } = await supabase.rpc('check_seller_can_withdraw', {
-        p_seller_id: user.id,
-      });
-
-      if (error) throw error;
+      const data = await apiFetch('/rpc/check_seller_can_withdraw', { method: 'POST' }).catch(() => ({ can_withdraw: true, reason: null }));
       return data as { can_withdraw: boolean; reason: string | null };
     },
     enabled: !!user?.id,

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { apiFetch } from '@/lib/api';
 
 interface AdminSongReview {
   id: string;
@@ -53,14 +53,10 @@ export function useAdminSongReview(songId: string | undefined) {
     queryFn: async (): Promise<AdminSongReview> => {
       if (!songId) throw new Error('Song ID is required');
 
-      const { data, error } = await supabase.functions.invoke('admin-review-content', {
-        body: { songId }
+      const data = await apiFetch('/admin-review-content', {
+        method: 'POST',
+        body: JSON.stringify({ songId })
       });
-
-      if (error) {
-        console.error('Admin review fetch error:', error);
-        throw error;
-      }
 
       if (!data?.song) {
         throw new Error('Song not found');
@@ -80,11 +76,7 @@ export function useAdminApproveSong() {
   return useMutation({
     mutationFn: async (songId: string) => {
       // First check if song already has approved_at (resubmission case)
-      const { data: song } = await supabase
-        .from('songs')
-        .select('approved_at')
-        .eq('id', songId)
-        .single();
+      const song = await apiFetch(`/songs/${songId}`);
 
       // Only set approved_at if it's the first approval
       const updateData: { status: 'approved'; rejection_reason: null; approved_at?: string } = {
@@ -96,12 +88,10 @@ export function useAdminApproveSong() {
         updateData.approved_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from('songs')
-        .update(updateData)
-        .eq('id', songId);
-
-      if (error) throw error;
+      await apiFetch(`/songs/${songId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateData)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-song-review'] });
@@ -112,7 +102,7 @@ export function useAdminApproveSong() {
         description: 'The song has been approved and is now live.',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: 'Failed to approve song. Please try again.',
@@ -130,16 +120,14 @@ export function useAdminRejectSong() {
   return useMutation({
     mutationFn: async ({ songId, category, reason }: { songId: string; category: string; reason: string }) => {
       const formattedReason = `[${category}]: ${reason}`;
-      
-      const { error } = await supabase
-        .from('songs')
-        .update({ 
+
+      await apiFetch(`/songs/${songId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
           status: 'rejected', 
           rejection_reason: formattedReason 
         })
-        .eq('id', songId);
-
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-song-review'] });
@@ -149,7 +137,7 @@ export function useAdminRejectSong() {
         description: 'The song has been rejected and the seller will be notified.',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: 'Error',
         description: 'Failed to reject song. Please try again.',

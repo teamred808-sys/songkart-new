@@ -1,28 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { isValidUUID, filterValidUUIDs } from '@/lib/validation';
+import { apiFetch } from '@/lib/api';
 
 // Fetch commission rate from platform settings
 async function getCommissionRate(): Promise<number> {
-  const { data } = await supabase
-    .from('platform_settings')
-    .select('value')
-    .eq('key', 'commission_rate')
-    .single();
+  const data = await apiFetch('/platform_settings?key=commission_rate');
   
-  // Default to 15% if not set, convert percentage to decimal
-  return ((data?.value as { rate?: number })?.rate || 15) / 100;
-}
-
-// Declare Cashfree global type
-declare global {
-  interface Window {
-    Cashfree: (config: { mode: string }) => {
-      checkout: (options: { paymentSessionId: string; redirectTarget: string }) => Promise<void>;
-    };
-  }
+  // API returns array — get first item's value
+  const setting = Array.isArray(data) ? data[0] : data;
+  const rateValue = setting?.value?.rate ?? setting?.value ?? 15;
+  return Number(rateValue) / 100;
 }
 
 export function useValidatedAddToCart() {
@@ -36,23 +25,18 @@ export function useValidatedAddToCart() {
       if (!isValidUUID(licenseTierId)) throw new Error('Invalid license tier ID');
 
       // Fast path: First check the license tier type client-side
-      const { data: licenseTier, error: tierError } = await supabase
-        .from('license_tiers')
-        .select('license_type, price, is_available, max_sales, current_sales, song_id')
-        .eq('id', licenseTierId)
-        .single();
-
-      if (tierError || !licenseTier) throw new Error('License tier not found');
+      const licenseTier = await apiFetch(`/license_tiers/${licenseTierId}`);
+      if (!licenseTier) throw new Error('License tier not found');
       if (!licenseTier.is_available) throw new Error('This license is no longer available');
 
       const isExclusive = licenseTier.license_type === 'exclusive';
 
       // For EXCLUSIVE licenses, use the edge function (handles reservations)
       if (isExclusive) {
-        const { data, error } = await supabase.functions.invoke('validate-cart-item', {
-          body: { song_id: songId, license_tier_id: licenseTierId },
+        const data = await apiFetch('/validate-cart-item', {
+          method: 'POST',
+          body: JSON.stringify({ song_id: songId, license_tier_id: licenseTierId })
         });
-        if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
         return data;
       }
@@ -64,13 +48,8 @@ export function useValidatedAddToCart() {
       }
 
       // Get seller_id from the song
-      const { data: song, error: songError } = await supabase
-        .from('songs')
-        .select('seller_id')
-        .eq('id', songId)
-        .single();
-
-      if (songError || !song) throw new Error('Song not found');
+      const song = await apiFetch(`/songs/${songId}`);
+      if (!song) throw new Error('Song not found');
 
       // Fetch commission rate and calculate prices
       const commissionRate = await getCommissionRate();
@@ -78,9 +57,9 @@ export function useValidatedAddToCart() {
       const platformCommission = basePrice * commissionRate;
 
       // Upsert cart item (insert or update if exists)
-      const { error: upsertError } = await supabase
-        .from('cart_items')
-        .upsert({
+      const data = await apiFetch('/cart_items', {
+        method: 'POST',
+        body: JSON.stringify({
           user_id: user.id,
           song_id: songId,
           license_tier_id: licenseTierId,
@@ -89,14 +68,9 @@ export function useValidatedAddToCart() {
           platform_commission: platformCommission,
           final_price: basePrice,
           is_exclusive: false,
-        }, {
-          onConflict: 'user_id,song_id',
-          ignoreDuplicates: false
-        });
-
-      if (upsertError) throw new Error('Failed to add to cart');
-
-      return { success: true, message: 'Added to cart', is_exclusive: false };
+        })
+      });
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -119,10 +93,11 @@ export function useValidatedAddToCart() {
 }
 
 export function useCartWithTotals() {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: ['cart-with-totals'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return { 
           items: [], 
@@ -136,65 +111,32 @@ export function useCartWithTotals() {
       }
 
       // Fetch cart items with related data
-      const { data: cartItems, error } = await supabase
-        .from('cart_items')
-        .select(`
-          id,
-          song_id,
-          license_tier_id,
-          is_exclusive,
-          base_price,
-          final_price,
-          songs (
-            id,
-            title,
-            cover_image_url,
-            seller_id
-          ),
-          license_tiers (
-            id,
-            license_type,
-            price
-          )
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      const cartItems = await apiFetch(`/cart_items/full?user_id=${user.id}`);
 
       // Get unique seller IDs
-      const sellerIds = [...new Set(cartItems?.map(item => item.songs?.seller_id).filter(Boolean))] as string[];
+      const sellerIds = [...new Set(cartItems?.map((item: any) => item.songs?.seller_id).filter(Boolean))] as string[];
       
       // Fetch seller profiles
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, username')
-        .in('id', sellerIds);
+      const profiles = await apiFetch(`/profiles?ids=${sellerIds.join(',')}`);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.username || 'Unknown Artist']));
+      const profileMap = new Map(profiles?.map((p: any) => [p.id, p.full_name || p.username || 'Unknown Artist']));
 
       // Fetch active exclusive reservations for items that are exclusive
-      const exclusiveItems = cartItems?.filter(item => item.is_exclusive) || [];
-      const exclusiveSongIds = exclusiveItems.map(item => item.song_id);
+      const exclusiveItems = cartItems?.filter((item: any) => item.is_exclusive) || [];
+      const exclusiveSongIds = exclusiveItems.map((item: any) => item.song_id);
       
       let reservationsMap = new Map<string, { expires_at: string }>();
       
       if (exclusiveSongIds.length > 0) {
-        const { data: reservations } = await supabase
-          .from('exclusive_reservations')
-          .select('song_id, expires_at')
-          .in('song_id', exclusiveSongIds)
-          .eq('buyer_id', user.id)
-          .eq('status', 'active')
-          .gt('expires_at', new Date().toISOString());
-        
-        reservationsMap = new Map(reservations?.map(r => [r.song_id, { expires_at: r.expires_at }]));
+        const reservations = await apiFetch(`/exclusive_reservations?song_ids=${exclusiveSongIds.join(',')}&buyer_id=${user.id}&status=active`);
+        reservationsMap = new Map(reservations?.map((r: any) => [r.song_id, { expires_at: r.expires_at }]));
       }
 
       // Get commission rate for split fee calculation
       const commissionRate = await getCommissionRate();
 
       // Map items with seller names, reservations, own song flag, and split fees
-      const items = cartItems?.map(item => {
+      const items = cartItems?.map((item: any) => {
         const isOwnSong = item.songs?.seller_id === user.id;
         const songPrice = item.final_price || item.license_tiers?.price || 0;
         
@@ -216,8 +158,8 @@ export function useCartWithTotals() {
       }) || [];
 
       // Calculate totals with split platform fee
-      const subtotal = items.reduce((sum, item) => sum + item.songPrice, 0);
-      const buyerPlatformFee = items.reduce((sum, item) => sum + item.platformFeeBuyer, 0);
+      const subtotal = items.reduce((sum: number, item: any) => sum + item.songPrice, 0);
+      const buyerPlatformFee = items.reduce((sum: number, item: any) => sum + item.platformFeeBuyer, 0);
       const total = subtotal + buyerPlatformFee;
 
       return {
@@ -226,8 +168,8 @@ export function useCartWithTotals() {
         buyerPlatformFee, // Buyer's portion of platform fee (50%)
         total,            // What buyer actually pays (subtotal + buyerPlatformFee)
         itemCount: items.length,
-        hasExclusiveItems: items.some(item => item.is_exclusive),
-        hasOwnSongs: items.some(item => item.isOwnSong),
+        hasExclusiveItems: items.some((item: any) => item.is_exclusive),
+        hasOwnSongs: items.some((item: any) => item.isOwnSong),
       };
     },
   });
@@ -244,16 +186,16 @@ export function useCreateCheckoutSession() {
     }) => {
       const returnUrl = `${window.location.origin}/buyer/order-confirmation`;
 
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
+      const data = await apiFetch('/create-checkout-session', {
+        method: 'POST',
+        body: JSON.stringify({ 
           acknowledgment_accepted: acknowledgmentAccepted,
           return_url: returnUrl,
           promo_code_id: promoCodeId || null,
           promo_discount: promoDiscount || 0,
-        },
+        }),
       });
 
-      if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
       return data;
@@ -263,7 +205,7 @@ export function useCreateCheckoutSession() {
       if (data.payment_session_id) {
         try {
           // Initialize Cashfree SDK - production mode for live payments
-          const cashfree = window.Cashfree({
+          const cashfree = (window as any).Cashfree({
             mode: "production"
           });
           
@@ -293,17 +235,18 @@ export function useVerifyPayment(orderId: string | null) {
     queryFn: async () => {
       if (!orderId) throw new Error('No order ID');
 
-      const { data, error } = await supabase.functions.invoke('verify-payment', {
-        body: { order_id: orderId },
+      const data = await apiFetch('/verify-payment', {
+        method: 'POST',
+        body: JSON.stringify({ order_id: orderId }),
       });
 
-      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     enabled: !!orderId && !!user,
     refetchInterval: (query) => {
       // Keep polling until payment is confirmed or failed
-      const data = query.state.data;
+      const data = query.state.data as any;
       if (data?.is_paid || data?.payment_status === 'FAILED') {
         return false;
       }
@@ -314,28 +257,25 @@ export function useVerifyPayment(orderId: string | null) {
 
 export function useRemoveFromCartWithReservation() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ cartItemId, songId, isExclusive }: { 
+    mutationFn: async ({ cartItemId, songId, isExclusive }: {
       cartItemId: string; 
       songId: string; 
       isExclusive: boolean;
     }) => {
       // Release reservation if exclusive
       if (isExclusive) {
-        await supabase.functions.invoke('release-reservation', {
-          body: { song_id: songId, reason: 'cart_removal' },
+        await apiFetch('/release-reservation', {
+          method: 'POST',
+          body: JSON.stringify({ song_id: songId, reason: 'cart_removal' }),
         });
       }
 
       // Remove from cart
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('id', cartItemId);
-
-      if (error) throw error;
+      await apiFetch(`/cart_items/${cartItemId}`, {
+        method: 'DELETE'
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -357,28 +297,8 @@ export function useOrders() {
     queryKey: ['orders', user?.id],
     queryFn: async () => {
       if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            *,
-            songs:song_id (
-              id,
-              title,
-              cover_image_url,
-              audio_url,
-              full_lyrics,
-              has_audio,
-              has_lyrics
-            )
-          )
-        `)
-        .eq('buyer_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      
+      const data = await apiFetch(`/orders?buyer_id=${user.id}`);
       return data;
     },
     enabled: !!user,
@@ -392,26 +312,8 @@ export function useOrder(orderId: string | null) {
     queryKey: ['order', orderId],
     queryFn: async () => {
       if (!orderId || !user) throw new Error('No order ID');
-
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            *,
-            songs:song_id (
-              id,
-              title,
-              cover_image_url,
-              audio_url
-            )
-          )
-        `)
-        .eq('id', orderId)
-        .eq('buyer_id', user.id)
-        .single();
-
-      if (error) throw error;
+      
+      const data = await apiFetch(`/orders/${orderId}?buyer_id=${user.id}`);
       return data;
     },
     enabled: !!orderId && !!user,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch, API_BASE } from '@/lib/api';
 import { useSearchParams } from "react-router-dom";
 
 type SitemapType = "index" | "songs" | "sellers" | "blog" | "pages";
@@ -21,7 +22,7 @@ const Sitemap = ({ type = "index" }: SitemapProps) => {
 
         const baseUrl = window.location.origin;
         const sitemapUrl = new URL(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sitemap`
+          `${API_BASE}/sitemap`
         );
         
         sitemapUrl.searchParams.set("baseUrl", baseUrl);

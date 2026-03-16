@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods, useSongLicenseTiers, useAddLicenseTier, useUpdateLicenseTier, useRemoveLicenseTier, LicenseTier } from '@/hooks/useSellerData';
 import { toast } from '@/hooks/use-toast';
@@ -86,14 +86,10 @@ export default function EditSong() {
     const fetchSong = async () => {
       if (!id || !user?.id) return;
 
-      const { data, error } = await supabase
-        .from('songs')
-        .select('*')
-        .eq('id', id)
-        .eq('seller_id', user.id)
-        .single();
+      const songDataArr = await apiFetch(`/songs?id=${id}&seller_id=${user.id}`);
+      const data = songDataArr?.[0];
 
-      if (error || !data) {
+      if (!data) {
         toast({ title: 'Song not found', variant: 'destructive' });
         navigate('/seller/songs');
         return;
@@ -141,9 +137,9 @@ export default function EditSong() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('songs')
-        .update({
+      await apiFetch(`/songs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           title: data.title,
           description: data.description || null,
           genre_id: data.genre_id,
@@ -161,9 +157,7 @@ export default function EditSong() {
           use_cases: useCases.length > 0 ? useCases : null,
           lyrics_intro: lyricsIntro || null,
         })
-        .eq('id', id);
-
-      if (error) throw error;
+      });
 
       toast({ title: 'Song updated successfully' });
       navigate('/seller/songs');
@@ -230,12 +224,9 @@ export default function EditSong() {
         refetchTiers();
         // Update is_free based on commercial tier pricing
         if (id) {
-          const { data: allTiers } = await supabase
-            .from('license_tiers')
-            .select('license_type, price')
-            .eq('song_id', id);
-          const isFree = allTiers?.some(t => t.license_type === 'commercial' && Number(t.price) === 0) || false;
-          await supabase.from('songs').update({ is_free: isFree }).eq('id', id);
+          const allTiers = await apiFetch(`/license_tiers?song_id=${id}`);
+          const isFree = allTiers?.some((t: any) => t.license_type === 'commercial' && Number(t.price) === 0) || false;
+          await apiFetch(`/songs/${id}`, { method: 'PATCH', body: JSON.stringify({ is_free: isFree }) });
         }
       },
     });

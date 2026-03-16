@@ -32,7 +32,6 @@ export default defineConfig(({ mode }) => ({
           ],
           'vendor-charts': ['recharts'],
           'vendor-editor': ['@tiptap/react', '@tiptap/starter-kit'],
-          'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
         },
         assetFileNames: 'assets/[name]-[hash][extname]',

@@ -35,7 +35,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
 // License rights by type
@@ -138,9 +138,11 @@ const uniqueItems = downloadableItems.filter((item, index, self) =>
         ? { order_item_id: itemId }
         : { transactionId: itemId };
 
-      const { data, error } = await supabase.functions.invoke(endpoint, { body });
+      const data = await apiFetch(`/${endpoint}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
 
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       if (data?.download_url) {

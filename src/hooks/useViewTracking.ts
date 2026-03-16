@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { apiFetch } from '@/lib/api';
 
 const VIEW_THRESHOLD_SECONDS = 5;
 
@@ -56,19 +56,18 @@ export function useViewTracking(songId: string | undefined, sellerId?: string) {
       // Mark as recorded to prevent duplicate calls
       viewRecordedRef.current = true;
       
-      const { data, error } = await supabase.functions.invoke('record-view', {
-        body: {
+      const data = await apiFetch('/record-view', {
+        method: 'POST',
+        body: JSON.stringify({
           songId,
           playbackSeconds,
           deviceFingerprint: generateDeviceFingerprint()
-        }
-      });
-      
-      if (error) {
+        })
+      }).catch((error) => {
         console.error('Failed to record view:', error);
         viewRecordedRef.current = false; // Allow retry on error
-        return { recorded: false, reason: 'api_error', error };
-      }
+        return { success: false, reason: 'api_error', error };
+      });
       
       // Check server response
       if (data?.success) {

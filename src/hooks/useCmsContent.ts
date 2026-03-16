@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { Json } from '@/integrations/supabase/types';
+import { apiFetch } from '@/lib/api';
 
 export type ContentType = 'page' | 'post';
 export type ContentStatus = 'draft' | 'published' | 'scheduled' | 'archived';
@@ -12,7 +11,7 @@ export interface CmsContent {
   title: string;
   slug: string;
   excerpt: string | null;
-  content_json: Json;
+  content_json: Record<string, unknown>;
   content_html: string | null;
   featured_image: string | null;
   author_id: string | null;
@@ -41,7 +40,7 @@ export interface CreateContentInput {
   title: string;
   slug: string;
   excerpt?: string;
-  content_json?: Json;
+  content_json?: Record<string, unknown>;
   content_html?: string;
   featured_image?: string;
   status?: ContentStatus;
@@ -95,19 +94,11 @@ export function useContentList(type?: ContentType, status?: ContentStatus) {
   return useQuery({
     queryKey: ['cms-content', type, status],
     queryFn: async () => {
-      let query = supabase
-        .from('cms_content')
-        .select(`
-          *,
-          author:profiles(full_name, avatar_url)
-        `)
-        .order('updated_at', { ascending: false });
+      const params = new URLSearchParams();
+      if (type) params.append('type', type);
+      if (status) params.append('status', status);
       
-      if (type) query = query.eq('type', type);
-      if (status) query = query.eq('status', status);
-      
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await apiFetch(`/cms_content/full?${params.toString()}`);
       return data as unknown as CmsContent[];
     },
   });
@@ -118,25 +109,19 @@ export function useContentBySlug(slug: string, type?: ContentType) {
   return useQuery({
     queryKey: ['cms-content-slug', slug, type],
     queryFn: async () => {
-      let query = supabase
-        .from('cms_content')
-        .select(`
-          *,
-          author:profiles(full_name, avatar_url)
-        `)
-        .eq('slug', slug)
-        .eq('status', 'published');
+      const params = new URLSearchParams({ slug, status: 'published' });
+      if (type) params.append('type', type);
       
-      if (type) query = query.eq('type', type);
+      const dataArr = await apiFetch(`/cms_content/full?${params.toString()}`);
+      const data = dataArr?.[0];
       
-      const { data, error } = await query.single();
-      if (error) throw error;
+      if (!data) throw new Error('Content not found');
       
       // Increment view count
-      await supabase
-        .from('cms_content')
-        .update({ view_count: (data.view_count || 0) + 1 })
-        .eq('id', data.id);
+      await apiFetch(`/cms_content/${data.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ view_count: (data.view_count || 0) + 1 })
+      });
       
       return data as unknown as CmsContent;
     },
@@ -151,17 +136,8 @@ export function useContentById(id: string | undefined) {
     queryFn: async () => {
       if (!id) return null;
       
-      const { data, error } = await supabase
-        .from('cms_content')
-        .select(`
-          *,
-          author:profiles(full_name, avatar_url)
-        `)
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data as unknown as CmsContent;
+      const dataArr = await apiFetch(`/cms_content/full?id=${id}`);
+      return dataArr?.[0] as unknown as CmsContent || null;
     },
     enabled: !!id,
   });
@@ -175,17 +151,11 @@ export function usePublishedPages() {
   return useQuery({
     queryKey: ['cms-published-pages'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cms_content')
-        .select('id, title, slug')
-        .eq('type', 'page')
-        .eq('status', 'published')
-        .order('title', { ascending: true });
-      
-      if (error) throw error;
+      const data = await apiFetch('/cms_content?type=page&status=published');
+      const sortedData = (data as any[]).sort((a, b) => a.title.localeCompare(b.title));
       
       // Filter out reserved slugs that conflict with React routes
-      return data?.filter(page => !RESERVED_SLUGS.includes(page.slug)) || [];
+      return sortedData.filter((page: any) => !RESERVED_SLUGS.includes(page.slug)) || [];
     },
   });
 }
@@ -195,19 +165,14 @@ export function usePublishedPosts() {
   return useQuery({
     queryKey: ['cms-published-posts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cms_content')
-        .select(`
-          *,
-          author:profiles(full_name, avatar_url)
-        `)
-        .eq('type', 'post')
-        .eq('status', 'published')
-        .lte('published_at', new Date().toISOString())
-        .order('published_at', { ascending: false });
+      const data = await apiFetch('/cms_content/full?type=post&status=published');
       
-      if (error) throw error;
-      return data as unknown as CmsContent[];
+      // Filter out future scheduled posts
+      const now = new Date().toISOString();
+      const filtered = (data as any[]).filter(post => post.published_at <= now);
+      
+      // Sort by published_at desc
+      return filtered.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()) as unknown as CmsContent[];
     },
   });
 }
@@ -218,12 +183,12 @@ export function useCreateContent() {
   
   return useMutation({
     mutationFn: async (input: CreateContentInput) => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Not authenticated');
+      const { user } = await apiFetch('/auth/me');
+      if (!user) throw new Error('Not authenticated');
       
-      const { data, error } = await supabase
-        .from('cms_content')
-        .insert({
+      const data = await apiFetch('/cms_content', {
+        method: 'POST',
+        body: JSON.stringify({
           type: input.type,
           title: input.title,
           slug: input.slug,
@@ -242,12 +207,10 @@ export function useCreateContent() {
           og_title: input.og_title || null,
           og_description: input.og_description || null,
           no_index: input.no_index || false,
-          author_id: user.user.id,
+          author_id: user.id,
         })
-        .select()
-        .single();
+      });
       
-      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -287,14 +250,11 @@ export function useUpdateContent() {
       if (input.og_description !== undefined) updateData.og_description = input.og_description;
       if (input.no_index !== undefined) updateData.no_index = input.no_index;
       
-      const { data, error } = await supabase
-        .from('cms_content')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
+      const data = await apiFetch(`/cms_content/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateData)
+      });
       
-      if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
@@ -315,30 +275,21 @@ export function usePublishContent() {
   return useMutation({
     mutationFn: async (id: string) => {
       // First validate content
-      const { data: content, error: fetchError } = await supabase
-        .from('cms_content')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (fetchError) throw fetchError;
+      const content = await apiFetch(`/cms_content/${id}`);
       
       const errors = validateForPublish(content as unknown as Partial<CmsContent>);
       if (errors.length > 0) {
         throw new Error(errors.join(', '));
       }
       
-      const { data, error } = await supabase
-        .from('cms_content')
-        .update({
+      const data = await apiFetch(`/cms_content/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           status: 'published',
           published_at: new Date().toISOString(),
         })
-        .eq('id', id)
-        .select()
-        .single();
+      });
       
-      if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
@@ -358,17 +309,14 @@ export function useUnpublishContent() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await supabase
-        .from('cms_content')
-        .update({
+      const data = await apiFetch(`/cms_content/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
           status: 'draft',
           published_at: null,
         })
-        .eq('id', id)
-        .select()
-        .single();
+      });
       
-      if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
@@ -388,12 +336,7 @@ export function useDeleteContent() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('cms_content')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await apiFetch(`/cms_content/${id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cms-content'] });
@@ -409,17 +352,11 @@ export function useDeleteContent() {
 export function useCheckSlug() {
   return useMutation({
     mutationFn: async ({ slug, excludeId }: { slug: string; excludeId?: string }) => {
-      let query = supabase
-        .from('cms_content')
-        .select('id')
-        .eq('slug', slug);
+      const data = await apiFetch(`/cms_content?slug=${slug}`);
       
       if (excludeId) {
-        query = query.neq('id', excludeId);
+        return !data.some((item: any) => item.id !== excludeId);
       }
-      
-      const { data, error } = await query;
-      if (error) throw error;
       
       return data.length === 0;
     },

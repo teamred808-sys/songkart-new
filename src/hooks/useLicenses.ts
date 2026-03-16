@@ -1,8 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 
 export interface LicenseDocument {
   id: string;
@@ -35,13 +35,7 @@ export function useLicenseDocuments() {
     queryKey: ['license-documents', user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('license_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch(`/license_documents?buyer_id=${user.id}`);
       return data as LicenseDocument[];
     },
     enabled: !!user,
@@ -53,15 +47,8 @@ export function useLicenseByOrderItem(orderItemId: string | undefined) {
     queryKey: ['license-document', orderItemId],
     queryFn: async () => {
       if (!orderItemId) return null;
-
-      const { data, error } = await supabase
-        .from('license_documents')
-        .select('*')
-        .eq('order_item_id', orderItemId)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data as LicenseDocument | null;
+      const data = await apiFetch(`/license_documents?order_item_id=${orderItemId}`);
+      return (data?.[0] || null) as LicenseDocument | null;
     },
     enabled: !!orderItemId,
   });
@@ -85,13 +72,11 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 export function useDownloadLicense() {
   return useMutation({
     mutationFn: async ({ orderItemId }: { orderItemId: string }) => {
-      const { data, error } = await supabase.functions.invoke('download-license', {
-        body: { order_item_id: orderItemId },
+      const data = await apiFetch('/download-license', {
+        method: 'POST',
+        body: JSON.stringify({ order_item_id: orderItemId }),
       });
-
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
       return data;
     },
     onSuccess: async (data) => {
@@ -131,13 +116,11 @@ export function useRegenerateLicense() {
     mutationFn: async ({ orderItemId }: { orderItemId: string }) => {
       if (cooldown) throw new Error('Please wait before regenerating again');
 
-      const { data, error } = await supabase.functions.invoke('generate-license-pdf', {
-        body: { order_item_id: orderItemId },
+      const data = await apiFetch('/generate-license-pdf', {
+        method: 'POST',
+        body: JSON.stringify({ order_item_id: orderItemId }),
       });
-
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
       return data;
     },
     onSuccess: () => {
@@ -159,13 +142,11 @@ export function useRevokeLicense() {
 
   return useMutation({
     mutationFn: async ({ licenseDocumentId, reason }: { licenseDocumentId: string; reason: string }) => {
-      const { data, error } = await supabase.functions.invoke('revoke-license', {
-        body: { license_document_id: licenseDocumentId, reason },
+      const data = await apiFetch('/revoke-license', {
+        method: 'POST',
+        body: JSON.stringify({ license_document_id: licenseDocumentId, reason }),
       });
-
-      if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
       return data;
     },
     onSuccess: () => {
@@ -182,12 +163,7 @@ export function useAllLicenses() {
   return useQuery({
     queryKey: ['all-licenses'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('license_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const data = await apiFetch('/license_documents');
       return data as LicenseDocument[];
     },
   });

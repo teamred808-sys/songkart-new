@@ -26,7 +26,7 @@ import { useSellerTier } from "@/hooks/useSellerTier";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewTracking } from "@/hooks/useViewTracking";
 import { LICENSE_TYPES } from "@/lib/constants";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { SongSEOHead } from "@/components/seo/SongSEOHead";
 import { MusicRecordingSchema, BreadcrumbSchema, ProductSchema, FAQSchema } from "@/components/seo/SchemaOrg";
@@ -57,7 +57,7 @@ export default function SongDetail() {
     
     // Also track play count (separate metric)
     if (song?.id) {
-      await supabase.rpc("increment_play_count", { song_uuid: song.id });
+      await apiFetch('/rpc/increment_play_count', { method: 'POST', body: JSON.stringify({ song_uuid: song.id }) }).catch(() => {});
     }
   }, [song?.id, startTracking]);
 

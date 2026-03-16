@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { apiFetch } from '@/lib/api';
 
 interface PendingClearanceItem {
   transaction_id: string;
@@ -18,13 +18,13 @@ export function usePendingClearance() {
     queryFn: async (): Promise<PendingClearanceItem[]> => {
       if (!user?.id) return [];
 
-      const { data, error } = await supabase
-        .rpc('get_pending_clearance_info', { p_seller_id: user.id });
-
-      if (error) {
+      const data = await apiFetch('/rpc/get_pending_clearance_info', { 
+        method: 'POST',
+        body: JSON.stringify({ p_seller_id: user.id })
+      }).catch((error) => {
         console.error('Error fetching pending clearance:', error);
         return [];
-      }
+      });
 
       return (data || []).map((item: any) => ({
         transaction_id: item.transaction_id,

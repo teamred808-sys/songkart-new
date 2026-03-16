@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -58,29 +58,21 @@ const SellerProfile = () => {
       // Try to find by username first, then by ID
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sellerIdentifier);
       
-      let profileQuery = supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, bio, is_verified, website, social_links, username, role, specialties");
-      
+      let profile;
       if (isUUID) {
-        profileQuery = profileQuery.eq("id", sellerIdentifier);
+        const profileArr = await apiFetch(`/profiles?id=${sellerIdentifier}`);
+        profile = profileArr?.[0];
       } else {
-        profileQuery = profileQuery.eq("username", sellerIdentifier);
+        const profileArr = await apiFetch(`/profiles?username=${sellerIdentifier}`);
+        profile = profileArr?.[0];
       }
       
-      const { data: profile, error: profileError } = await profileQuery.maybeSingle();
-      if (profileError) throw profileError;
       if (!profile) return null;
 
       // Verify this user has seller role
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", profile.id)
-        .eq("role", "seller")
-        .maybeSingle();
+      const roleDataArr = await apiFetch(`/user_roles?user_id=${profile.id}&role=seller`);
+      const roleData = roleDataArr?.[0];
 
-      if (roleError) throw roleError;
       if (!roleData) return null;
 
       return profile as SellerProfile | null;
@@ -93,13 +85,7 @@ const SellerProfile = () => {
     queryFn: async () => {
       if (!seller?.id) return [];
 
-      const { data, error } = await supabase
-        .from("songs")
-        .select("id, title, description, cover_image_url, artwork_cropped_url, preview_audio_url, base_price, play_count, view_count, has_lyrics, has_audio, seller_id, slug, genres(name), moods(name)")
-        .eq("seller_id", seller.id)
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
+      const data = await apiFetch(`/songs/full?seller_id=${seller.id}&status=approved`);
       return (data || []) as (Song & { slug?: string })[];
     },
     enabled: !!seller?.id,

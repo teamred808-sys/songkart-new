@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
+import { API_BASE, apiFetch } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useGenres, useMoods } from '@/hooks/useSellerData';
 import { toast } from '@/hooks/use-toast';
@@ -278,17 +278,24 @@ export default function UploadSong() {
   };
 
   const uploadFile = async (file: File, bucket: string, path: string) => {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, { upsert: true });
-    
-    if (error) throw error;
-    
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-    
-    return publicUrl;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
+
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`${API_BASE}/storage/${bucket}/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Upload failed');
+    }
+
+    const data = await res.json();
+    return data.public_url as string;
   };
 
   const handleSubmit = async () => {
@@ -330,9 +337,9 @@ export default function UploadSong() {
       setUploadProgress(70);
 
       // Create song record
-      const { data: song, error: songError } = await supabase
-        .from('songs')
-        .insert({
+      const song = await apiFetch('/songs', {
+        method: 'POST',
+        body: JSON.stringify({
           seller_id: user.id,
           title: metadata.title,
           description: metadata.description || null,
@@ -360,10 +367,7 @@ export default function UploadSong() {
           use_cases: useCases.length > 0 ? useCases : null,
           lyrics_intro: lyricsIntro || null,
         })
-        .select()
-        .single();
-
-      if (songError) throw songError;
+      });
 
       setUploadProgress(85);
 
@@ -377,11 +381,10 @@ export default function UploadSong() {
           terms: tier.terms || null,
         }));
 
-        const { error: tiersError } = await supabase
-          .from('license_tiers')
-          .insert(tiers);
-
-        if (tiersError) throw tiersError;
+        await apiFetch('/license_tiers', {
+          method: 'POST',
+          body: JSON.stringify(tiers)
+        });
       }
 
       setUploadProgress(100);

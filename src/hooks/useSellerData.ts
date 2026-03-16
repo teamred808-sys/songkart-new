@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { apiFetch } from '@/lib/api';
 
 // Types
 export interface SellerSong {
@@ -91,18 +91,7 @@ export function useSellerSongs() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('songs')
-        .select(`
-          *,
-          genre:genres(id, name),
-          mood:moods(id, name),
-          license_tiers(*)
-        `)
-        .eq('seller_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await apiFetch(`/songs/full?seller_id=${user.id}`);
       return data as SellerSong[];
     },
     enabled: !!user?.id,
@@ -118,46 +107,24 @@ export function useSellerStats() {
       if (!user?.id) return null;
       
       // Get songs count
-      const { data: songs, error: songsError } = await supabase
-        .from('songs')
-        .select('id, status')
-        .eq('seller_id', user.id);
-      
-      if (songsError) throw songsError;
+      const songs = await apiFetch(`/songs?seller_id=${user.id}`).catch(() => []);
       
       // Get transactions
-      const { data: transactions, error: txError } = await supabase
-        .from('transactions')
-        .select('seller_amount, created_at')
-        .eq('seller_id', user.id)
-        .eq('payment_status', 'completed');
-      
-      if (txError) throw txError;
+      const transactions = await apiFetch(`/transactions?seller_id=${user.id}&payment_status=completed`).catch(() => []);
       
       // Get wallet
-      const { data: wallet, error: walletError } = await supabase
-        .from('seller_wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (walletError && walletError.code !== 'PGRST116') throw walletError;
+      const walletArr = await apiFetch(`/seller_wallets?user_id=${user.id}`).catch(() => []);
+      const wallet = walletArr?.[0] || null;
       
       // Get pending withdrawals
-      const { data: withdrawals, error: wdError } = await supabase
-        .from('withdrawal_requests')
-        .select('amount')
-        .eq('user_id', user.id)
-        .eq('status', 'pending');
-      
-      if (wdError) throw wdError;
+      const withdrawals = await apiFetch(`/withdrawal_requests?user_id=${user.id}&status=pending`).catch(() => []);
       
       const totalUploads = songs?.length || 0;
-      const approvedSongs = songs?.filter(s => s.status === 'approved').length || 0;
+      const approvedSongs = songs?.filter((s: any) => s.status === 'approved').length || 0;
       const totalSales = transactions?.length || 0;
-      const totalEarnings = transactions?.reduce((sum, t) => sum + Number(t.seller_amount), 0) || 0;
+      const totalEarnings = transactions?.reduce((sum: number, t: any) => sum + Number(t.seller_amount), 0) || 0;
       const availableBalance = wallet?.available_balance || 0;
-      const pendingWithdrawals = withdrawals?.reduce((sum, w) => sum + Number(w.amount), 0) || 0;
+      const pendingWithdrawals = withdrawals?.reduce((sum: number, w: any) => sum + Number(w.amount), 0) || 0;
       
       return {
         totalUploads,
@@ -206,17 +173,7 @@ export function useSellerTransactions() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          song:songs(id, title, cover_image_url, artwork_cropped_url),
-          license_tier:license_tiers(license_type, price)
-        `)
-        .eq('seller_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await apiFetch(`/transactions/full?seller_id=${user.id}`);
       return data as SellerTransaction[];
     },
     enabled: !!user?.id,
@@ -231,14 +188,8 @@ export function useSellerWallet() {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      const { data, error } = await supabase
-        .from('seller_wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data as SellerWallet | null;
+      const dataArr = await apiFetch(`/seller_wallets?user_id=${user.id}`);
+      return dataArr?.[0] as SellerWallet | null;
     },
     enabled: !!user?.id,
   });
@@ -252,13 +203,7 @@ export function useWithdrawalRequests() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
+      const data = await apiFetch(`/withdrawal_requests?user_id=${user.id}`);
       return data as WithdrawalRequest[];
     },
     enabled: !!user?.id,
@@ -273,14 +218,7 @@ export function useHasPendingWithdrawal() {
     queryFn: async () => {
       if (!user?.id) return false;
 
-      const { data, error } = await supabase
-        .from('withdrawal_requests')
-        .select('id')
-        .eq('user_id', user.id)
-        .in('status', ['pending', 'approved'])
-        .limit(1);
-
-      if (error) throw error;
+      const data = await apiFetch(`/withdrawal_requests?user_id=${user.id}&status=in.(pending,approved)&limit=1`);
       return (data?.length ?? 0) > 0;
     },
     enabled: !!user?.id,
@@ -302,12 +240,7 @@ export function useRequestWithdrawal() {
       if (!user?.id) throw new Error('Not authenticated');
       
       // Check for existing pending withdrawal
-      const { data: pending } = await supabase
-        .from('withdrawal_requests')
-        .select('id')
-        .eq('user_id', user.id)
-        .in('status', ['pending', 'approved'])
-        .limit(1);
+      const pending = await apiFetch(`/withdrawal_requests?user_id=${user.id}&status=in.(pending,approved)&limit=1`);
 
       if (pending && pending.length > 0) {
         throw new Error('Withdrawal request already in progress. Please wait until it is processed.');
@@ -326,16 +259,15 @@ export function useRequestWithdrawal() {
         throw new Error('Amount exceeds available balance');
       }
       
-      const { error } = await supabase
-        .from('withdrawal_requests')
-        .insert({
+      await apiFetch('/withdrawal_requests', {
+        method: 'POST',
+        body: JSON.stringify({
           user_id: user.id,
           amount: data.amount,
           payout_method: data.payout_method,
           payout_details: data.payout_details,
-        });
-      
-      if (error) throw error;
+        })
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['withdrawal-requests'] });
@@ -354,22 +286,11 @@ export function useDeleteSong() {
 
   return useMutation({
     mutationFn: async (songId: string) => {
-      const { data, error } = await supabase
-        .from('songs')
-        .delete()
-        .eq('id', songId)
-        .select('id');
-
-      if (error) throw error;
-      
-      // If no rows returned, the delete was blocked by RLS
-      if (!data || data.length === 0) {
-        // Check if song has sales
-        const { data: salesData } = await supabase
-          .from('order_items')
-          .select('id')
-          .eq('song_id', songId)
-          .limit(1);
+      try {
+        await apiFetch(`/songs/${songId}`, { method: 'DELETE' });
+      } catch (error: any) {
+        // If error, check if it's due to sales
+        const salesData = await apiFetch(`/order_items?song_id=${songId}&limit=1`).catch(() => []);
         
         if (salesData && salesData.length > 0) {
           throw new Error('Cannot delete this song because it has existing sales.');
@@ -420,13 +341,8 @@ export function useGenres() {
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('genres')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/genres');
+      return (data as any[]).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 }
@@ -435,13 +351,8 @@ export function useMoods() {
   return useQuery({
     queryKey: ['moods'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('moods')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/moods');
+      return (data as any[]).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 }
@@ -454,12 +365,10 @@ export function useUpdateSellerDynamicPricing() {
     mutationFn: async (enabled: boolean) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ dynamic_pricing_enabled: enabled })
-        .eq('id', user.id);
-      
-      if (error) throw error;
+      await apiFetch(`/profiles/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ dynamic_pricing_enabled: enabled })
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller-stats'] });
@@ -479,17 +388,16 @@ export function useAddLicenseTier() {
       terms?: string;
       max_sales?: number;
     }) => {
-      const { error } = await supabase
-        .from('license_tiers')
-        .insert({
+      await apiFetch('/license_tiers', {
+        method: 'POST',
+        body: JSON.stringify({
           song_id: data.song_id,
           license_type: data.license_type,
           price: data.price,
           terms: data.terms || null,
           max_sales: data.max_sales || null,
-        });
-      
-      if (error) throw error;
+        })
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
@@ -517,12 +425,10 @@ export function useUpdateLicenseTier() {
       if (data.terms !== undefined) updateData.terms = data.terms;
       if (data.is_available !== undefined) updateData.is_available = data.is_available;
       
-      const { error } = await supabase
-        .from('license_tiers')
-        .update(updateData)
-        .eq('id', data.tier_id);
-      
-      if (error) throw error;
+      await apiFetch(`/license_tiers/${data.tier_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateData)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
@@ -540,24 +446,14 @@ export function useRemoveLicenseTier() {
   return useMutation({
     mutationFn: async (tierId: string) => {
       // First check if there are any sales
-      const { data: tier, error: fetchError } = await supabase
-        .from('license_tiers')
-        .select('current_sales')
-        .eq('id', tierId)
-        .single();
-      
-      if (fetchError) throw fetchError;
+      const tierArr = await apiFetch(`/license_tiers?id=${tierId}`);
+      const tier = tierArr?.[0];
       
       if (tier?.current_sales && tier.current_sales > 0) {
         throw new Error('Cannot remove license tier with existing sales');
       }
       
-      const { error } = await supabase
-        .from('license_tiers')
-        .delete()
-        .eq('id', tierId);
-      
-      if (error) throw error;
+      await apiFetch(`/license_tiers/${tierId}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['seller-songs'] });
@@ -574,14 +470,8 @@ export function useSongLicenseTiers(songId: string) {
   return useQuery({
     queryKey: ['license-tiers', songId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('license_tiers')
-        .select('*')
-        .eq('song_id', songId)
-        .order('price', { ascending: true });
-      
-      if (error) throw error;
-      return data as LicenseTier[];
+      const data = await apiFetch(`/license_tiers?song_id=${songId}`);
+      return (data as LicenseTier[]).sort((a, b) => a.price - b.price);
     },
     enabled: !!songId,
   });

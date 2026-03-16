@@ -1,32 +1,19 @@
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { SongCard } from "@/components/songs/SongCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Gift, ArrowRight } from "lucide-react";
+import { apiFetch } from '@/lib/api';
 
 const useFreeSongs = () => {
   return useQuery({
     queryKey: ['free-songs'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('songs')
-        .select(`
-          id, title, slug, base_price, cover_image_url, artwork_cropped_url, preview_audio_url,
-          has_audio, has_lyrics, play_count, average_rating, total_ratings,
-          seller:profiles!songs_seller_id_fkey(full_name),
-          genres(name),
-          moods(name),
-          license_tiers(license_type, price)
-        `)
-        .eq('status', 'approved')
-        .eq('is_free', true)
-        .order('created_at', { ascending: false })
-        .limit(8);
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch('/songs/full?status=approved&is_free=true&limit=8');
+      
+      // Sort client-side since API endpoint doesn't support order parameter
+      return (data || []).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
   });
 };

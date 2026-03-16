@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send, Bot, User, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { apiFetch, API_BASE } from '@/lib/api';
 
 type Message = {
   role: "user" | "assistant";
@@ -10,7 +10,7 @@ type Message = {
   feedbackGiven?: boolean;
 };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/support-chat`;
+const CHAT_URL = `${API_BASE}/support-chat`;
 
 function getSessionId(): string {
   let id = localStorage.getItem("songkart_chat_session");
@@ -54,12 +54,8 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const resp = await fetch(CHAT_URL, {
+      const resp = await apiFetch(CHAT_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
         body: JSON.stringify({
           messages: overrideText ? newMessages : newMessages,
           session_id: getSessionId(),

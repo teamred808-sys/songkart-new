@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { apiFetch, API_BASE } from '@/lib/api';
 
 interface SecurePlaybackState {
   token: string | null;
@@ -60,15 +60,14 @@ export function useSecurePlayback() {
 
   const checkAbuse = useCallback(async (): Promise<AbuseCheckResult> => {
     try {
-      const { data, error } = await supabase.functions.invoke('check-abuse', {
-        body: {
+      const data = await apiFetch('/check-abuse', {
+        method: 'POST',
+        body: JSON.stringify({
           userId: user?.id,
           deviceFingerprint: deviceFingerprint.current,
           action: 'check'
-        }
+        })
       });
-
-      if (error) throw error;
       return data as AbuseCheckResult;
     } catch (err) {
       console.error('Abuse check failed:', err);
@@ -78,14 +77,15 @@ export function useSecurePlayback() {
 
   const reportAbuse = useCallback(async (flagType: string, details?: Record<string, unknown>) => {
     try {
-      await supabase.functions.invoke('check-abuse', {
-        body: {
+      await apiFetch('/check-abuse', {
+        method: 'POST',
+        body: JSON.stringify({
           userId: user?.id,
           deviceFingerprint: deviceFingerprint.current,
           action: 'report',
           flagType,
           details
-        }
+        })
       });
     } catch (err) {
       console.error('Failed to report abuse:', err);
@@ -96,19 +96,18 @@ export function useSecurePlayback() {
   const getDirectPreviewUrl = useCallback((previewAudioUrl: string | null): string | null => {
     if (!previewAudioUrl) return null;
     
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const baseUrl = API_BASE;
     
     // If it's already a full URL, return it
     if (previewAudioUrl.startsWith('http')) {
       return previewAudioUrl;
     }
-    
     // Extract path and build public URL from song-previews bucket
     const path = previewAudioUrl.includes('song-previews/') 
       ? previewAudioUrl.split('song-previews/')[1]
       : previewAudioUrl;
     
-    return `${baseUrl}/storage/v1/object/public/song-previews/${path}`;
+    return `/storage/song-files/${path}`;
   }, []);
 
   const getToken = useCallback(async (songId: string, type: 'preview' | 'purchased' = 'preview') => {
@@ -126,15 +125,14 @@ export function useSecurePlayback() {
         return null;
       }
       
-      const { data, error } = await supabase.functions.invoke('audio-token', {
-        body: {
+      const data = await apiFetch('/audio/token', {
+        method: 'POST',
+        body: JSON.stringify({
           songId,
           type,
           deviceFingerprint: deviceFingerprint.current
-        }
+        })
       });
-
-      if (error) throw error;
 
       const expiresAt = new Date(data.expiresAt);
       
@@ -168,8 +166,7 @@ export function useSecurePlayback() {
   }, [checkAbuse]);
 
   const getStreamUrl = useCallback((songId: string, token: string): string => {
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${baseUrl}/functions/v1/stream-preview?songId=${songId}&token=${encodeURIComponent(token)}`;
+    return `${API_BASE}/audio/stream-preview?songId=${songId}&token=${encodeURIComponent(token)}`;
   }, []);
 
   const invalidateToken = useCallback(() => {

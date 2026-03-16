@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Clock, ArrowRight, Banknote, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 export default function SellerDashboard() {
@@ -33,11 +33,7 @@ export default function SellerDashboard() {
   const handleVerifyClick = async () => {
     setIsVerifying(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-verification-email');
-
-      if (error) {
-        throw new Error(error.message || 'Failed to send verification email');
-      }
+      const data = await apiFetch('/users/verification/send-verification', { method: 'POST' });
 
       if (data?.error) {
         if (data.already_verified) {
