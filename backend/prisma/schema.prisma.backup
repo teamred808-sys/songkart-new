@@ -1,0 +1,1132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model activity_logs {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  action      String
+  entity_type String
+  entity_id   String?   @db.Uuid
+  metadata    Json?     @default("{}")
+  ip_address  String?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  users       users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  profiles    profiles? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_logs_user_id_profiles_fkey")
+
+  @@index([created_at(sort: Desc)], map: "idx_activity_logs_created_at")
+  @@index([entity_type, entity_id], map: "idx_activity_logs_entity")
+  @@index([entity_type], map: "idx_activity_logs_entity_type")
+  @@index([user_id], map: "idx_activity_logs_user")
+  @@index([user_id], map: "idx_activity_logs_user_id")
+}
+
+model admin_bug_reports {
+  id                                               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                                            String
+  description                                      String
+  affected_section                                 String
+  severity                                         String              @default("medium")
+  status                                           String              @default("open")
+  reporter_id                                      String?             @db.Uuid
+  assignee_id                                      String?             @db.Uuid
+  screenshots                                      Json?               @default("[]")
+  logs                                             Json?               @default("[]")
+  internal_notes                                   Json?               @default("[]")
+  resolution_notes                                 String?
+  resolved_at                                      DateTime?           @db.Timestamptz(6)
+  created_at                                       DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at                                       DateTime?           @default(now()) @db.Timestamptz(6)
+  profiles_admin_bug_reports_assignee_idToprofiles profiles?           @relation("admin_bug_reports_assignee_idToprofiles", fields: [assignee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_admin_bug_reports_reporter_idToprofiles profiles?           @relation("admin_bug_reports_reporter_idToprofiles", fields: [reporter_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  system_error_logs                                system_error_logs[]
+}
+
+model audio_sessions {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String?   @db.Uuid
+  song_id            String?   @db.Uuid
+  session_token      String    @unique
+  ip_address         String?
+  user_agent         String?
+  device_fingerprint String?
+  started_at         DateTime? @default(now()) @db.Timestamptz(6)
+  last_access        DateTime? @default(now()) @db.Timestamptz(6)
+  play_count         Int?      @default(0)
+  is_valid           Boolean?  @default(true)
+  expires_at         DateTime  @db.Timestamptz(6)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  songs              songs?    @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_audio_sessions_expires")
+  @@index([song_id], map: "idx_audio_sessions_song_id")
+  @@index([session_token], map: "idx_audio_sessions_token")
+  @@index([user_id], map: "idx_audio_sessions_user_id")
+}
+
+model audio_watermarks {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id String?       @db.Uuid
+  buyer_id       String        @db.Uuid
+  song_id        String        @db.Uuid
+  watermark_code String        @unique
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  users          users         @relation(fields: [buyer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  songs          songs         @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions   transactions? @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([buyer_id], map: "idx_audio_watermarks_buyer")
+  @@index([watermark_code], map: "idx_audio_watermarks_code")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model buyer_carts {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyer_id   String    @db.Uuid
+  status     String?   @default("active")
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  expires_at DateTime? @default(dbgenerated("(now() + '7 days'::interval)")) @db.Timestamptz(6)
+
+  @@unique([buyer_id, status])
+}
+
+model cart_items {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String        @db.Uuid
+  song_id             String        @db.Uuid
+  license_tier_id     String        @db.Uuid
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  seller_id           String?       @db.Uuid
+  base_price          Decimal       @default(0) @db.Decimal
+  platform_commission Decimal       @default(0) @db.Decimal
+  final_price         Decimal       @default(0) @db.Decimal
+  is_exclusive        Boolean?      @default(false)
+  updated_at          DateTime?     @default(now()) @db.Timestamptz(6)
+  license_tiers       license_tiers @relation(fields: [license_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs               songs         @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, song_id, license_tier_id])
+  @@unique([user_id, song_id], map: "cart_items_user_song_unique")
+  @@index([song_id], map: "idx_cart_items_song_id")
+  @@index([user_id], map: "idx_cart_items_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chat_logs {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?  @db.Uuid
+  session_id String
+  role       String
+  content    String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  source     String?  @default("ai")
+}
+
+model chat_response_cache {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  question_hash String   @unique
+  question      String
+  response      String
+  source        String   @default("ai")
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  expires_at    DateTime @default(dbgenerated("(now() + '24:00:00'::interval)")) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model checkout_sessions {
+  id                          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyer_id                    String         @db.Uuid
+  cart_snapshot               Json
+  subtotal                    Decimal        @db.Decimal
+  platform_fee                Decimal        @db.Decimal
+  tax_amount                  Decimal?       @default(0) @db.Decimal
+  total_amount                Decimal        @db.Decimal
+  currency                    String?        @default("INR")
+  status                      String?        @default("pending")
+  cashfree_order_id           String?
+  cashfree_payment_session_id String?
+  acknowledgment_accepted     Boolean?       @default(false)
+  acknowledgment_timestamp    DateTime?      @db.Timestamptz(6)
+  ip_address                  String?
+  user_agent                  String?
+  created_at                  DateTime?      @default(now()) @db.Timestamptz(6)
+  expires_at                  DateTime?      @default(dbgenerated("(now() + '00:30:00'::interval)")) @db.Timestamptz(6)
+  completed_at                DateTime?      @db.Timestamptz(6)
+  buyer_country_code          String?        @db.Char(2)
+  buyer_currency_code         String?        @default("INR") @db.Char(3)
+  exchange_rate_used          Decimal?       @default(1) @db.Decimal
+  pricing_zone_id             String?        @db.Uuid
+  platform_fee_buyer          Decimal?       @default(0) @db.Decimal
+  platform_fee_seller         Decimal?       @default(0) @db.Decimal
+  promo_code_id               String?        @db.Uuid
+  promo_discount              Decimal?       @default(0) @db.Decimal
+  pricing_zones               pricing_zones? @relation(fields: [pricing_zone_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promo_codes                 promo_codes?   @relation(fields: [promo_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders                      orders[]
+}
+
+model cms_categories {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String    @unique
+  slug       String    @unique
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model cms_content {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            content_type   @default(page)
+  title           String
+  slug            String         @unique(map: "cms_content_slug_unique")
+  excerpt         String?
+  content_json    Json           @default("{}")
+  content_html    String?
+  featured_image  String?
+  author_id       String?        @db.Uuid
+  status          content_status @default(draft)
+  published_at    DateTime?      @db.Timestamptz(6)
+  scheduled_at    DateTime?      @db.Timestamptz(6)
+  seo_title       String?
+  seo_description String?
+  seo_keywords    String[]
+  canonical_url   String?
+  og_image        String?
+  og_title        String?
+  og_description  String?
+  no_index        Boolean?       @default(false)
+  view_count      Int?           @default(0)
+  created_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  profiles        profiles?      @relation(fields: [author_id], references: [id], onUpdate: NoAction)
+
+  @@index([author_id], map: "idx_cms_content_author")
+  @@index([published_at(sort: Desc)], map: "idx_cms_content_published_at")
+  @@index([slug], map: "idx_cms_content_slug")
+  @@index([status], map: "idx_cms_content_status")
+  @@index([type], map: "idx_cms_content_type")
+  @@index([type, status], map: "idx_cms_content_type_status")
+}
+
+model cms_media {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  file_name    String
+  file_type    String
+  file_size    Int
+  storage_path String
+  public_url   String
+  alt_text     String?
+  caption      String?
+  uploaded_by  String?   @db.Uuid
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  profiles     profiles? @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction)
+}
+
+model content_fingerprints {
+  id                                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id                                           String?   @db.Uuid
+  audio_file_hash                                   String?
+  audio_duration_ms                                 Int?
+  lyrics_hash                                       String?
+  lyrics_word_count                                 Int?
+  copyright_check_status                            String?   @default("pending")
+  plagiarism_check_status                           String?   @default("pending")
+  audio_match_confidence                            Decimal?  @db.Decimal(5, 2)
+  audio_match_source                                String?
+  lyrics_similarity_score                           Decimal?  @db.Decimal(5, 2)
+  similar_song_id                                   String?   @db.Uuid
+  checked_at                                        DateTime? @db.Timestamptz(6)
+  reviewed_by                                       String?   @db.Uuid
+  reviewed_at                                       DateTime? @db.Timestamptz(6)
+  review_notes                                      String?
+  created_at                                        DateTime? @default(now()) @db.Timestamptz(6)
+  profiles                                          profiles? @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs_content_fingerprints_similar_song_idTosongs songs?    @relation("content_fingerprints_similar_song_idTosongs", fields: [similar_song_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs_content_fingerprints_song_idTosongs         songs?    @relation("content_fingerprints_song_idTosongs", fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([audio_file_hash], map: "idx_content_fingerprints_audio_hash")
+  @@index([lyrics_hash], map: "idx_content_fingerprints_lyrics_hash")
+  @@index([song_id], map: "idx_content_fingerprints_song")
+  @@index([copyright_check_status], map: "idx_content_fingerprints_status")
+}
+
+model content_review_queue {
+  id                                                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id                                           String?   @db.Uuid
+  queue_type                                        String
+  priority                                          Int?      @default(5)
+  status                                            String?   @default("pending")
+  detection_type                                    String?
+  confidence_score                                  Decimal?  @db.Decimal(5, 2)
+  matched_content                                   String?
+  matched_song_id                                   String?   @db.Uuid
+  resolved_by                                       String?   @db.Uuid
+  resolved_at                                       DateTime? @db.Timestamptz(6)
+  resolution                                        String?
+  resolution_notes                                  String?
+  created_at                                        DateTime? @default(now()) @db.Timestamptz(6)
+  songs_content_review_queue_matched_song_idTosongs songs?    @relation("content_review_queue_matched_song_idTosongs", fields: [matched_song_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles                                          profiles? @relation(fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs_content_review_queue_song_idTosongs         songs?    @relation("content_review_queue_song_idTosongs", fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([song_id], map: "idx_review_queue_song")
+  @@index([status, priority], map: "idx_review_queue_status")
+}
+
+model currency_exchange_rates {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  currency_code   String    @unique @db.Char(3)
+  currency_name   String
+  currency_symbol String
+  rate_from_inr   Decimal   @db.Decimal
+  last_updated    DateTime? @default(now()) @db.Timestamptz(6)
+  is_active       Boolean?  @default(true)
+}
+
+model disputes {
+  id                                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transaction_id                        String          @db.Uuid
+  raised_by                             String          @db.Uuid
+  against                               String          @db.Uuid
+  reason                                String
+  description                           String?
+  status                                dispute_status? @default(open)
+  resolution                            String?
+  resolved_by                           String?         @db.Uuid
+  resolved_at                           DateTime?       @db.Timestamptz(6)
+  created_at                            DateTime        @default(now()) @db.Timestamptz(6)
+  users_disputes_againstTousers         users           @relation("disputes_againstTousers", fields: [against], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_disputes_againstToprofiles   profiles        @relation("disputes_againstToprofiles", fields: [against], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "disputes_against_profiles_fkey")
+  users_disputes_raised_byTousers       users           @relation("disputes_raised_byTousers", fields: [raised_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_disputes_raised_byToprofiles profiles        @relation("disputes_raised_byToprofiles", fields: [raised_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "disputes_raised_by_profiles_fkey")
+  users_disputes_resolved_byTousers     users?          @relation("disputes_resolved_byTousers", fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transactions                          transactions    @relation(fields: [transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model exclusive_reservations {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id         String         @db.Uuid
+  buyer_id        String         @db.Uuid
+  license_tier_id String?        @db.Uuid
+  status          String?        @default("active")
+  reserved_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  expires_at      DateTime       @db.Timestamptz(6)
+  released_at     DateTime?      @db.Timestamptz(6)
+  released_reason String?
+  license_tiers   license_tiers? @relation(fields: [license_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs           songs          @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model faq {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  question   String
+  answer     String
+  keywords   String[] @default([])
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model favorites {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  song_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  songs      songs    @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, song_id])
+  @@index([song_id], map: "idx_favorites_song_id")
+  @@index([user_id], map: "idx_favorites_user_id")
+}
+
+model genres {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @unique
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  songs      songs[]
+}
+
+model knowledge_base {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String
+  content    String
+  tags       String[] @default([])
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model license_rights_labels {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  right_key     String    @unique
+  display_name  String
+  tooltip       String?
+  display_order Int
+  is_active     Boolean?  @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model license_templates {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_type           license_type
+  version                Int          @default(1)
+  is_active              Boolean?     @default(true)
+  template_name          String
+  legal_clauses          Json         @default("{}")
+  permitted_uses         String[]     @default([])
+  prohibited_uses        String[]     @default([])
+  ownership_clause       String
+  warranty_disclaimer    String
+  indemnification_clause String
+  termination_conditions String
+  governing_law          String?      @default("Laws of India")
+  platform_disclaimer    String
+  created_at             DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?    @default(now()) @db.Timestamptz(6)
+  created_by             String?      @db.Uuid
+  profiles               profiles?    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([license_type, version])
+  @@index([license_type, is_active], map: "idx_license_templates_type_active")
+}
+
+model license_tier_definitions {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_key      String    @unique
+  name          String
+  display_order Int
+  description   String?
+  rights        Json      @default("{}")
+  is_active     Boolean?  @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model license_tiers {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id                String                   @db.Uuid
+  license_type           license_type
+  price                  Decimal                  @db.Decimal(10, 2)
+  description            String?
+  terms                  String?
+  is_available           Boolean?                 @default(true)
+  max_sales              Int?
+  current_sales          Int?                     @default(0)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  cart_items             cart_items[]
+  exclusive_reservations exclusive_reservations[]
+  songs                  songs                    @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions           transactions[]
+
+  @@unique([song_id, license_type])
+  @@index([song_id], map: "idx_license_tiers_song")
+  @@index([song_id], map: "idx_license_tiers_song_id")
+}
+
+model moods {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @unique
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  songs      songs[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_number        String              @unique
+  buyer_id            String              @db.Uuid
+  checkout_session_id String?             @db.Uuid
+  subtotal            Decimal             @db.Decimal
+  platform_fee        Decimal             @db.Decimal
+  tax_amount          Decimal?            @default(0) @db.Decimal
+  total_amount        Decimal             @db.Decimal
+  currency            String?             @default("INR")
+  payment_status      String?             @default("pending")
+  payment_method      String?
+  cashfree_order_id   String?
+  cashfree_payment_id String?
+  fulfillment_status  String?             @default("pending")
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  paid_at             DateTime?           @db.Timestamptz(6)
+  fulfilled_at        DateTime?           @db.Timestamptz(6)
+  checkout_sessions   checkout_sessions?  @relation(fields: [checkout_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promo_code_usages   promo_code_usages[]
+
+  @@index([buyer_id], map: "idx_orders_buyer_id")
+  @@index([created_at(sort: Desc)], map: "idx_orders_created_at")
+  @@index([payment_status], map: "idx_orders_payment_status")
+}
+
+model payout_profile_change_logs {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id       String   @db.Uuid
+  change_type     String
+  previous_values Json?
+  new_values      Json?
+  changed_by      String?  @db.Uuid
+  ip_address      String?
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([seller_id], map: "idx_payout_change_logs_seller")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model piracy_reports {
+  id                                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id                                 String    @db.Uuid
+  watermark_code                          String?
+  reported_url                            String?
+  platform                                String?
+  status                                  String?   @default("pending")
+  evidence                                Json?     @default("[]")
+  notes                                   String?
+  created_by                              String?   @db.Uuid
+  created_at                              DateTime? @default(now()) @db.Timestamptz(6)
+  resolved_at                             DateTime? @db.Timestamptz(6)
+  resolved_by                             String?   @db.Uuid
+  users_piracy_reports_created_byTousers  users?    @relation("piracy_reports_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_piracy_reports_resolved_byTousers users?    @relation("piracy_reports_resolved_byTousers", fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  songs                                   songs     @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([song_id], map: "idx_piracy_reports_song")
+  @@index([status], map: "idx_piracy_reports_status")
+}
+
+model platform_settings {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key        String   @unique
+  value      Json
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_by String?  @db.Uuid
+  users      users?   @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model pricing_zone_countries {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  country_code  String        @unique @db.Char(2)
+  country_name  String
+  zone_id       String        @db.Uuid
+  currency_code String        @db.Char(3)
+  is_active     Boolean?      @default(true)
+  created_at    DateTime?     @default(now()) @db.Timestamptz(6)
+  pricing_zones pricing_zones @relation(fields: [zone_id], references: [id], onUpdate: NoAction)
+
+  @@index([country_code], map: "idx_pricing_zone_countries_country_code")
+  @@index([zone_id], map: "idx_pricing_zone_countries_zone_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pricing_zones {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  zone_code              String                   @unique
+  zone_name              String
+  multiplier             Decimal                  @default(1.0) @db.Decimal
+  is_active              Boolean?                 @default(true)
+  description            String?
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  checkout_sessions      checkout_sessions[]
+  pricing_zone_countries pricing_zone_countries[]
+}
+
+model profiles {
+  id                                                             String                       @id @db.Uuid
+  email                                                          String
+  full_name                                                      String?
+  avatar_url                                                     String?
+  bio                                                            String?
+  website                                                        String?
+  social_links                                                   Json?                        @default("{}")
+  is_verified                                                    Boolean?                     @default(false)
+  created_at                                                     DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime                     @default(now()) @db.Timestamptz(6)
+  account_status                                                 String?                      @default("active")
+  upload_limit                                                   Int?                         @default(50)
+  fraud_flags                                                    Json?                        @default("[]")
+  kyc_status                                                     String?                      @default("pending")
+  kyc_documents                                                  Json?                        @default("[]")
+  suspended_at                                                   DateTime?                    @db.Timestamptz(6)
+  suspension_reason                                              String?
+  dynamic_pricing_enabled                                        Boolean                      @default(true)
+  username                                                       String?
+  role                                                           String?
+  specialties                                                    String[]
+  activity_logs                                                  activity_logs[]
+  admin_bug_reports_admin_bug_reports_assignee_idToprofiles      admin_bug_reports[]          @relation("admin_bug_reports_assignee_idToprofiles")
+  admin_bug_reports_admin_bug_reports_reporter_idToprofiles      admin_bug_reports[]          @relation("admin_bug_reports_reporter_idToprofiles")
+  cms_content                                                    cms_content[]
+  cms_media                                                      cms_media[]
+  content_fingerprints                                           content_fingerprints[]
+  content_review_queue                                           content_review_queue[]
+  disputes_disputes_againstToprofiles                            disputes[]                   @relation("disputes_againstToprofiles")
+  disputes_disputes_raised_byToprofiles                          disputes[]                   @relation("disputes_raised_byToprofiles")
+  license_templates                                              license_templates[]
+  users                                                          users                        @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rating_abuse_flags_rating_abuse_flags_flagged_byToprofiles     rating_abuse_flags[]         @relation("rating_abuse_flags_flagged_byToprofiles")
+  rating_abuse_flags_rating_abuse_flags_reviewed_byToprofiles    rating_abuse_flags[]         @relation("rating_abuse_flags_reviewed_byToprofiles")
+  seller_payout_profiles                                         seller_payout_profiles?
+  seller_tier_history_seller_tier_history_seller_idToprofiles    seller_tier_history[]        @relation("seller_tier_history_seller_idToprofiles")
+  seller_tier_history_seller_tier_history_triggered_byToprofiles seller_tier_history[]        @relation("seller_tier_history_triggered_byToprofiles")
+  seller_tier_status_seller_tier_status_frozen_byToprofiles      seller_tier_status[]         @relation("seller_tier_status_frozen_byToprofiles")
+  seller_tier_status_seller_tier_status_seller_idToprofiles      seller_tier_status?          @relation("seller_tier_status_seller_idToprofiles")
+  seller_upload_rates                                            seller_upload_rates?
+  seller_verification_tokens                                     seller_verification_tokens[]
+  song_ratings                                                   song_ratings[]
+  songs                                                          songs[]
+  system_error_logs                                              system_error_logs[]
+  tier_abuse_flags_tier_abuse_flags_buyer_idToprofiles           tier_abuse_flags[]           @relation("tier_abuse_flags_buyer_idToprofiles")
+  tier_abuse_flags_tier_abuse_flags_reviewed_byToprofiles        tier_abuse_flags[]           @relation("tier_abuse_flags_reviewed_byToprofiles")
+  tier_abuse_flags_tier_abuse_flags_seller_idToprofiles          tier_abuse_flags[]           @relation("tier_abuse_flags_seller_idToprofiles")
+  transactions_transactions_buyer_idToprofiles                   transactions[]               @relation("transactions_buyer_idToprofiles")
+  transactions_transactions_seller_idToprofiles                  transactions[]               @relation("transactions_seller_idToprofiles")
+  withdrawal_requests                                            withdrawal_requests[]
+
+  @@index([email], map: "idx_profiles_email")
+  @@index([is_verified], map: "idx_profiles_is_verified")
+}
+
+model promo_code_usages {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  promo_code_id   String      @db.Uuid
+  user_id         String      @db.Uuid
+  order_id        String?     @db.Uuid
+  discount_amount Decimal     @db.Decimal
+  used_at         DateTime?   @default(now()) @db.Timestamptz(6)
+  orders          orders?     @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promo_codes     promo_codes @relation(fields: [promo_code_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model promo_codes {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                String              @unique
+  created_by          String              @db.Uuid
+  creator_role        String
+  discount_type       String
+  discount_value      Decimal             @db.Decimal
+  song_id             String?             @db.Uuid
+  license_type        String?
+  min_purchase_amount Decimal?            @default(0) @db.Decimal
+  usage_limit         Int?
+  usage_count         Int?                @default(0)
+  expires_at          DateTime?           @db.Timestamptz(6)
+  is_active           Boolean?            @default(true)
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  checkout_sessions   checkout_sessions[]
+  promo_code_usages   promo_code_usages[]
+  songs               songs?              @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model rating_abuse_flags {
+  id                                                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rating_id                                         String       @db.Uuid
+  flagged_by                                        String?      @db.Uuid
+  reason                                            String
+  status                                            String?      @default("pending")
+  reviewed_by                                       String?      @db.Uuid
+  reviewed_at                                       DateTime?    @db.Timestamptz(6)
+  action_taken                                      String?
+  created_at                                        DateTime?    @default(now()) @db.Timestamptz(6)
+  profiles_rating_abuse_flags_flagged_byToprofiles  profiles?    @relation("rating_abuse_flags_flagged_byToprofiles", fields: [flagged_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  song_ratings                                      song_ratings @relation(fields: [rating_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_rating_abuse_flags_reviewed_byToprofiles profiles?    @relation("rating_abuse_flags_reviewed_byToprofiles", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status], map: "idx_rating_abuse_flags_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model seller_account_health {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                String    @unique @db.Uuid
+  health_score             Int       @default(100)
+  community_strikes_active Int       @default(0)
+  copyright_strikes_active Int       @default(0)
+  is_frozen                Boolean   @default(false)
+  frozen_at                DateTime? @db.Timestamptz(6)
+  frozen_until             DateTime? @db.Timestamptz(6)
+  freeze_reason            String?
+  is_deactivated           Boolean   @default(false)
+  deactivated_at           DateTime? @db.Timestamptz(6)
+  deactivation_reason      String?
+  funds_forfeited          Boolean   @default(false)
+  forfeited_amount         Decimal?  @default(0) @db.Decimal
+  forfeited_at             DateTime? @db.Timestamptz(6)
+  restored_by              String?   @db.Uuid
+  restored_at              DateTime? @db.Timestamptz(6)
+  restoration_notes        String?
+  last_strike_at           DateTime? @db.Timestamptz(6)
+  last_health_update       DateTime? @default(now()) @db.Timestamptz(6)
+  created_at               DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model seller_payout_profiles {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                String                     @unique @db.Uuid
+  account_holder_name      String
+  bank_name                String
+  account_number_encrypted String
+  account_number_last4     String
+  ifsc_code                String
+  account_type             String                     @default("savings")
+  country                  String                     @default("India")
+  currency                 String                     @default("INR")
+  upi_id                   String?
+  verification_status      payout_verification_status @default(pending)
+  verified_by              String?                    @db.Uuid
+  verified_at              DateTime?                  @db.Timestamptz(6)
+  rejection_reason         String?
+  is_active                Boolean                    @default(true)
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  is_locked                Boolean                    @default(false)
+  locked_reason            String?
+  profiles                 profiles                   @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_seller_payout_profiles_seller")
+
+  @@index([seller_id], map: "idx_payout_profiles_seller")
+  @@index([verification_status], map: "idx_payout_profiles_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model seller_strikes {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id            String                 @db.Uuid
+  strike_type          String
+  reason               String
+  details              String?
+  evidence_urls        Json?                  @default("[]")
+  song_id              String?                @db.Uuid
+  status               String                 @default("active")
+  expires_at           DateTime?              @db.Timestamptz(6)
+  issued_by            String?                @db.Uuid
+  reversed_by          String?                @db.Uuid
+  reversed_at          DateTime?              @db.Timestamptz(6)
+  reversal_reason      String?
+  appeal_status        String?
+  appeal_reason        String?
+  appeal_submitted_at  DateTime?              @db.Timestamptz(6)
+  appeal_reviewed_by   String?                @db.Uuid
+  appeal_reviewed_at   DateTime?              @db.Timestamptz(6)
+  appeal_response      String?
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  songs                songs?                 @relation(fields: [song_id], references: [id], onUpdate: NoAction)
+  strike_notifications strike_notifications[]
+
+  @@index([seller_id], map: "idx_seller_strikes_seller_id")
+  @@index([status], map: "idx_seller_strikes_status")
+  @@index([strike_type, status], map: "idx_seller_strikes_type_status")
+}
+
+model seller_tier_history {
+  id                                                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                                           String    @db.Uuid
+  previous_tier                                       Int?
+  new_tier                                            Int
+  lifetime_sales_at_change                            Decimal?  @db.Decimal
+  trigger_type                                        String
+  triggered_by                                        String?   @db.Uuid
+  notes                                               String?
+  created_at                                          DateTime? @default(now()) @db.Timestamptz(6)
+  profiles_seller_tier_history_seller_idToprofiles    profiles  @relation("seller_tier_history_seller_idToprofiles", fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_seller_tier_history_triggered_byToprofiles profiles? @relation("seller_tier_history_triggered_byToprofiles", fields: [triggered_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([seller_id], map: "idx_seller_tier_history_seller_id")
+}
+
+model seller_tier_status {
+  id                                              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                                       String       @unique @db.Uuid
+  current_tier_level                              Int          @default(1)
+  lifetime_sales_amount                           Decimal      @default(0) @db.Decimal
+  tier_frozen                                     Boolean?     @default(false)
+  frozen_reason                                   String?
+  frozen_by                                       String?      @db.Uuid
+  frozen_at                                       DateTime?    @db.Timestamptz(6)
+  last_tier_check                                 DateTime?    @default(now()) @db.Timestamptz(6)
+  created_at                                      DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime?    @default(now()) @db.Timestamptz(6)
+  seller_tiers                                    seller_tiers @relation(fields: [current_tier_level], references: [tier_level], onDelete: NoAction, onUpdate: NoAction)
+  profiles_seller_tier_status_frozen_byToprofiles profiles?    @relation("seller_tier_status_frozen_byToprofiles", fields: [frozen_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_seller_tier_status_seller_idToprofiles profiles     @relation("seller_tier_status_seller_idToprofiles", fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([seller_id], map: "idx_seller_tier_status_seller_id")
+}
+
+model seller_tiers {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_level            Int                  @unique
+  name                  String
+  badge_label           String
+  min_lifetime_sales    Decimal              @default(0) @db.Decimal
+  max_price_lyrics_only Decimal?             @db.Decimal
+  max_price_with_audio  Decimal?             @db.Decimal
+  badge_color           String?              @default("gray")
+  description           String?
+  created_at            DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?            @default(now()) @db.Timestamptz(6)
+  seller_tier_status    seller_tier_status[]
+}
+
+model seller_upload_rates {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id    String    @unique @db.Uuid
+  upload_count Int?      @default(0)
+  window_start DateTime? @default(now()) @db.Timestamptz(6)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  profiles     profiles  @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model seller_verification_tokens {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  token      String    @unique
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  profiles   profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([token], map: "idx_verification_tokens_token")
+  @@index([user_id], map: "idx_verification_tokens_user")
+}
+
+model seller_wallets {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String   @unique @db.Uuid
+  total_earnings       Decimal? @default(0) @db.Decimal(10, 2)
+  available_balance    Decimal? @default(0) @db.Decimal(10, 2)
+  pending_balance      Decimal? @default(0) @db.Decimal(10, 2)
+  withdrawal_threshold Decimal? @default(500) @db.Decimal(10, 2)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @db.Timestamptz(6)
+  users                users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model song_ratings {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  song_id              String               @db.Uuid
+  user_id              String               @db.Uuid
+  rating               Int
+  is_verified_purchase Boolean?             @default(false)
+  ip_address           String?
+  device_fingerprint   String?
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  rating_abuse_flags   rating_abuse_flags[]
+  songs                songs                @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles             profiles             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([song_id, user_id])
+  @@index([created_at(sort: Desc)], map: "idx_song_ratings_created_at")
+  @@index([song_id], map: "idx_song_ratings_song_id")
+  @@index([user_id], map: "idx_song_ratings_user_id")
+}
+
+model song_views {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                   String   @db.Uuid
+  song_id                   String   @db.Uuid
+  viewed_at                 DateTime @default(now()) @db.Timestamptz(6)
+  playback_duration_seconds Int?     @default(0)
+  ip_address                String?
+  user_agent                String?
+  device_fingerprint        String?
+  songs                     songs    @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([song_id], map: "idx_song_views_song_id")
+  @@index([user_id], map: "idx_song_views_user_id")
+  @@index([user_id, song_id, viewed_at], map: "idx_song_views_user_song_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
+model songs {
+  id                                                               String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                                                        String?                  @db.Uuid
+  title                                                            String
+  description                                                      String?
+  genre_id                                                         String?                  @db.Uuid
+  mood_id                                                          String?                  @db.Uuid
+  language                                                         String?                  @default("English")
+  bpm                                                              Int?
+  duration                                                         Int?
+  full_lyrics                                                      String?
+  preview_lyrics                                                   String?
+  audio_url                                                        String?
+  preview_audio_url                                                String?
+  cover_image_url                                                  String?
+  status                                                           song_status              @default(pending)
+  rejection_reason                                                 String?
+  base_price                                                       Decimal                  @default(0) @db.Decimal(10, 2)
+  play_count                                                       Int?                     @default(0)
+  view_count                                                       Int?                     @default(0)
+  is_featured                                                      Boolean?                 @default(false)
+  has_audio                                                        Boolean?                 @default(false)
+  has_lyrics                                                       Boolean?                 @default(false)
+  created_at                                                       DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at                                                       DateTime                 @default(now()) @db.Timestamptz(6)
+  exclusive_sold                                                   Boolean?                 @default(false)
+  exclusive_buyer_id                                               String?                  @db.Uuid
+  exclusive_sold_at                                                DateTime?                @db.Timestamptz(6)
+  approved_at                                                      DateTime?                @db.Timestamptz(6)
+  new_uploads_excluded                                             Boolean?                 @default(false)
+  new_uploads_pinned                                               Boolean?                 @default(false)
+  new_uploads_pinned_until                                         DateTime?                @db.Timestamptz(6)
+  average_rating                                                   Decimal?                 @default(0) @db.Decimal(2, 1)
+  total_ratings                                                    Int?                     @default(0)
+  preview_generated_at                                             DateTime?                @db.Timestamptz(6)
+  preview_duration_seconds                                         Int?
+  preview_file_size_bytes                                          Int?
+  seo_description                                                  String?
+  seo_content                                                      String?
+  use_cases                                                        String[]                 @default([])
+  lyrics_intro                                                     String?
+  canonical_url                                                    String?
+  no_index                                                         Boolean?                 @default(false)
+  content_check_status                                             String?                  @default("pending")
+  requires_ownership_proof                                         Boolean?                 @default(false)
+  ownership_proof_url                                              String?
+  slug                                                             String?
+  artwork_cropped_url                                              String?
+  is_free                                                          Boolean                  @default(false)
+  audio_sessions                                                   audio_sessions[]
+  audio_watermarks                                                 audio_watermarks[]
+  cart_items                                                       cart_items[]
+  content_fingerprints_content_fingerprints_similar_song_idTosongs content_fingerprints[]   @relation("content_fingerprints_similar_song_idTosongs")
+  content_fingerprints_content_fingerprints_song_idTosongs         content_fingerprints[]   @relation("content_fingerprints_song_idTosongs")
+  content_review_queue_content_review_queue_matched_song_idTosongs content_review_queue[]   @relation("content_review_queue_matched_song_idTosongs")
+  content_review_queue_content_review_queue_song_idTosongs         content_review_queue[]   @relation("content_review_queue_song_idTosongs")
+  exclusive_reservations                                           exclusive_reservations[]
+  favorites                                                        favorites[]
+  license_tiers                                                    license_tiers[]
+  piracy_reports                                                   piracy_reports[]
+  promo_codes                                                      promo_codes[]
+  seller_strikes                                                   seller_strikes[]
+  song_ratings                                                     song_ratings[]
+  song_views                                                       song_views[]
+  users                                                            users?                   @relation(fields: [exclusive_buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  genres                                                           genres?                  @relation(fields: [genre_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  moods                                                            moods?                   @relation(fields: [mood_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles                                                         profiles?                @relation(fields: [seller_id], references: [id], onUpdate: NoAction)
+  transactions                                                     transactions[]
+
+  @@index([approved_at], map: "idx_songs_approved_at")
+  @@index([average_rating(sort: Desc)], map: "idx_songs_average_rating")
+  @@index([created_at(sort: Desc)], map: "idx_songs_created_at")
+  @@index([genre_id], map: "idx_songs_genre")
+  @@index([genre_id], map: "idx_songs_genre_id")
+  @@index([is_featured], map: "idx_songs_is_featured")
+  @@index([mood_id], map: "idx_songs_mood")
+  @@index([mood_id], map: "idx_songs_mood_id")
+  @@index([seller_id], map: "idx_songs_seller_id")
+  @@index([status], map: "idx_songs_status")
+}
+
+model strike_notifications {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id         String          @db.Uuid
+  strike_id         String?         @db.Uuid
+  notification_type String
+  title             String
+  message           String
+  is_read           Boolean         @default(false)
+  read_at           DateTime?       @db.Timestamptz(6)
+  email_sent        Boolean         @default(false)
+  email_sent_at     DateTime?       @db.Timestamptz(6)
+  created_at        DateTime        @default(now()) @db.Timestamptz(6)
+  seller_strikes    seller_strikes? @relation(fields: [strike_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model system_error_logs {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  error_type           String
+  error_message        String
+  error_stack          String?
+  module               String
+  action_performed     String?
+  user_id              String?            @db.Uuid
+  severity             String?            @default("error")
+  context              Json?              @default("{}")
+  browser_info         Json?              @default("{}")
+  resolved             Boolean?           @default(false)
+  linked_bug_report_id String?            @db.Uuid
+  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  admin_bug_reports    admin_bug_reports? @relation(fields: [linked_bug_report_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles             profiles?          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tier_abuse_flags {
+  id                                              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seller_id                                       String        @db.Uuid
+  flag_type                                       String
+  transaction_id                                  String?       @db.Uuid
+  buyer_id                                        String?       @db.Uuid
+  details                                         Json?         @default("{}")
+  status                                          String?       @default("pending")
+  reviewed_by                                     String?       @db.Uuid
+  reviewed_at                                     DateTime?     @db.Timestamptz(6)
+  action_taken                                    String?
+  created_at                                      DateTime?     @default(now()) @db.Timestamptz(6)
+  profiles_tier_abuse_flags_buyer_idToprofiles    profiles?     @relation("tier_abuse_flags_buyer_idToprofiles", fields: [buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_tier_abuse_flags_reviewed_byToprofiles profiles?     @relation("tier_abuse_flags_reviewed_byToprofiles", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profiles_tier_abuse_flags_seller_idToprofiles   profiles      @relation("tier_abuse_flags_seller_idToprofiles", fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions                                    transactions? @relation(fields: [transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([seller_id], map: "idx_tier_abuse_flags_seller_id")
+  @@index([status], map: "idx_tier_abuse_flags_status")
+}
+
+model transactions {
+  id                                        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buyer_id                                  String             @db.Uuid
+  seller_id                                 String             @db.Uuid
+  song_id                                   String             @db.Uuid
+  license_tier_id                           String             @db.Uuid
+  amount                                    Decimal            @db.Decimal(10, 2)
+  commission_rate                           Decimal            @db.Decimal(5, 2)
+  commission_amount                         Decimal            @db.Decimal(10, 2)
+  seller_amount                             Decimal            @db.Decimal(10, 2)
+  payment_id                                String?
+  payment_status                            String?            @default("pending")
+  payment_method                            String?
+  license_pdf_url                           String?
+  created_at                                DateTime           @default(now()) @db.Timestamptz(6)
+  cleared_at                                DateTime?          @db.Timestamptz(6)
+  is_cleared                                Boolean?           @default(false)
+  song_price                                Decimal?           @default(0) @db.Decimal
+  platform_fee_buyer                        Decimal?           @default(0) @db.Decimal
+  platform_fee_seller                       Decimal?           @default(0) @db.Decimal
+  buyer_total_paid                          Decimal?           @default(0) @db.Decimal
+  audio_watermarks                          audio_watermarks[]
+  disputes                                  disputes[]
+  tier_abuse_flags                          tier_abuse_flags[]
+  users_transactions_buyer_idTousers        users              @relation("transactions_buyer_idTousers", fields: [buyer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_transactions_buyer_idToprofiles  profiles           @relation("transactions_buyer_idToprofiles", fields: [buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_buyer_id_profiles_fkey")
+  license_tiers                             license_tiers      @relation(fields: [license_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_transactions_seller_idTousers       users              @relation("transactions_seller_idTousers", fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles_transactions_seller_idToprofiles profiles           @relation("transactions_seller_idToprofiles", fields: [seller_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_seller_id_profiles_fkey")
+  songs                                     songs              @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([buyer_id], map: "idx_transactions_buyer")
+  @@index([buyer_id], map: "idx_transactions_buyer_id")
+  @@index([created_at(sort: Desc)], map: "idx_transactions_created_at")
+  @@index([payment_status], map: "idx_transactions_payment_status")
+  @@index([seller_id], map: "idx_transactions_seller")
+  @@index([seller_id], map: "idx_transactions_seller_id")
+}
+
+model user_roles {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  role       app_role @default(buyer)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, role])
+}
+
+model users {
+  id                                                          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                                       String?
+  activity_logs                                               activity_logs[]
+  audio_sessions                                              audio_sessions[]
+  audio_watermarks                                            audio_watermarks[]
+  cart_items                                                  cart_items[]
+  disputes_disputes_againstTousers                            disputes[]            @relation("disputes_againstTousers")
+  disputes_disputes_raised_byTousers                          disputes[]            @relation("disputes_raised_byTousers")
+  disputes_disputes_resolved_byTousers                        disputes[]            @relation("disputes_resolved_byTousers")
+  piracy_reports_piracy_reports_created_byTousers             piracy_reports[]      @relation("piracy_reports_created_byTousers")
+  piracy_reports_piracy_reports_resolved_byTousers            piracy_reports[]      @relation("piracy_reports_resolved_byTousers")
+  platform_settings                                           platform_settings[]
+  profiles                                                    profiles?
+  seller_wallets                                              seller_wallets?
+  songs                                                       songs[]
+  transactions_transactions_buyer_idTousers                   transactions[]        @relation("transactions_buyer_idTousers")
+  transactions_transactions_seller_idTousers                  transactions[]        @relation("transactions_seller_idTousers")
+  user_roles                                                  user_roles[]
+  withdrawal_requests_withdrawal_requests_processed_byTousers withdrawal_requests[] @relation("withdrawal_requests_processed_byTousers")
+  withdrawal_requests_withdrawal_requests_user_idTousers      withdrawal_requests[] @relation("withdrawal_requests_user_idTousers")
+}
+
+model withdrawal_requests {
+  id                                            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                                       String             @db.Uuid
+  amount                                        Decimal            @db.Decimal(10, 2)
+  status                                        withdrawal_status? @default(pending)
+  payout_method                                 String?
+  payout_details                                Json?
+  processed_at                                  DateTime?          @db.Timestamptz(6)
+  processed_by                                  String?            @db.Uuid
+  notes                                         String?
+  created_at                                    DateTime           @default(now()) @db.Timestamptz(6)
+  cashfree_transfer_id                          String?
+  cashfree_status                               String?
+  cashfree_status_code                          String?
+  payment_reference                             String?
+  failure_reason                                String?
+  retries                                       Int?               @default(0)
+  users_withdrawal_requests_processed_byTousers users?             @relation("withdrawal_requests_processed_byTousers", fields: [processed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_withdrawal_requests_user_idTousers      users              @relation("withdrawal_requests_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profiles                                      profiles           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "withdrawal_requests_user_id_profiles_fkey")
+}
+
+enum app_role {
+  admin
+  seller
+  buyer
+}
+
+enum content_status {
+  draft
+  published
+  scheduled
+  archived
+}
+
+enum content_type {
+  page
+  post
+}
+
+enum dispute_status {
+  open
+  in_review
+  resolved
+  closed
+}
+
+enum license_type {
+  personal
+  youtube
+  commercial
+  film
+  exclusive
+}
+
+enum payout_verification_status {
+  not_added
+  pending
+  verified
+  rejected
+}
+
+enum song_status {
+  pending
+  approved
+  rejected
+}
+
+enum withdrawal_status {
+  pending
+  approved
+  processed
+  rejected
+}

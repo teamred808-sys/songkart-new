@@ -1,0 +1,13 @@
+Test server on 5002
+BODY: { email: 'test32@test.com' }
+prisma:info Starting a mysql pool with 21 connections.
+prisma:query BEGIN
+prisma:query INSERT INTO `u837896566_songkart`.`users` (`id`,`email`) VALUES (?,?)
+prisma:query SELECT `u837896566_songkart`.`users`.`id`, `u837896566_songkart`.`users`.`email` FROM `u837896566_songkart`.`users` WHERE `u837896566_songkart`.`users`.`id` = ? LIMIT ? OFFSET ?
+prisma:query COMMIT
+User created: f84af449-7e41-4068-aae1-571b7cf659f7
+prisma:query BEGIN
+prisma:query INSERT INTO `u837896566_songkart`.`profiles` (`id`,`email`,`full_name`,`social_links`,`is_verified`,`created_at`,`updated_at`,`account_status`,`upload_limit`,`fraud_flags`,`kyc_status`,`kyc_documents`,`dynamic_pricing_enabled`,`role`,`specialties`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+prisma:query SELECT `u837896566_songkart`.`profiles`.`id`, `u837896566_songkart`.`profiles`.`email`, `u837896566_songkart`.`profiles`.`full_name`, `u837896566_songkart`.`profiles`.`avatar_url`, `u837896566_songkart`.`profiles`.`bio`, `u837896566_songkart`.`profiles`.`website`, `u837896566_songkart`.`profiles`.`social_links`, `u837896566_songkart`.`profiles`.`is_verified`, `u837896566_songkart`.`profiles`.`created_at`, `u837896566_songkart`.`profiles`.`updated_at`, `u837896566_songkart`.`profiles`.`account_status`, `u837896566_songkart`.`profiles`.`upload_limit`, `u837896566_songkart`.`profiles`.`fraud_flags`, `u837896566_songkart`.`profiles`.`kyc_status`, `u837896566_songkart`.`profiles`.`kyc_documents`, `u837896566_songkart`.`profiles`.`suspended_at`, `u837896566_songkart`.`profiles`.`suspension_reason`, `u837896566_songkart`.`profiles`.`dynamic_pricing_enabled`, `u837896566_songkart`.`profiles`.`username`, `u837896566_songkart`.`profiles`.`role`, `u837896566_songkart`.`profiles`.`specialties` FROM `u837896566_songkart`.`profiles` WHERE `u837896566_songkart`.`profiles`.`id` = ? LIMIT ? OFFSET ?
+prisma:query COMMIT
+Profile created: f84af449-7e41-4068-aae1-571b7cf659f7

@@ -9,13 +9,24 @@ interface CartItemCardProps {
   item: {
     id: string;
     song_id: string;
-    songs: {
+    songs?: {
       id: string;
       title: string;
       cover_image_url: string | null;
       seller_id: string;
     } | null;
-    license_tiers: {
+    song?: {
+      id: string;
+      title: string;
+      cover_image_url: string | null;
+      seller_id: string;
+    } | null;
+    license_tiers?: {
+      id: string;
+      license_type: string;
+      price: number;
+    } | null;
+    license_tier?: {
       id: string;
       license_type: string;
       price: number;
@@ -67,10 +78,10 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
       } ${item.isOwnSong ? 'border-amber-500/50 bg-amber-500/5' : ''}`}
     >
       <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0" style={{ aspectRatio: '1/1' }}>
-        {item.songs?.cover_image_url ? (
+        {(item.songs?.cover_image_url || item.song?.cover_image_url) ? (
           <img
-            src={item.songs.cover_image_url}
-            alt={item.songs.title}
+            src={item.songs?.cover_image_url || item.song?.cover_image_url || ""}
+            alt={(item.songs?.title || item.song?.title) as string}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -80,7 +91,7 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
 
       <div className="flex-1 min-w-0 max-w-full overflow-hidden">
         <Link to={`/song/${item.song_id}`} className="hover:underline block">
-          <p className="font-medium truncate max-w-full">{item.songs?.title}</p>
+          <p className="font-medium truncate max-w-full">{item.songs?.title || item.song?.title}</p>
         </Link>
         <p className="text-sm text-muted-foreground truncate">{item.seller_name}</p>
         <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap max-w-full">
@@ -88,7 +99,7 @@ export function CartItemCard({ item, onRemove, isRemoving }: CartItemCardProps) 
             variant={item.is_exclusive ? 'default' : 'outline'}
             className={`text-xs whitespace-nowrap ${item.is_exclusive ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
           >
-            {item.license_tiers?.license_type}
+            {item.license_tiers?.license_type || item.license_tier?.license_type}
           </Badge>
           
           {item.isOwnSong && (

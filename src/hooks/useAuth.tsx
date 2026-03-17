@@ -54,12 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = async (userId: string) => {
     try {
       // Fetch profile via API
-      const userProfile = await api.get<{ id: string; email: string; full_name: string; role: AppRole }>('/users/me');
+      const userProfile = await api.get<{ id: string; email: string; full_name: string; role: AppRole, roles?: AppRole[] }>('/users/me');
 
       if (userProfile) {
         setProfile(userProfile as unknown as Profile); // Mocking rest of profile for now
-        setRoles([userProfile.role]);
+        setRoles(userProfile.roles || [userProfile.role]);
         setRole(userProfile.role);
+        
+        // Ensure user state has the correct ID
+        setUser({ id: userProfile.id, email: userProfile.email } as User);
+        setSession(prev => prev ? { ...prev, user: { id: userProfile.id, email: userProfile.email } as User } : null);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -97,10 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         await fetchUserData('restoring');
         
-        if (isMounted) {
-          setUser({ id: 'restoring', email: '' } as User); 
-        }
-
+        // fetchUserData now handles setting the correct user ID.
       } catch (error) {
         console.error('Auth initialization error:', error);
       } finally {

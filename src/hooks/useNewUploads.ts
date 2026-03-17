@@ -79,7 +79,6 @@ export function useNewUploadsSectionEnabled() {
       const setting = data?.[0] || null;
 
       if (!setting) {
-        console.error('Error fetching new uploads enabled setting');
         return true; // Default to enabled
       }
 

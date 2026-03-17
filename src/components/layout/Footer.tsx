@@ -141,7 +141,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/license-guide" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                <Link to="/licenses" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
                   License Guide
                 </Link>
               </li>

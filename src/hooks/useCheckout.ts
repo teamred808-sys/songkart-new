@@ -138,7 +138,7 @@ export function useCartWithTotals() {
       // Map items with seller names, reservations, own song flag, and split fees
       const items = cartItems?.map((item: any) => {
         const isOwnSong = item.songs?.seller_id === user.id;
-        const songPrice = item.final_price || item.license_tiers?.price || 0;
+        const songPrice = Number(item.final_price || item.license_tiers?.price || item.license_tier?.price || 0);
         
         // Calculate split platform fee (50/50)
         const platformFeeTotal = Math.round(songPrice * commissionRate);
