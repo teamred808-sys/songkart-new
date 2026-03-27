@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
@@ -40,7 +41,7 @@ router.get('/', async (req: Request, res: Response) => {
       // Default to approved songs for public browse
       where.status = 'approved';
     }
-    if (search) where.title = { contains: search, mode: 'insensitive' };
+    if (search) where.title = { contains: search };
     if (genre && genre !== 'all') where.genre_id = genre;
     if (mood && mood !== 'all') where.mood_id = mood;
     if (language && language !== 'all') where.language = language;
@@ -224,12 +225,12 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const songData: any = {
-      seller_id: sellerId,
+    const songData: Prisma.songsCreateInput = {
+      profiles: { connect: { id: sellerId } },
       title,
       description: description || null,
-      genre_id: genre_id || null,
-      mood_id: mood_id || null,
+      ...(genre_id ? { genres: { connect: { id: genre_id } } } : {}),
+      ...(mood_id ? { moods: { connect: { id: mood_id } } } : {}),
       language: language || 'English',
       bpm: bpm ? parseInt(bpm) : null,
       duration: duration ? parseInt(duration) : null,

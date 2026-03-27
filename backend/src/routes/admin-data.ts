@@ -78,7 +78,7 @@ router.get('/users', authenticate, async (req: AuthRequest, res: Response) => {
 
     const where: any = {};
     if (status) where.account_status = status;
-    if (search) where.OR = [{ full_name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }];
+    if (search) where.OR = [{ full_name: { contains: search } }, { email: { contains: search } }];
 
     const profiles = await prisma.profiles.findMany({ where, orderBy: { created_at: 'desc' }, take: 100 });
 
@@ -184,7 +184,7 @@ router.get('/songs', authenticate, async (req: AuthRequest, res: Response) => {
     const where: any = {};
     if (status) where.status = status;
     if (sellerId) where.seller_id = sellerId;
-    if (search) where.title = { contains: search, mode: 'insensitive' };
+    if (search) where.title = { contains: search };
 
     const songs = await prisma.songs.findMany({
       where, include: { genres: true, moods: true, profiles: { select: { id: true, full_name: true, email: true } } },
