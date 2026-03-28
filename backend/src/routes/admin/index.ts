@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { authenticate, AuthRequest } from '../../middleware/auth';
+import { authenticate, AuthRequest, requireAdmin } from '../../middleware/auth';
 import prisma from '../../db/prisma';
 
 const router = Router();
+
+router.use(authenticate, requireAdmin);
 
 // Equivalent to `admin-review-content`
 // Purpose: Allows an admin to review and approve/reject content uploaded by sellers.

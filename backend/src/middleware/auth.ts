@@ -32,3 +32,25 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 };
+
+export const requireRole = (...allowedRoles: string[]) => {
+  const normalizedRoles = allowedRoles.map((role) => role.toLowerCase());
+
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || typeof req.user.role !== 'string') {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const userRole = req.user.role.toLowerCase();
+
+    if (!normalizedRoles.includes(userRole)) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    next();
+  };
+};
+
+export const requireAdmin = requireRole('admin');

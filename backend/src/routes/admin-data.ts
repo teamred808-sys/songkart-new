@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, AuthRequest, requireAdmin } from '../middleware/auth';
 
 const router = Router();
+
+router.use(authenticate, requireAdmin);
 
 // ============ COUNTS ============
 
